@@ -266,6 +266,52 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
     }
   };
 
+  const handleSaveActivity = async () => {
+    if (!selectedSector || !selectedSubcategory) {
+      alert.addToast('error', 'Error', 'Por favor selecciona un rubro y una subcategoría.');
+      return;
+    }
+
+    const ivaArticle = getIvaArticleForActivity(selectedSector, selectedSubcategory);
+    const sectorData = ACTIVITY_SECTORS.find(s => s.id === selectedSector);
+    const subcategoryData = sectorData?.subcategories.find(sub => sub.id === selectedSubcategory);
+
+    // Actualizar el perfil localmente
+    setProfile(prev => ({
+      ...prev,
+      fiscalConfig: {
+        ...prev.fiscalConfig,
+        activitySector: selectedSector,
+        activitySubcategory: selectedSubcategory,
+        ivaArticle: ivaArticle,
+        actividadPrincipal: subcategoryData?.name || prev.fiscalConfig?.actividadPrincipal || ''
+      } as SpanishFiscalConfig
+    }));
+
+    // Guardar en el servidor
+    setIsSaving(true);
+    try {
+      const updatedProfile = {
+        ...profile,
+        fiscalConfig: {
+          ...profile.fiscalConfig,
+          activitySector: selectedSector,
+          activitySubcategory: selectedSubcategory,
+          ivaArticle: ivaArticle,
+          actividadPrincipal: subcategoryData?.name || profile.fiscalConfig?.actividadPrincipal || ''
+        } as SpanishFiscalConfig
+      };
+      
+      await onUpdate(updatedProfile);
+      setShowActivityModal(false);
+      alert.addToast('success', 'Actividad Actualizada', 'La actividad económica se ha actualizado correctamente. Esto afectará las menciones legales en facturas futuras.');
+    } catch (error) {
+      alert.addToast('error', 'Error', 'No se pudo guardar la actividad. Intenta nuevamente.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // --- FISCAL CALCULATIONS (SPAIN LOGIC) ---
   const fiscalPreview = useMemo(() => {
     const config = profile.fiscalConfig || {} as SpanishFiscalConfig;

@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { 
   Building2, Check, ChevronRight, Palette, CreditCard, ShoppingBag, Mail, Sparkles,
   Loader2, Globe, UploadCloud, LayoutTemplate, Search, MapPin, AlertCircle, X,
-  Coins, Smartphone, Server, AtSign, ShieldCheck, Zap, ArrowRight, PenLine,
+  Coins, Smartphone, Server, AtSign, ShieldCheck, Zap, ArrowRight, ArrowLeft, PenLine,
   User, CheckCircle2, Hash, Lock, Eye, EyeOff, Crown, Rocket, Star
 } from 'lucide-react';
 import { UserProfile, CatalogItem, EmailConfig, ProfileType } from '../types';
