@@ -51,9 +51,32 @@ export default async function handler(req, res) {
     }
 
     // Usar API keys del usuario si están disponibles, sino usar process.env.API_KEY
+    console.log('Llamando a suggestCatalogItems con:', { 
+      businessDescription: businessDescription.trim().substring(0, 50),
+      hasApiKeys: !!apiKeys,
+      hasEnvKey: !!process.env.API_KEY
+    });
+    
     const items = await geminiService.suggestCatalogItems(businessDescription.trim(), apiKeys, true);
     
+    console.log('Resultado de suggestCatalogItems:', { 
+      itemsCount: items?.length || 0,
+      items: items?.slice(0, 2) // Log primeros 2 items para debugging
+    });
+    
     if (!items || items.length === 0) {
+      // Verificar si hay API key configurada
+      const hasApiKey = (apiKeys?.gemini && apiKeys.gemini.trim()) || process.env.API_KEY;
+      
+      if (!hasApiKey) {
+        return res.status(503).json({ 
+          error: 'API Key de IA no configurada. Configura tu API Key en Ajustes o contacta a soporte.',
+          items: [],
+          requiresApiKey: true,
+          canContinue: true
+        });
+      }
+      
       return res.status(200).json({ 
         error: 'No se pudieron generar servicios. Intenta con una descripción más detallada.',
         items: [],

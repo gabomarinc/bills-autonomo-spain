@@ -186,6 +186,8 @@ export const suggestCatalogItems = async (businessDescription: string, keys?: Ai
                 required: ['name', 'price', 'description']
             }
         };
+        
+        console.log('Llamando a Gemini para generar catálogo...');
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
             contents: `Sugiere 3-5 servicios o productos con precios estimados para: ${businessDescription}. Precios en EUR (Euros).`,
@@ -193,12 +195,29 @@ export const suggestCatalogItems = async (businessDescription: string, keys?: Ai
         }));
         
         const text = response.text || "[]";
+        console.log('Respuesta de Gemini (raw):', text.substring(0, 200));
+        
         const cleaned = cleanJson(text);
         const items = JSON.parse(cleaned);
         
-        return items.map((i: any) => ({ ...i, id: Date.now().toString() + Math.random(), isRecurring: false }));
-    } catch (e) {
+        if (!Array.isArray(items) || items.length === 0) {
+            console.warn('Gemini devolvió array vacío o inválido');
+            return [];
+        }
+        
+        console.log('Catálogo generado exitosamente:', items.length, 'items');
+        return items.map((i: any) => ({ 
+            ...i, 
+            id: `cat_${Date.now()}_${Math.random()}`, 
+            isRecurring: false 
+        }));
+    } catch (e: any) {
         console.error("Suggest Catalog Error:", e);
+        // Propagar el error de API key faltante
+        if (e?.message === AI_ERROR_BLOCKED) {
+            throw e;
+        }
+        // Para otros errores, devolver array vacío
         return [];
     }
 };
