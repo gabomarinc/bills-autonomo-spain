@@ -282,6 +282,7 @@ const AppContent: React.FC = () => {
       {activeView === AppView.CLIENT_WIZARD && <ClientWizard onSave={async (clientData) => { 
         await saveClientToDb({ 
           name: clientData.name, 
+          contactName: clientData.contactName,
           taxId: clientData.taxId, 
           email: clientData.email, 
           address: clientData.address,

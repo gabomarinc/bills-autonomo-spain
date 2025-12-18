@@ -4,7 +4,7 @@ import {
   ArrowLeft, Mail, MapPin, Building2, Crown, 
   Clock, CheckCircle2, FileText, FileBadge, 
   TrendingUp, Edit2, Calendar, Save, X, Phone,
-  ExternalLink, Send, Wallet, Trash2, Tag, StickyNote, Plus, Check, Sparkles
+  ExternalLink, Send, Wallet, Trash2, Tag, StickyNote, Plus, Check, Sparkles, User
 } from 'lucide-react';
 import { Invoice, InvoiceStatus, DbClient } from '../types';
 
@@ -46,6 +46,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
       phone?: string;
       address?: string;
       taxId?: string;
+      contactName?: string;
   }>({});
 
   // Reset optimistic state when dbClientData actually updates from parent
@@ -89,6 +90,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
     return {
       clientData: {
         name: clientName,
+        contactName: optimisticOverrides.contactName ?? (dbClientData?.contactName || ''),
         email: optimisticOverrides.email ?? (dbClientData?.email || latestDoc.clientEmail || ''),
         taxId: optimisticOverrides.taxId ?? (dbClientData?.taxId || latestDoc.clientTaxId || ''),
         address: optimisticOverrides.address ?? (dbClientData?.address || latestDoc.clientAddress || ''),
@@ -130,6 +132,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
     const updatedProfile = {
       ...dbClientData, 
       name: clientName,
+      contactName: editForm.contactName,
       email: editForm.email,
       address: editForm.address,
       taxId: editForm.taxId,
@@ -141,6 +144,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
     // Optimistic Update
     setOptimisticOverrides(prev => ({
         ...prev,
+        contactName: editForm.contactName,
         email: editForm.email,
         address: editForm.address,
         taxId: editForm.taxId,
@@ -312,6 +316,23 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
                            <p className="font-medium text-[#1c2938] truncate">{clientData.email || 'No registrado'}</p>
                            {clientData.email && <a href={`mailto:${clientData.email}`} className="opacity-0 group-hover:opacity-100 p-1.5 bg-slate-50 hover:bg-blue-50 text-blue-500 rounded-lg transition-all"><Send className="w-3 h-3" /></a>}
                         </div>
+                     )}
+                  </div>
+
+                  {/* Contact Name */}
+                  <div className="group">
+                     <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1 mb-1">
+                        <User className="w-3 h-3" /> Nombre de Contacto
+                     </label>
+                     {isEditingProfile ? (
+                        <input 
+                          value={editForm.contactName || ''}
+                          onChange={(e) => setEditForm({...editForm, contactName: e.target.value})}
+                          className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-[#27bea5]"
+                          placeholder="Ej. Juan Pérez"
+                        />
+                     ) : (
+                        <p className="font-medium text-[#1c2938] truncate">{clientData.contactName || 'No registrado'}</p>
                      )}
                   </div>
 

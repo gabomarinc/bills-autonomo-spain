@@ -25,6 +25,7 @@ export enum ProfileType {
 export interface DbClient {
   id?: string;
   name: string;
+  contactName?: string; // Nombre de la persona de contacto
   taxId?: string;
   email?: string;
   phone?: string;

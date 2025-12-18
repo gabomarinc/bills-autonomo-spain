@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 interface ClientWizardProps {
-  onSave: (clientData: { name: string; taxId: string; email: string; address: string; phone: string; tags: string; notes: string; status: 'CLIENT' | 'PROSPECT' }) => void;
+  onSave: (clientData: { name: string; contactName?: string; taxId: string; email: string; address: string; phone: string; tags: string; notes: string; status: 'CLIENT' | 'PROSPECT' }) => void;
   onCancel: () => void;
 }
 
@@ -16,6 +16,7 @@ const ClientWizard: React.FC<ClientWizardProps> = ({ onSave, onCancel }) => {
   const [step, setStep] = useState<Step>(1);
   const [formData, setFormData] = useState({
     name: '',
+    contactName: '',
     taxId: '',
     email: '',
     phone: '',
@@ -79,6 +80,19 @@ const ClientWizard: React.FC<ClientWizardProps> = ({ onSave, onCancel }) => {
                            className="w-full pl-14 p-4 text-xl font-bold text-[#1c2938] bg-white border-2 border-slate-100 rounded-2xl focus:border-[#27bea5] focus:ring-0 outline-none transition-all placeholder:text-slate-200 shadow-sm"
                            placeholder="Ej. Tech Solutions Inc."
                            autoFocus
+                         />
+                      </div>
+                   </div>
+
+                   <div className="group">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nombre de Contacto (Opcional)</label>
+                      <div className="relative">
+                         <User className="absolute left-4 top-4 w-6 h-6 text-slate-300 group-focus-within:text-[#27bea5] transition-colors" />
+                         <input 
+                           value={formData.contactName}
+                           onChange={(e) => handleChange('contactName', e.target.value)}
+                           className="w-full pl-14 p-4 text-lg font-medium text-[#1c2938] bg-white border-2 border-slate-100 rounded-2xl focus:border-[#27bea5] focus:ring-0 outline-none transition-all placeholder:text-slate-200 shadow-sm"
+                           placeholder="Ej. Juan Pérez"
                          />
                       </div>
                    </div>
