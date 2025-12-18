@@ -127,11 +127,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       
       if (data.items && data.items.length > 0) {
         setCatalogItems(data.items);
+        console.log('Catálogo generado exitosamente:', data.items.length, 'items');
       } else {
         // Si el error indica que puede continuar, no mostrar alerta bloqueante
         if (data.canContinue) {
-          // Permitir continuar sin catálogo generado
+          // Permitir continuar sin catálogo generado - mostrar mensaje informativo
           console.log('No se pudo generar catálogo, pero el usuario puede continuar');
+          // No mostrar alerta, solo dejar que el usuario continúe manualmente
         } else {
           alert(data.error || 'No se pudieron generar servicios. Intenta con una descripción más detallada.');
         }
@@ -996,9 +998,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                   </div>
                </div>
             ) : (
-               <div className="flex flex-col items-center justify-center text-slate-300 h-64 border-2 border-dashed border-slate-100 rounded-[3rem]">
+               <div className="flex flex-col items-center justify-center text-slate-300 h-64 border-2 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/50">
                   <ShoppingBag className="w-16 h-16 mb-4 opacity-20" />
-                  <p className="font-medium">Tus servicios aparecerán aquí</p>
+                  <p className="font-medium mb-2">Tus servicios aparecerán aquí</p>
+                  {businessDesc && !isLoading && (
+                    <p className="text-xs text-slate-400 mt-2">
+                      Haz clic en "Generar" para crear tu catálogo con IA
+                    </p>
+                  )}
                </div>
             )}
          </div>
