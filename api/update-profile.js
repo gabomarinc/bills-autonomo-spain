@@ -41,7 +41,14 @@ const updateUserProfileInDb = async (profile) => {
 
     const dbType = (profile.type || '').includes('Empresa') ? 'COMPANY' : 'FREELANCE';
 
-    await client.query(
+    // Verificar que el usuario existe primero
+    const checkUser = await client.query('SELECT id FROM users WHERE id = $1', [profile.id]);
+    if (checkUser.rows.length === 0) {
+      await client.end();
+      throw new Error(`Usuario con ID ${profile.id} no encontrado en la base de datos`);
+    }
+
+    const result = await client.query(
       `UPDATE users 
        SET name = $1, type = $2, profile_data = $3, stripe_customer_id = $4, plan_name = $5, renewal_date = $6, updated_at = NOW() 
        WHERE id = $7`,
@@ -55,6 +62,20 @@ const updateUserProfileInDb = async (profile) => {
         profile.id
       ]
     );
+
+    // Verificar que se actualizó al menos una fila
+    if (result.rowCount === 0) {
+      await client.end();
+      throw new Error(`No se pudo actualizar el usuario. Ninguna fila fue modificada.`);
+    }
+
+    console.log(`Usuario ${profile.id} actualizado correctamente. Filas afectadas: ${result.rowCount}`);
+    
+    // Verificar que se guardó correctamente
+    const verify = await client.query('SELECT profile_data FROM users WHERE id = $1', [profile.id]);
+    if (verify.rows.length > 0) {
+      console.log('Datos guardados en profile_data:', JSON.stringify(verify.rows[0].profile_data).substring(0, 200));
+    }
 
     await client.end();
     return true;
