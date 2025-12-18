@@ -5,14 +5,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { businessDescription } = req.body;
+  const { businessDescription, apiKeys } = req.body;
 
   if (!businessDescription) {
     return res.status(400).json({ error: 'businessDescription is required' });
   }
 
   try {
-    const items = await suggestCatalogItems(businessDescription, undefined, true);
+    // Usar API keys del usuario si están disponibles, sino usar process.env.API_KEY
+    const items = await suggestCatalogItems(businessDescription, apiKeys, true);
     return res.status(200).json({ items });
   } catch (error) {
     console.error('Generate Catalog Error:', error);

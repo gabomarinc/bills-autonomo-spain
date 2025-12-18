@@ -23,13 +23,30 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number = TIMEOUT_MS): Pr
     ]);
 };
 
-// Fix: Strictly use process.env.API_KEY as mandated by guidelines
-const getAiClient = () => {
-  if (process.env.API_KEY) {
-      return new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to get API key: user keys first, then fallback to process.env.API_KEY
+const getApiKey = (keys?: AiKeys): string | null => {
+  // Prioridad 1: API key del usuario (Gemini)
+  if (keys?.gemini && keys.gemini.trim()) {
+    return keys.gemini.trim();
   }
   
-  console.error("Gemini AI Error: Missing process.env.API_KEY.");
+  // Prioridad 2: API key del sistema (variable de entorno)
+  if (process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  
+  return null;
+};
+
+// Get AI client using user API keys or fallback to process.env.API_KEY
+const getAiClient = (keys?: AiKeys) => {
+  const apiKey = getApiKey(keys);
+  
+  if (apiKey) {
+    return new GoogleGenAI({ apiKey });
+  }
+  
+  console.error("Gemini AI Error: No API key found. Configure your API key in Settings or set process.env.API_KEY.");
   throw new Error(AI_ERROR_BLOCKED);
 };
 
@@ -62,11 +79,11 @@ const cleanJson = (text: string) => {
 export const parseExpenseImage = async (
   imageBase64: string, 
   mimeType: string, 
-  _keys?: AiKeys
+  keys?: AiKeys
 ): Promise<ParsedInvoiceData | null> => {
   
   try {
-    const ai = getAiClient();
+    const ai = getAiClient(keys);
 
     const schema: Schema = {
       type: Type.OBJECT,
@@ -104,9 +121,9 @@ export const parseExpenseImage = async (
   }
 };
 
-export const parseInvoiceRequest = async (input: string, _keys?: AiKeys): Promise<ParsedInvoiceData | null> => {
+export const parseInvoiceRequest = async (input: string, keys?: AiKeys): Promise<ParsedInvoiceData | null> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const schema: Schema = {
             type: Type.OBJECT,
             properties: {
@@ -136,9 +153,9 @@ export const parseInvoiceRequest = async (input: string, _keys?: AiKeys): Promis
     }
 };
 
-export const askSupportBot = async (message: string, _keys?: AiKeys): Promise<string> => {
+export const askSupportBot = async (message: string, keys?: AiKeys): Promise<string> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
             contents: message,
@@ -153,9 +170,9 @@ export const askSupportBot = async (message: string, _keys?: AiKeys): Promise<st
 
 // --- ONBOARDING FEATURES (process.env.API_KEY Only) ---
 
-export const suggestCatalogItems = async (businessDescription: string, _keys?: AiKeys, _useSystemKey: boolean = false): Promise<CatalogItem[]> => {
+export const suggestCatalogItems = async (businessDescription: string, keys?: AiKeys, _useSystemKey: boolean = false): Promise<CatalogItem[]> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         
         const schema: Schema = {
             type: Type.ARRAY,
@@ -186,9 +203,9 @@ export const suggestCatalogItems = async (businessDescription: string, _keys?: A
     }
 };
 
-export const generateEmailTemplate = async (tone: 'Formal' | 'Casual', _keys?: AiKeys, _useSystemKey: boolean = false): Promise<string> => {
+export const generateEmailTemplate = async (tone: 'Formal' | 'Casual', keys?: AiKeys, _useSystemKey: boolean = false): Promise<string> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
             contents: `Genera un ejemplo CORTO (máximo 3 líneas) de correo ${tone === 'Formal' ? 'corporativo y profesional' : 'cercano y amigable'} para enviar una factura. Solo el ejemplo, sin explicaciones.`,
@@ -217,9 +234,9 @@ export const testAiConnection = async (provider: 'gemini' | 'openai', key: strin
     return true; 
 };
 
-export const generateFinancialAnalysis = async (summary: string, _keys?: AiKeys): Promise<FinancialAnalysisResult | null> => {
+export const generateFinancialAnalysis = async (summary: string, keys?: AiKeys): Promise<FinancialAnalysisResult | null> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const schema: Schema = {
             type: Type.OBJECT,
             properties: {
@@ -270,9 +287,9 @@ export const generateFinancialAnalysis = async (summary: string, _keys?: AiKeys)
     }
 };
 
-export const generateDeepDiveReport = async (title: string, context: string, _keys?: AiKeys): Promise<DeepDiveReport | null> => {
+export const generateDeepDiveReport = async (title: string, context: string, keys?: AiKeys): Promise<DeepDiveReport | null> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const schema: Schema = {
             type: Type.OBJECT,
             properties: {
@@ -325,11 +342,11 @@ export const generateDeepDiveReport = async (title: string, context: string, _ke
 export const analyzePriceMarket = async (
     itemName: string, 
     country: string, 
-    _keys?: AiKeys,
+    keys?: AiKeys,
     userContext?: UserProfile
 ): Promise<PriceAnalysisResult | null> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         
         let contextPrompt = `Ubicación: ${country}.`;
         if (userContext) {
@@ -362,9 +379,9 @@ export const analyzePriceMarket = async (
     }
 };
 
-export const enhanceProductDescription = async (desc: string, name: string, format: 'paragraph' | 'bullets', _keys?: AiKeys): Promise<string> => {
+export const enhanceProductDescription = async (desc: string, name: string, format: 'paragraph' | 'bullets', keys?: AiKeys): Promise<string> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
             contents: `Mejora esta descripción de venta para "${name}": "${desc}". Formato: ${format}. Idioma: Español.`,
@@ -378,10 +395,10 @@ export const enhanceProductDescription = async (desc: string, name: string, form
 export const getDiscountRecommendation = async (
     amount: number, 
     clientName: string, 
-    _keys?: AiKeys
+    keys?: AiKeys
 ): Promise<{ recommendedRate: number, reasoning: string } | null> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const schema: Schema = {
             type: Type.OBJECT,
             properties: {
@@ -408,10 +425,10 @@ export const generateRevenueInsight = async (
     currentRevenue: number, 
     prevRevenue: number, 
     percentChange: number,
-    _keys?: AiKeys
+    keys?: AiKeys
 ): Promise<string | null> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(keys);
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
             contents: `Eres un CFO. Datos: Mes Actual €${currentRevenue}, Anterior €${prevRevenue}, Var ${percentChange}%.

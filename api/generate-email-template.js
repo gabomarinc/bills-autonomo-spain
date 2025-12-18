@@ -5,14 +5,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { tone } = req.body;
+  const { tone, apiKeys } = req.body;
 
   if (!tone || !['Formal', 'Casual'].includes(tone)) {
     return res.status(400).json({ error: 'tone must be "Formal" or "Casual"' });
   }
 
   try {
-    const text = await generateEmailTemplate(tone, undefined, true);
+    // Usar API keys del usuario si están disponibles, sino usar process.env.API_KEY
+    const text = await generateEmailTemplate(tone, apiKeys, true);
     return res.status(200).json({ text });
   } catch (error) {
     console.error('Generate Email Template Error:', error);
