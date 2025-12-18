@@ -210,7 +210,7 @@ const CatalogDashboard: React.FC<CatalogDashboardProps> = ({ items, userCountry,
                    {item.isRecurring ? 'Suscripción' : 'Pago Único'}
                  </span>
                  <span className="text-2xl font-bold text-[#1c2938] tracking-tight">
-                    ${item.price.toLocaleString()}
+                    €{item.price.toLocaleString()}
                     {item.isRecurring && <span className="text-sm text-slate-400 font-medium">/mes</span>}
                  </span>
               </div>
