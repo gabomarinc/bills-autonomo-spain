@@ -414,6 +414,165 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
              )}
           </div>
 
+          {/* BÓVEDA FINANCIERA */}
+          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative group">
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-[#1c2938] flex items-center gap-3">
+                   <div className="p-2 bg-amber-50 rounded-xl text-amber-600"><Coins className="w-6 h-6" /></div>
+                   Bóveda Financiera
+                </h3>
+                <button className="px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-600 transition-colors flex items-center gap-2">
+                   <ShieldCheck className="w-4 h-4" /> Seguridad Bancaria
+                </button>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre del Banco</label>
+                   <input 
+                      value={profile.bankName || ''} 
+                      onChange={(e) => handleInputChange('bankName', e.target.value)} 
+                      placeholder="Ej. Banco Santander"
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all font-medium text-[#1c2938] focus:ring-2 focus:ring-[#27bea5]" 
+                   />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cuenta Bancaria (IBAN)</label>
+                   <input 
+                      value={profile.bankAccount || ''} 
+                      onChange={(e) => handleInputChange('bankAccount', e.target.value)} 
+                      placeholder="ES71 1583 0001 1790 6660 097"
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all font-mono text-slate-600 focus:ring-2 focus:ring-[#27bea5]" 
+                   />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo de Cuenta</label>
+                   <select 
+                      value={profile.bankAccountType || 'Ahorro'} 
+                      onChange={(e) => handleInputChange('bankAccountType', e.target.value)} 
+                      className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all focus:ring-2 focus:ring-[#27bea5]"
+                   >
+                      <option value="Ahorro">Ahorro</option>
+                      <option value="Corriente">Corriente</option>
+                   </select>
+                </div>
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Moneda Base</label>
+                   <div className="relative">
+                      <input 
+                         value="EUR" 
+                         readOnly
+                         className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-[#1c2938] cursor-not-allowed" 
+                      />
+                      <Globe className="absolute right-4 top-4 w-5 h-5 text-slate-400" />
+                   </div>
+                </div>
+             </div>
+             
+             {/* Pagos Digitales */}
+             <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                   <div>
+                      <p className="text-sm font-bold text-[#1c2938] mb-1">Pagos Digitales</p>
+                      <p className="text-xs text-slate-500">Stripe / PayPal / Bizum</p>
+                   </div>
+                   <button
+                      onClick={togglePaymentIntegration}
+                      className={`relative w-14 h-8 rounded-full transition-colors ${profile.paymentIntegration?.enabled ? 'bg-[#27bea5]' : 'bg-slate-200'}`}
+                   >
+                      <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform shadow-sm ${profile.paymentIntegration?.enabled ? 'left-7' : 'left-1'}`}></div>
+                   </button>
+                </div>
+             </div>
+          </div>
+
+          {/* TU CEREBRO DIGITAL - API KEYS */}
+          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative group">
+             <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-50 rounded-xl text-blue-600"><Zap className="w-6 h-6" /></div>
+                <div>
+                   <h3 className="text-xl font-bold text-[#1c2938]">Tu Cerebro Digital</h3>
+                   <p className="text-xs text-slate-400">Conecta tus llaves de IA para darle superpoderes ilimitados a tu asistente.</p>
+                </div>
+             </div>
+             
+             <div className="space-y-6 mt-6">
+                {/* Google Gemini API Key */}
+                <div className="space-y-2">
+                   <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                         Google Gemini API Key
+                         <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold">RECOMENDADO</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                         <button
+                            onClick={() => toggleKeyVisibility('gemini')}
+                            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                         >
+                            {showKeys['gemini'] ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                         </button>
+                         <button
+                            onClick={() => runConnectionTest('gemini')}
+                            disabled={testStatus['gemini'] === 'LOADING' || !profile.apiKeys?.gemini}
+                            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                         >
+                            {testStatus['gemini'] === 'LOADING' && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
+                            {testStatus['gemini'] === 'SUCCESS' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                            {testStatus['gemini'] === 'ERROR' && <XCircle className="w-4 h-4 text-red-500" />}
+                            {testStatus['gemini'] === 'IDLE' && <Zap className="w-4 h-4 text-slate-400" />}
+                         </button>
+                      </div>
+                   </div>
+                   <div className="relative">
+                      <input
+                         type={showKeys['gemini'] ? 'text' : 'password'}
+                         value={profile.apiKeys?.gemini || ''}
+                         onChange={(e) => handleApiKeyChange('gemini', e.target.value)}
+                         placeholder="Pega tu llave aquí..."
+                         className="w-full p-4 pr-24 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all font-mono text-sm focus:ring-2 focus:ring-[#27bea5]"
+                      />
+                      <Key className="absolute right-4 top-4 w-5 h-5 text-slate-400" />
+                   </div>
+                </div>
+
+                {/* OpenAI API Key (Backup) */}
+                <div className="space-y-2">
+                   <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                         OpenAI API Key (Backup)
+                      </label>
+                      <div className="flex items-center gap-2">
+                         <button
+                            onClick={() => toggleKeyVisibility('openai')}
+                            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                         >
+                            {showKeys['openai'] ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                         </button>
+                         <button
+                            onClick={() => runConnectionTest('openai')}
+                            disabled={testStatus['openai'] === 'LOADING' || !profile.apiKeys?.openai}
+                            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                         >
+                            {testStatus['openai'] === 'LOADING' && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
+                            {testStatus['openai'] === 'SUCCESS' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                            {testStatus['openai'] === 'ERROR' && <XCircle className="w-4 h-4 text-red-500" />}
+                            {testStatus['openai'] === 'IDLE' && <Zap className="w-4 h-4 text-slate-400" />}
+                         </button>
+                      </div>
+                   </div>
+                   <div className="relative">
+                      <input
+                         type={showKeys['openai'] ? 'text' : 'password'}
+                         value={profile.apiKeys?.openai || ''}
+                         onChange={(e) => handleApiKeyChange('openai', e.target.value)}
+                         placeholder="Pega tu llave aquí..."
+                         className="w-full p-4 pr-24 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all font-mono text-sm focus:ring-2 focus:ring-[#27bea5]"
+                      />
+                      <Key className="absolute right-4 top-4 w-5 h-5 text-slate-400" />
+                   </div>
+                </div>
+             </div>
+          </div>
+
           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative overflow-hidden">
              <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500"><Scale className="w-6 h-6" /></div>
