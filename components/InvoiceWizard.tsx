@@ -187,7 +187,13 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
 
       // Calcular total actual
       const subtotal = draft.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const discount = subtotal * (discountRate / 100);
+      // Calcular descuento según tipo (porcentaje o monto fijo)
+      let discount = 0;
+      if (discountType === 'PERCENT') {
+        discount = subtotal * (discountValue / 100);
+      } else {
+        discount = discountValue;
+      }
       const totalBeforeTax = subtotal - discount;
       const taxAmount = applyIva ? totalBeforeTax * (getIvaRate(ivaType) / 100) : 0;
       const total = totalBeforeTax + taxAmount;
@@ -227,7 +233,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     };
 
     calculateExchangeRate();
-  }, [draft.invoiceCurrency, draft.currency, draft.items, draft.validityDate, discountRate, applyIva, ivaType]);
+  }, [draft.invoiceCurrency, draft.currency, draft.items, draft.validityDate, discountValue, discountType, applyIva, ivaType]);
 
   // Sync IVA/IRPF & discount visibility with existing items on load
   useEffect(() => {

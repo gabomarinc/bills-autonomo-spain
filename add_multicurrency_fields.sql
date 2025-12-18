@@ -48,3 +48,4 @@ CREATE INDEX IF NOT EXISTS idx_invoices_exchange_date ON invoices(user_id, excha
 -- - payment_date: Fecha en que se recibió el pago
 -- - exchange_difference: Diferencia entre factura y pago (base_amount_eur - payment_received_eur)
 --   Esta diferencia se registra como gasto financiero deducible
+

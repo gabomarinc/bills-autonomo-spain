@@ -359,3 +359,4 @@ export const SUPPORTED_CURRENCIES = [
   { code: 'MXN', name: 'Peso Mexicano', symbol: '$' },
   { code: 'BRL', name: 'Real Brasileño', symbol: 'R$' }
 ];
+
