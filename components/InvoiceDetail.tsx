@@ -618,7 +618,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
              )}
              <div className="flex justify-between font-serif font-bold text-xl text-slate-900">
                 <span>Total:</span>
-                <span>{invoice.currency} ${invoice.total.toFixed(2)}</span>
+                <span>{invoice.currency === 'EUR' ? '€' : invoice.currency} {invoice.total.toFixed(2)}</span>
              </div>
           </div>
        </div>
