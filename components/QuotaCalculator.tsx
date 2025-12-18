@@ -68,6 +68,8 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
           ...currentUser.fiscalConfig,
           entityType: currentUser.fiscalConfig?.entityType || 'FISICA',
           nif: currentUser.fiscalConfig?.nif || currentUser.taxId || '',
+          regimenFiscal: currentUser.fiscalConfig?.regimenFiscal || 'GENERAL',
+          actividadPrincipal: currentUser.fiscalConfig?.actividadPrincipal || '',
           baseCotizacionSS: baseCotizacion,
           fechaAltaAutonomo: fechaAlta,
           tipoReduccion,
