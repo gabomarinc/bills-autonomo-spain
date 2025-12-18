@@ -58,7 +58,10 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
   }, [baseCotizacion, fechaAlta, tipoReduccion]);
 
   const handleSave = async () => {
-    if (!onUpdateProfile) return;
+    if (!onUpdateProfile) {
+      alert.addToast('error', 'Error', 'No se puede guardar: función de actualización no disponible.');
+      return;
+    }
     
     setIsSaving(true);
     try {
@@ -78,8 +81,9 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
       };
       await onUpdateProfile(updated);
       alert.addToast('success', 'Configuración Guardada', 'Los datos de cuotas se han actualizado correctamente.');
-    } catch (error) {
-      alert.addToast('error', 'Error', 'No se pudo guardar la configuración.');
+    } catch (error: any) {
+      console.error('Error guardando configuración:', error);
+      alert.addToast('error', 'Error', error.message || 'No se pudo guardar la configuración. Verifica tu conexión.');
     } finally {
       setIsSaving(false);
     }
@@ -173,7 +177,7 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
                   className="w-full p-3 border border-slate-200 rounded-xl font-bold text-[#1c2938] outline-none focus:ring-2 focus:ring-[#27bea5]"
                 >
                   <option value="NINGUNA">Ninguna</option>
-                  <option value="TARIFA_PLANA">Tarifa Plana (€60/mes primeros 12 meses)</option>
+                  <option value="TARIFA_PLANA">Tarifa Plana (€80/mes primeros 12 meses)</option>
                   <option value="REDUCCION_50">Reducción 50%</option>
                   <option value="REDUCCION_25">Reducción 25%</option>
                 </select>

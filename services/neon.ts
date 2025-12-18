@@ -354,9 +354,10 @@ export const updateUserProfileInDb = async (profile: UserProfile): Promise<boole
 
     await client.end();
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update User Error:", error);
-    return false;
+    // Lanzar el error para que el componente pueda manejarlo
+    throw new Error(error.message || 'Error al actualizar el perfil en la base de datos');
   }
 };
 

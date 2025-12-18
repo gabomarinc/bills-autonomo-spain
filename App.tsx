@@ -222,10 +222,28 @@ const AppContent: React.FC = () => {
   };
 
   const handleUpdateProfile = async (updated: UserProfile) => {
-    setCurrentUser(updated);
-    localStorage.setItem('konsul_user_data', JSON.stringify(updated)); 
-    await updateUserProfileInDb(updated);
-    alert.addToast('success', 'Perfil Actualizado');
+    try {
+      setCurrentUser(updated);
+      localStorage.setItem('konsul_user_data', JSON.stringify(updated)); 
+      
+      // Llamar a la API route en lugar de la función directa
+      const response = await fetch('/api/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: updated })
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'No se pudo guardar en la base de datos');
+      }
+      
+      alert.addToast('success', 'Perfil Actualizado');
+    } catch (error: any) {
+      console.error('Error actualizando perfil:', error);
+      alert.addToast('error', 'Error', error.message || 'No se pudo actualizar el perfil. Verifica tu conexión.');
+      throw error; // Re-lanzar para que el componente pueda manejarlo
+    }
   };
 
   const handleSaveCatalogItem = async (item: CatalogItem) => {

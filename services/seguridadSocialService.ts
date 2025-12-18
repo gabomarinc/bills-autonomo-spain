@@ -66,9 +66,8 @@ export const calcularCuotaAutonomo = (
   // Aplicar bonificaciones/reducciones
   if (tieneBonificacion) {
     if (tipoReduccion === 'TARIFA_PLANA') {
-      // Tarifa plana: 60€/mes primeros 12 meses, 80€/mes meses 13-24
-      // Simplificado: asumimos primeros 12 meses
-      cuotaMensual = 60.0;
+      // Tarifa plana: 80€/mes primeros 12 meses (desde 2023)
+      cuotaMensual = 80.0;
     } else if (tipoReduccion === 'REDUCCION_50') {
       cuotaMensual = cuotaMensual * 0.5;
     } else if (tipoReduccion === 'REDUCCION_25') {
