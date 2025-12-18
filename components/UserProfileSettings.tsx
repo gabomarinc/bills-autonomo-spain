@@ -227,6 +227,17 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
             body: JSON.stringify({ customerId: profile.stripeCustomerId })
         });
         
+        if (!response.ok) {
+            const data = await response.json();
+            if (response.status === 503) {
+                alert.addToast('info', 'Servicio no disponible', "El sistema de pagos no está configurado. Contacta a soporte.");
+            } else {
+                throw new Error(data.error || 'No se pudo generar el enlace');
+            }
+            setIsRedirectingToPortal(false);
+            return;
+        }
+        
         const data = await response.json();
         
         if (data.url) {

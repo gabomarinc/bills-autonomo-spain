@@ -66,7 +66,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onRegisterCli
         if (result.success) {
             setMode('RESET_SENT');
         } else {
-            setError(result.error || 'Hubo un error al enviar el correo de recuperación.');
+            const errorMsg = result.error || 'Hubo un error al enviar el correo de recuperación.';
+            if (errorMsg.includes('no está configurado')) {
+                setError('El servicio de emails no está disponible. Contacta a soporte para recuperar tu contraseña.');
+            } else {
+                setError(errorMsg);
+            }
         }
     } catch (err) {
         setError('Error al procesar la solicitud.');

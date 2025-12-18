@@ -1,13 +1,18 @@
 
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey ? new Stripe(stripeKey) : null;
 
 export default async function handler(req, res) {
   const { sessionId } = req.query;
 
   if (!sessionId) {
     return res.status(400).json({ error: 'Missing session_id' });
+  }
+
+  if (!stripe || !stripeKey) {
+    return res.status(503).json({ error: 'Stripe no está configurado. Contacta al administrador.' });
   }
 
   try {

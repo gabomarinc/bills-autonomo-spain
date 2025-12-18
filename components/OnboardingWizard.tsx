@@ -123,6 +123,17 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         })
       });
       
+      if (!response.ok) {
+        const data = await response.json();
+        if (response.status === 503) {
+          alert("El sistema de pagos no está configurado. Puedes continuar usando la versión gratuita.");
+        } else {
+          throw new Error(data.error || 'Error al iniciar el pago');
+        }
+        setIsRedirecting(false);
+        return;
+      }
+      
       const { url, error } = await response.json();
       
       if (error) throw new Error(error);

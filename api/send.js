@@ -7,7 +7,11 @@ export default async function handler(req, res) {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Missing Resend API Key in server environment' });
+    console.warn('⚠️ RESEND_API_KEY no configurado. El envío de emails está deshabilitado.');
+    return res.status(503).json({ 
+      error: 'El servicio de emails no está configurado. Contacta al administrador.',
+      disabled: true 
+    });
   }
 
   try {

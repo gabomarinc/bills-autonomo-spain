@@ -274,7 +274,12 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             setShowSuccessModal(true);
             alert.addToast('success', 'Correo Enviado', 'El documento ha sido enviado correctamente.');
         } else {
-            throw new Error(result.error || 'Error al enviar el correo.');
+            const errorMsg = result.error || 'Error al enviar el correo.';
+            if (errorMsg.includes('no está configurado')) {
+                alert.addToast('info', 'Servicio no disponible', 'El servicio de emails no está configurado. Puedes descargar el PDF manualmente.');
+            } else {
+                throw new Error(errorMsg);
+            }
         }
     } catch (error: any) {
         console.error("Error sending document:", error);
