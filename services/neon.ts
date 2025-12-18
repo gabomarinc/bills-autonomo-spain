@@ -309,8 +309,19 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
     await client.end();
     logAuditAction(userId, 'REGISTER_USER', { email });
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Create User Error:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack
+    });
+    // Cerrar conexión si está abierta
+    try {
+      await client.end();
+    } catch (closeError) {
+      // Ignorar errores al cerrar
+    }
     return false;
   }
 };

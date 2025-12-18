@@ -128,7 +128,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       if (data.items && data.items.length > 0) {
         setCatalogItems(data.items);
       } else {
-        alert(data.error || 'No se pudieron generar servicios. Intenta con una descripción más detallada.');
+        // Si el error indica que puede continuar, no mostrar alerta bloqueante
+        if (data.canContinue) {
+          // Permitir continuar sin catálogo generado
+          console.log('No se pudo generar catálogo, pero el usuario puede continuar');
+        } else {
+          alert(data.error || 'No se pudieron generar servicios. Intenta con una descripción más detallada.');
+        }
       }
     } catch (error) {
       console.error('Error generando catálogo:', error);
@@ -267,11 +273,15 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     try {
         // 1. Create User in DB directly (bypass App state update to avoid flashing dashboard)
         // We import createUserInDb directly instead of relying on callback that changes view
+        console.log('Intentando crear usuario en BD...', { email, userId: newUserId });
         const success = await createUserInDb(profileData, password, email);
         
         if (!success) {
-            throw new Error('No se pudo crear el usuario en la base de datos. Verifica tu conexión.');
+            console.error('createUserInDb retornó false');
+            throw new Error('No se pudo crear el usuario en la base de datos. Verifica tu conexión y que el email no esté ya registrado.');
         }
+        
+        console.log('Usuario creado exitosamente en BD');
         
         // 2. SEND WELCOME EMAIL (Template: welcome-to-konsul-bills)
         // We do this before redirecting. It's best effort.
