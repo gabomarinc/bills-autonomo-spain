@@ -580,24 +580,40 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
               </div>
 
               {/* Info Box about IVA Article */}
-              {selectedSubcategory && (
-                <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-2xl">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-bold text-blue-900 mb-2">Información Fiscal</h4>
-                      <p className="text-sm text-blue-800 mb-3">
-                        Para tu actividad ({selectedSectorData?.subcategories.find(s => s.id === selectedSubcategory)?.name}), 
-                        aplicarán los artículos <strong>69 y 70</strong> de la Ley del IVA (regla de localización de servicios).
-                      </p>
-                      <p className="text-xs text-blue-700">
-                        Esto significa que cuando factures a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente, 
-                        no según la normativa española. Las facturas se emitirán exentas de IVA español con la mención legal correspondiente.
-                      </p>
+              {selectedSubcategory && (() => {
+                const subcategoryData = selectedSectorData?.subcategories.find(s => s.id === selectedSubcategory);
+                const ivaArticle = getIvaArticleForActivity(selectedSector, selectedSubcategory);
+                const articleText = ivaArticle === 'ART_21' ? '21' : ivaArticle === 'ART_69_70' ? '69 y 70' : ivaArticle === 'ART_69' ? '69' : ivaArticle === 'ART_70' ? '70' : '69 o 70 (según el caso)';
+                const articleDescription = ivaArticle === 'ART_21' 
+                  ? 'exportación de bienes físicos'
+                  : ivaArticle === 'ART_69_70'
+                  ? 'regla de localización de servicios (artículos 69 y 70)'
+                  : ivaArticle === 'ART_69'
+                  ? 'servicios prestados a empresarios/profesionales (artículo 69)'
+                  : ivaArticle === 'ART_70'
+                  ? 'servicios prestados a particulares (artículo 70)'
+                  : 'servicios (artículos 69 o 70 según el caso)';
+                
+                return (
+                  <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-2xl">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-bold text-blue-900 mb-2">Información Fiscal</h4>
+                        <p className="text-sm text-blue-800 mb-3">
+                          Para tu actividad <strong>({subcategoryData?.name})</strong>, 
+                          aplicarán los artículos <strong>{articleText}</strong> de la Ley del IVA ({articleDescription}).
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          {ivaArticle === 'ART_21' 
+                            ? 'Cuando exportes bienes físicos fuera de España, la operación estará exenta de IVA español según el artículo 21. El IVA, si aplica, se gestiona en el país de destino.'
+                            : 'Cuando factures servicios a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente (regla de localización). Las facturas se emitirán exentas de IVA español con la mención legal correspondiente.'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>
