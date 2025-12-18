@@ -191,11 +191,16 @@ export const generateEmailTemplate = async (tone: 'Formal' | 'Casual', _keys?: A
         const ai = getAiClient();
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
-            contents: `Genera una plantilla de correo ${tone} para enviar una factura a un cliente. Solo el cuerpo del correo.`,
+            contents: `Genera un ejemplo CORTO (máximo 3 líneas) de correo ${tone === 'Formal' ? 'corporativo y profesional' : 'cercano y amigable'} para enviar una factura. Solo el ejemplo, sin explicaciones.`,
         }));
-        return response.text || "";
+        const text = response.text || "";
+        // Limitar a las primeras 3 líneas o 200 caracteres
+        const lines = text.split('\n').slice(0, 3).join('\n');
+        return lines.length > 200 ? lines.substring(0, 200) + '...' : lines;
     } catch(e) {
-        return tone === 'Formal' ? "Estimado cliente, adjunto su factura." : "Hola! Aquí tienes tu factura.";
+        return tone === 'Formal' 
+            ? "Estimado cliente,\n\nAdjunto encontrará la factura correspondiente.\n\nSaludos cordiales." 
+            : "¡Hola!\n\nAquí tienes tu factura. Cualquier duda, avísame.\n\n¡Un abrazo!";
     }
 };
 

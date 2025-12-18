@@ -350,3 +350,4 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
 };
 
 export default TrimestralWizard;
+

@@ -89,10 +89,24 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
   const generateCatalog = async () => {
     if (!businessDesc) return;
     setIsLoading(true);
-    // Explicitly allow system key for onboarding
-    const items = await suggestCatalogItems(businessDesc, undefined, true);
-    setCatalogItems(items);
-    setIsLoading(false);
+    try {
+      const response = await fetch('/api/generate-catalog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessDescription: businessDesc })
+      });
+      const data = await response.json();
+      if (data.items && data.items.length > 0) {
+        setCatalogItems(data.items);
+      } else {
+        alert('No se pudieron generar servicios. Intenta con una descripción más detallada.');
+      }
+    } catch (error) {
+      console.error('Error generando catálogo:', error);
+      alert('Error al generar catálogo. Intenta más tarde.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateCatalogItem = (index: number, field: keyof CatalogItem, value: any) => {
@@ -104,10 +118,22 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
   const generateEmail = async (selectedTone: 'Formal' | 'Casual') => {
     setTone(selectedTone);
     setIsLoading(true);
-    // Explicitly allow system key for onboarding
-    const text = await generateEmailTemplate(selectedTone, undefined, true);
-    setEmailPreview(text);
-    setIsLoading(false);
+    try {
+      const response = await fetch('/api/generate-email-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tone: selectedTone })
+      });
+      const data = await response.json();
+      setEmailPreview(data.text || '');
+    } catch (error) {
+      console.error('Error generando plantilla:', error);
+      setEmailPreview(selectedTone === 'Formal' 
+        ? "Estimado cliente,\n\nAdjunto encontrará la factura correspondiente.\n\nSaludos cordiales." 
+        : "¡Hola!\n\nAquí tienes tu factura. Cualquier duda, avísame.\n\n¡Un abrazo!");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const initiatePayment = async (userId: string) => {
@@ -126,12 +152,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       if (!response.ok) {
         const data = await response.json();
         if (response.status === 503) {
-          alert("El sistema de pagos no está configurado. Puedes continuar usando la versión gratuita.");
+          // Si Stripe no está configurado, continuar sin pago
+          window.location.href = '/';
+          return;
         } else {
           throw new Error(data.error || 'Error al iniciar el pago');
         }
-        setIsRedirecting(false);
-        return;
       }
       
       const { url, error } = await response.json();
@@ -144,6 +170,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       setIsRedirecting(false);
       alert("Hubo un error iniciando el pago. Por favor intenta más tarde.");
     }
+  };
+
+  const skipPayment = () => {
+    // Continuar sin pago - redirigir al dashboard
+    window.location.href = '/';
   };
 
   const finishOnboarding = async () => {
@@ -192,7 +223,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     try {
         // 1. Create User in DB directly (bypass App state update to avoid flashing dashboard)
         // We import createUserInDb directly instead of relying on callback that changes view
-        await createUserInDb(profileData, password, email);
+        const success = await createUserInDb(profileData, password, email);
+        
+        if (!success) {
+            throw new Error('No se pudo crear el usuario en la base de datos. Verifica tu conexión.');
+        }
         
         // 2. SEND WELCOME EMAIL (Template: welcome-to-konsul-bills)
         // We do this before redirecting. It's best effort.
@@ -206,11 +241,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         // 3. Set LocalStorage so when they return from Stripe, App.tsx can rehydrate session
         localStorage.setItem('konsul_user_data', JSON.stringify(profileData));
         
-        // 4. Initiate Stripe Session with the created User ID
+        // 4. Initiate Stripe Session with the created User ID (or skip if user chooses)
         await initiatePayment(newUserId); 
-    } catch (e) {
+    } catch (e: any) {
         console.error("Onboarding Error", e);
-        alert("Hubo un error al guardar tu perfil. Intenta nuevamente.");
+        alert(e.message || "Hubo un error al guardar tu perfil. Intenta nuevamente.");
         setIsRedirecting(false);
     }
   };
@@ -942,20 +977,29 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                  <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-amber-500 flex-shrink-0" /> <span className="font-medium text-slate-700">Reportes Financieros</span></li>
               </div>
 
-              <button 
-                onClick={finishOnboarding}
-                disabled={isRedirecting}
-                className="w-full bg-[#1c2938] text-white py-5 px-10 rounded-[2rem] font-bold text-xl hover:bg-amber-500 hover:text-white transition-all shadow-xl hover:shadow-2xl active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-              >
+              <div className="space-y-4">
+                <button 
+                  onClick={finishOnboarding}
+                  disabled={isRedirecting}
+                  className="w-full bg-[#1c2938] text-white py-5 px-10 rounded-[2rem] font-bold text-xl hover:bg-amber-500 hover:text-white transition-all shadow-xl hover:shadow-2xl active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                >
                 {isRedirecting ? (
                    <><Loader2 className="w-6 h-6 animate-spin" /> Procesando Pago...</>
                 ) : (
                    <><CreditCard className="w-6 h-6" /> Suscribirse y Continuar</>
                 )}
               </button>
+              <button 
+                onClick={skipPayment}
+                disabled={isRedirecting}
+                className="w-full bg-slate-100 text-slate-600 py-4 px-10 rounded-[2rem] font-bold text-lg hover:bg-slate-200 transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                Hacerlo más tarde
+              </button>
               <p className="text-xs text-slate-400 mt-4 flex items-center justify-center gap-1">
                  <Lock className="w-3 h-3" /> Pago seguro vía Stripe
               </p>
+              </div>
            </div>
         </div>
 

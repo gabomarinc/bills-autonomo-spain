@@ -333,3 +333,4 @@ COMMENT ON TABLE autonomo_config IS 'Configuración fiscal y de Seguridad Social
 -- =====================================================
 -- FIN DEL SCRIPT
 -- =====================================================
+
