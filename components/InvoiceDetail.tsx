@@ -346,7 +346,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
   // --- RENDER PAYMENT BUTTONS ---
   const renderPaymentButtons = () => {
-      if (isQuote || !remainingBalance || remainingBalance <= 0) return null;
+      // Usar remainingBalance en EUR para determinar si hay saldo pendiente
+      if (isQuote || !remainingBalance || remainingBalance <= 0.01) return null;
       
       const paymentInt = issuer.paymentIntegration;
       if (!paymentInt?.enabled) return null;
@@ -549,27 +550,73 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
               )}
               <div className="pt-6 border-t-2 border-slate-100 flex justify-between items-end">
                   <span className="font-bold text-[#1c2938] text-xl">Total</span>
-                  <span className="font-bold text-[#1c2938] text-4xl" style={{ color: color }}>
-                    {invoice.currency} {invoice.total.toFixed(2)}
-                  </span>
+                  <div className="text-center">
+                    <span className="font-bold text-[#1c2938] text-4xl" style={{ color: color }}>
+                      {(() => {
+                        const currency = invoice.invoiceCurrency || invoice.currency;
+                        const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
+                        return `${symbol} ${invoice.total.toFixed(2)}`;
+                      })()}
+                    </span>
+                    {invoice.baseAmountEur && invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && (
+                      <p className="text-sm text-slate-500 mt-1">
+                        (€{invoice.baseAmountEur.toFixed(2)} para declaración)
+                      </p>
+                    )}
+                  </div>
               </div>
               
-              {!isQuote && amountPaid > 0 && (
+              {!isQuote && (amountPaid > 0 || paidEur > 0) && (
                 <div className="pt-4 mt-2 border-t border-slate-100">
                     <div className="flex justify-between text-sm mb-1">
                         <span className="font-bold text-green-600">Pagado</span>
-                        <span className="font-bold text-slate-600">{invoice.currency} {amountPaid.toFixed(2)}</span>
+                        <div className="text-right">
+                          {invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && invoice.baseAmountEur ? (
+                            <>
+                              <span className="font-bold text-slate-600 block">
+                                {invoice.invoiceCurrency} {amountPaid.toFixed(2)}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                (€{paidEur.toFixed(2)} para declaración)
+                              </span>
+                            </>
+                          ) : (
+                            <span className="font-bold text-slate-600">
+                              {invoice.currency} {amountPaid.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2.5 mb-1">
                         <div 
                             className="bg-green-500 h-2.5 rounded-full" 
-                            style={{ width: `${Math.min(100, (amountPaid / invoice.total) * 100)}%` }}
+                            style={{ width: `${Math.min(100, (paidEur / invoiceTotal) * 100)}%` }}
                         ></div>
                     </div>
                     <div className="flex justify-between text-xs text-slate-400">
-                        <span>{((amountPaid / invoice.total) * 100).toFixed(0)}% Completado</span>
-                        <span>Resta: {invoice.currency} {remainingBalance.toFixed(2)}</span>
+                        <span>{((paidEur / invoiceTotal) * 100).toFixed(0)}% Completado</span>
+                        <span>
+                          Resta: {(() => {
+                            const currency = invoice.invoiceCurrency || invoice.currency;
+                            const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
+                            return `${symbol} ${(invoice.total - amountPaid).toFixed(2)}`;
+                          })()}
+                          {invoice.baseAmountEur && (
+                            <span className="block text-[10px]">(€{remainingBalance.toFixed(2)} para declaración)</span>
+                          )}
+                        </span>
                     </div>
+                    {invoice.exchangeDifference && invoice.exchangeDifference !== 0 && (
+                      <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-amber-700">
+                        <div className="flex justify-between font-medium">
+                          <span>Diferencia de cambio:</span>
+                          <span>€{invoice.exchangeDifference.toFixed(2)}</span>
+                        </div>
+                        <p className="text-[10px] text-amber-600 mt-1 italic">
+                          Gasto financiero deducible
+                        </p>
+                      </div>
+                    )}
                 </div>
               )}
             </div>
