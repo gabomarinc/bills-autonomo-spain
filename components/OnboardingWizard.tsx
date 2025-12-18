@@ -162,7 +162,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       address,
       country: DEFAULT_COUNTRY,
       fiscalConfig: {
-        entityType: personType === 'JURIDICA' ? 'JURIDICA' : 'FISICA',
+        entityType: (personType === 'JURIDICA' ? 'JURIDICA' : 'FISICA') as 'FISICA' | 'JURIDICA',
         nif: taxId,
         regimenFiscal: 'GENERAL',
         actividadPrincipal: businessDesc || '',

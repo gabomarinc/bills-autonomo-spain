@@ -8,6 +8,7 @@ export interface CuotaAutonomo {
   baseMaxima: number;
   baseActual: number;
   cuotaMensual: number;
+  mes?: number; // Mes (1-12) para el historial
   desglose: {
     contingenciasComunes: number;
     desempleo: number;
@@ -141,7 +142,10 @@ export const obtenerHistorialCuotas = (
       config.tipoReduccion
     );
     
-    historial.push(cuota);
+    historial.push({
+      ...cuota,
+      mes: fechaActual.getMonth() + 1 // Agregar mes (1-12)
+    });
     
     // Siguiente mes
     fechaActual.setMonth(fechaActual.getMonth() + 1);

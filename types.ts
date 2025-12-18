@@ -109,9 +109,11 @@ export interface SpanishFiscalConfig {
   nif: string; // NIF/CIF del autónomo
   regimenFiscal: 'GENERAL' | 'SIMPLIFICADO' | 'AGRICOLA' | 'GANADERO' | 'FORESTAL';
   actividadPrincipal: string; // Código CNAE o descripción
+  codigoCnae?: string; // Código CNAE específico
   fechaAltaAutonomo?: string; // Para calcular tarifa plana
   baseCotizacionSS?: number; // Base de cotización Seguridad Social
   bonificacionReduccion?: 'TARIFA_PLANA' | 'REDUCCION_50' | 'REDUCCION_25' | 'NINGUNA';
+  tipoReduccion?: 'TARIFA_PLANA' | 'REDUCCION_50' | 'REDUCCION_25' | 'NINGUNA';
   ivaRegimen?: 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO';
   prorrateoIVA?: boolean; // Si tiene actividad mixta
   porcentajeProrrateo?: number; // % de actividad sujeta a IVA

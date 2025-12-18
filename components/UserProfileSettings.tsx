@@ -24,7 +24,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   const [saveStatus, setSaveStatus] = useState<'IDLE' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [showKeys, setShowKeys] = useState<{ [key: string]: boolean }>({});
   const [testStatus, setTestStatus] = useState<{ [key: string]: 'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR' }>({});
-  const [activePaymentTab, setActivePaymentTab] = useState<'PAGUELOFACIL' | 'YAPPY'>('PAGUELOFACIL');
+  const [activePaymentTab, setActivePaymentTab] = useState<'STRIPE' | 'PAYPAL' | 'BIZUM'>('STRIPE');
   
   // Password Change State
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -118,12 +118,13 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
       return {
         ...prev,
         paymentIntegration: {
-          provider: prev.paymentIntegration?.provider || 'PAGUELOFACIL',
+          provider: prev.paymentIntegration?.provider || 'STRIPE',
           enabled: isEnabled,
-          cclw: prev.paymentIntegration?.cclw || '',
-          token: prev.paymentIntegration?.token || '',
-          yappyMerchantId: prev.paymentIntegration?.yappyMerchantId || '',
-          yappySecretKey: prev.paymentIntegration?.yappySecretKey || ''
+          stripePublicKey: prev.paymentIntegration?.stripePublicKey || '',
+          stripeSecretKey: prev.paymentIntegration?.stripeSecretKey || '',
+          paypalClientId: prev.paymentIntegration?.paypalClientId || '',
+          paypalSecret: prev.paymentIntegration?.paypalSecret || '',
+          bizumPhone: prev.paymentIntegration?.bizumPhone || ''
         }
       };
     });
@@ -131,15 +132,20 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
 
   const handlePaymentConfigChange = (field: keyof PaymentIntegration, value: string) => {
     setProfile(prev => {
-      const currentInt = prev.paymentIntegration || { provider: 'PAGUELOFACIL', enabled: true };
+      const currentInt = prev.paymentIntegration || { provider: 'STRIPE', enabled: true };
       const updatedInt = { ...currentInt, [field]: value };
-      const hasPaguelo = !!updatedInt.cclw && !!updatedInt.token;
-      const hasYappy = !!updatedInt.yappyMerchantId && !!updatedInt.yappySecretKey;
       
-      let newProvider: 'PAGUELOFACIL' | 'YAPPY' | 'BOTH' = updatedInt.provider;
-      if (hasPaguelo && hasYappy) newProvider = 'BOTH';
-      else if (hasYappy) newProvider = 'YAPPY';
-      else if (hasPaguelo) newProvider = 'PAGUELOFACIL';
+      // Determinar provider basado en qué campos están configurados
+      const hasStripe = !!(updatedInt.stripePublicKey && updatedInt.stripeSecretKey);
+      const hasPayPal = !!(updatedInt.paypalClientId && updatedInt.paypalSecret);
+      const hasBizum = !!updatedInt.bizumPhone;
+      
+      let newProvider: 'STRIPE' | 'PAYPAL' | 'BIZUM' | 'BOTH' = 'STRIPE';
+      if (hasStripe && (hasPayPal || hasBizum)) newProvider = 'BOTH';
+      else if (hasPayPal && hasBizum) newProvider = 'BOTH';
+      else if (hasPayPal) newProvider = 'PAYPAL';
+      else if (hasBizum) newProvider = 'BIZUM';
+      else if (hasStripe) newProvider = 'STRIPE';
 
       return { ...prev, paymentIntegration: { ...updatedInt, provider: newProvider } };
     });
@@ -298,8 +304,9 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
     };
   }, [profile.fiscalConfig]);
 
-  const isPagueloConfigured = !!profile.paymentIntegration?.cclw && !!profile.paymentIntegration?.token;
-  const isYappyConfigured = !!profile.paymentIntegration?.yappyMerchantId && !!profile.paymentIntegration?.yappySecretKey;
+  const isStripeConfigured = !!(profile.paymentIntegration?.stripePublicKey && profile.paymentIntegration?.stripeSecretKey);
+  const isPayPalConfigured = !!(profile.paymentIntegration?.paypalClientId && profile.paymentIntegration?.paypalSecret);
+  const isBizumConfigured = !!profile.paymentIntegration?.bizumPhone;
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in pb-12 relative">
