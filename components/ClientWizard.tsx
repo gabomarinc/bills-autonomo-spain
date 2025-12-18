@@ -131,7 +131,7 @@ const ClientWizard: React.FC<ClientWizardProps> = ({ onSave, onCancel }) => {
                            value={formData.phone}
                            onChange={(e) => handleChange('phone', e.target.value)}
                            className="w-full pl-14 p-4 text-lg font-medium text-[#1c2938] bg-white border-2 border-slate-100 rounded-2xl focus:border-[#27bea5] focus:ring-0 outline-none transition-all placeholder:text-slate-200 shadow-sm"
-                           placeholder="+507 6000-0000"
+                           placeholder="+34 600 000 000"
                          />
                       </div>
                    </div>
@@ -172,7 +172,7 @@ const ClientWizard: React.FC<ClientWizardProps> = ({ onSave, onCancel }) => {
                            value={formData.address}
                            onChange={(e) => handleChange('address', e.target.value)}
                            className="w-full pl-14 p-4 text-lg font-medium text-[#1c2938] bg-white border-2 border-slate-100 rounded-2xl focus:border-[#27bea5] focus:ring-0 outline-none transition-all placeholder:text-slate-200 shadow-sm resize-none h-20"
-                           placeholder="Calle 50, Edificio Global, Piso 12..."
+                           placeholder="Calle Gran Vía, 45, 3º B, 28013 Madrid"
                          />
                       </div>
                    </div>

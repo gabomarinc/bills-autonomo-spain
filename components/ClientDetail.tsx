@@ -325,7 +325,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
                           value={editForm.phone}
                           onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
                           className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-[#27bea5]"
-                          placeholder="+507 6000-0000"
+                          placeholder="+34 600 000 000"
                         />
                      ) : (
                         <div className="flex justify-between items-center">
