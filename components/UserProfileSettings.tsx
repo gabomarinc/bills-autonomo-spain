@@ -41,7 +41,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   // Activity Selection Modal State
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [selectedSector, setSelectedSector] = useState<string>(profile.fiscalConfig?.activitySector || '');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>(profile.fiscalConfig?.activitySubcategory || '');
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(
+    profile.fiscalConfig?.activitySubcategories || 
+    (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
+  );
   const [searchSector, setSearchSector] = useState('');
 
   const alert = useAlert();
@@ -267,14 +270,18 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   };
 
   const handleSaveActivity = async () => {
-    if (!selectedSector || !selectedSubcategory) {
-      alert.addToast('error', 'Error', 'Por favor selecciona un rubro y una subcategoría.');
+    if (!selectedSector || selectedSubcategories.length === 0) {
+      alert.addToast('error', 'Error', 'Por favor selecciona un rubro y al menos una subcategoría.');
       return;
     }
 
-    const ivaArticle = getIvaArticleForActivity(selectedSector, selectedSubcategory);
     const sectorData = ACTIVITY_SECTORS.find(s => s.id === selectedSector);
-    const subcategoryData = sectorData?.subcategories.find(sub => sub.id === selectedSubcategory);
+    const selectedSubs = sectorData?.subcategories.filter(sub => selectedSubcategories.includes(sub.id)) || [];
+    
+    // Calcular ivaArticle: si hay múltiples artículos diferentes, usar MIXTO
+    const articles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
+    const uniqueArticles = [...new Set(articles)];
+    const ivaArticle = uniqueArticles.length > 1 ? 'MIXTO' : uniqueArticles[0] as 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO';
 
     // Actualizar el perfil localmente
     setProfile(prev => ({
@@ -282,9 +289,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
       fiscalConfig: {
         ...prev.fiscalConfig,
         activitySector: selectedSector,
-        activitySubcategory: selectedSubcategory,
+        activitySubcategory: selectedSubcategories[0], // Mantener compatibilidad
+        activitySubcategories: selectedSubcategories,
         ivaArticle: ivaArticle,
-        actividadPrincipal: subcategoryData?.name || prev.fiscalConfig?.actividadPrincipal || ''
+        actividadPrincipal: selectedSubs.map(s => s.name).join(', ') || prev.fiscalConfig?.actividadPrincipal || ''
       } as SpanishFiscalConfig
     }));
 
@@ -296,9 +304,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
         fiscalConfig: {
           ...profile.fiscalConfig,
           activitySector: selectedSector,
-          activitySubcategory: selectedSubcategory,
+          activitySubcategory: selectedSubcategories[0], // Mantener compatibilidad
+          activitySubcategories: selectedSubcategories,
           ivaArticle: ivaArticle,
-          actividadPrincipal: subcategoryData?.name || profile.fiscalConfig?.actividadPrincipal || ''
+          actividadPrincipal: selectedSubs.map(s => s.name).join(', ') || profile.fiscalConfig?.actividadPrincipal || ''
         } as SpanishFiscalConfig
       };
       
@@ -664,7 +673,16 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                                       {ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector)?.name || 'Rubro no encontrado'}
                                     </p>
                                     <p className="text-xs text-slate-500 mt-0.5">
-                                      {ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector)?.subcategories.find(sub => sub.id === profile.fiscalConfig?.activitySubcategory)?.name || 'Subcategoría no encontrada'}
+                                      {(() => {
+                                        const sector = ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector);
+                                        const subcategories = profile.fiscalConfig?.activitySubcategories || 
+                                          (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : []);
+                                        if (subcategories.length === 0) return 'Sin subcategorías';
+                                        if (subcategories.length === 1) {
+                                          return sector?.subcategories.find(sub => sub.id === subcategories[0])?.name || 'Subcategoría no encontrada';
+                                        }
+                                        return `${subcategories.length} actividades seleccionadas`;
+                                      })()}
                                     </p>
                                     {profile.fiscalConfig?.ivaArticle && (
                                       <p className="text-xs text-indigo-600 mt-1 font-medium">
@@ -675,7 +693,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                                   <button
                                     onClick={() => {
                                       setSelectedSector(profile.fiscalConfig?.activitySector || '');
-                                      setSelectedSubcategory(profile.fiscalConfig?.activitySubcategory || '');
+                                      setSelectedSubcategories(
+                                        profile.fiscalConfig?.activitySubcategories || 
+                                        (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
+                                      );
                                       setShowActivityModal(true);
                                     }}
                                     className="ml-3 px-4 py-2 bg-indigo-500 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-colors"
@@ -803,7 +824,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                 onClick={() => {
                   setShowActivityModal(false);
                   setSelectedSector(profile.fiscalConfig?.activitySector || '');
-                  setSelectedSubcategory(profile.fiscalConfig?.activitySubcategory || '');
+                  setSelectedSubcategories(
+                    profile.fiscalConfig?.activitySubcategories || 
+                    (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
+                  );
                   setSearchSector('');
                 }}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -842,7 +866,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                             key={sector.id}
                             onClick={() => {
                               setSelectedSector(sector.id);
-                              setSelectedSubcategory('');
+                              setSelectedSubcategories([]);
                             }}
                             className="p-4 bg-slate-50 border-2 border-slate-100 rounded-xl hover:border-indigo-500 hover:shadow-md transition-all text-left group"
                           >
@@ -868,7 +892,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                     <button
                       onClick={() => {
                         setSelectedSector('');
-                        setSelectedSubcategory('');
+                        setSelectedSubcategories([]);
                       }}
                       className="flex items-center gap-2 text-slate-500 hover:text-[#1c2938] transition-colors font-medium text-sm"
                     >
@@ -879,49 +903,67 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                     <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-5 rounded-xl text-white">
                       <h3 className="text-xl font-bold mb-1">{selectedSectorData?.name}</h3>
                       <p className="text-white/80 text-sm">
-                        Selecciona la subcategoría que mejor describe tu actividad específica
+                        Selecciona todas las subcategorías que describen tu actividad (puedes seleccionar varias)
                       </p>
                     </div>
 
-                    {/* Subcategory Selection */}
+                    {/* Subcategory Selection - Multiple Selection with Checkboxes */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {selectedSectorData?.subcategories.map((sub) => (
-                        <button
-                          key={sub.id}
-                          onClick={() => setSelectedSubcategory(sub.id)}
-                          className={`p-4 bg-white border-2 rounded-xl text-left transition-all ${
-                            selectedSubcategory === sub.id
-                              ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                              : 'border-slate-100 hover:border-indigo-300'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-bold text-[#1c2938] text-sm">{sub.name}</h4>
-                            {selectedSubcategory === sub.id && (
-                              <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-                            )}
-                          </div>
-                          {sub.description && (
-                            <p className="text-xs text-slate-500 mt-1">{sub.description}</p>
-                          )}
-                        </button>
-                      ))}
+                      {selectedSectorData?.subcategories.map((sub) => {
+                        const isSelected = selectedSubcategories.includes(sub.id);
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedSubcategories(prev => prev.filter(id => id !== sub.id));
+                              } else {
+                                setSelectedSubcategories(prev => [...prev, sub.id]);
+                              }
+                            }}
+                            className={`p-4 bg-white border-2 rounded-xl text-left transition-all ${
+                              isSelected
+                                ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                                : 'border-slate-100 hover:border-indigo-300'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                  isSelected 
+                                    ? 'bg-indigo-500 border-indigo-500' 
+                                    : 'border-slate-300 bg-white'
+                                }`}>
+                                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-[#1c2938] text-sm">{sub.name}</h4>
+                                  {sub.description && (
+                                    <p className="text-xs text-slate-500 mt-1">{sub.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    {/* Info Box about IVA Article */}
-                    {selectedSubcategory && (() => {
-                      const subcategoryData = selectedSectorData?.subcategories.find(s => s.id === selectedSubcategory);
-                      const ivaArticle = getIvaArticleForActivity(selectedSector, selectedSubcategory);
-                      const articleText = ivaArticle === 'ART_21' ? '21' : ivaArticle === 'ART_69_70' ? '69 y 70' : ivaArticle === 'ART_69' ? '69' : ivaArticle === 'ART_70' ? '70' : '69 o 70 (según el caso)';
-                      const articleDescription = ivaArticle === 'ART_21' 
-                        ? 'exportación de bienes físicos'
-                        : ivaArticle === 'ART_69_70'
-                        ? 'regla de localización de servicios (artículos 69 y 70)'
-                        : ivaArticle === 'ART_69'
-                        ? 'servicios prestados a empresarios/profesionales (artículo 69)'
-                        : ivaArticle === 'ART_70'
-                        ? 'servicios prestados a particulares (artículo 70)'
-                        : 'servicios (artículos 69 o 70 según el caso)';
+                    {/* Info Box about IVA Article - Show info for all selected */}
+                    {selectedSubcategories.length > 0 && (() => {
+                      const selectedSubs = selectedSectorData?.subcategories.filter(s => selectedSubcategories.includes(s.id)) || [];
+                      const ivaArticles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
+                      const uniqueArticles = [...new Set(ivaArticles)];
+                      const isMixed = uniqueArticles.length > 1;
+                      const mainArticle = uniqueArticles[0] || 'ART_69_70';
+                      
+                      const articleText = isMixed 
+                        ? '69-70 (Mixto según actividad)'
+                        : mainArticle === 'ART_21' ? '21' 
+                        : mainArticle === 'ART_69_70' ? '69 y 70' 
+                        : mainArticle === 'ART_69' ? '69' 
+                        : mainArticle === 'ART_70' ? '70' 
+                        : '69 o 70';
                       
                       return (
                         <div className="bg-blue-50 border-2 border-blue-200 p-5 rounded-xl">
@@ -930,12 +972,19 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                             <div>
                               <h4 className="font-bold text-blue-900 mb-2">Información Fiscal</h4>
                               <p className="text-sm text-blue-800 mb-2">
-                                Para tu actividad <strong>({subcategoryData?.name})</strong>, 
-                                aplicarán los artículos <strong>{articleText}</strong> de la Ley del IVA ({articleDescription}).
+                                Has seleccionado <strong>{selectedSubcategories.length}</strong> {selectedSubcategories.length === 1 ? 'actividad' : 'actividades'}: 
+                              </p>
+                              <ul className="text-xs text-blue-700 mb-3 list-disc list-inside space-y-1">
+                                {selectedSubs.map(sub => (
+                                  <li key={sub.id}>{sub.name}</li>
+                                ))}
+                              </ul>
+                              <p className="text-sm text-blue-800 mb-2">
+                                Aplicarán los artículos <strong>{articleText}</strong> de la Ley del IVA.
                               </p>
                               <p className="text-xs text-blue-700">
-                                {ivaArticle === 'ART_21' 
-                                  ? 'Cuando exportes bienes físicos fuera de España, la operación estará exenta de IVA español según el artículo 21.'
+                                {isMixed 
+                                  ? 'Tienes actividades mixtas. El artículo aplicable dependerá del tipo específico de servicio en cada factura.'
                                   : 'Cuando factures servicios a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente (regla de localización).'}
                               </p>
                             </div>
@@ -954,7 +1003,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                 onClick={() => {
                   setShowActivityModal(false);
                   setSelectedSector(profile.fiscalConfig?.activitySector || '');
-                  setSelectedSubcategory(profile.fiscalConfig?.activitySubcategory || '');
+                  setSelectedSubcategories(
+                    profile.fiscalConfig?.activitySubcategories || 
+                    (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
+                  );
                   setSearchSector('');
                 }}
                 className="px-6 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-lg transition-colors"
@@ -963,7 +1015,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
               </button>
               <button
                 onClick={handleSaveActivity}
-                disabled={!selectedSector || !selectedSubcategory || isSaving}
+                disabled={!selectedSector || selectedSubcategories.length === 0 || isSaving}
                 className="px-6 py-2 bg-indigo-500 text-white font-bold rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {isSaving ? (
