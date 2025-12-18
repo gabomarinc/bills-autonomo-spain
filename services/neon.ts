@@ -320,7 +320,9 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
  */
 export const updateUserProfileInDb = async (profile: UserProfile): Promise<boolean> => {
   const client = getDbClient();
-  if (!client) return false;
+  if (!client) {
+    throw new Error('No se pudo conectar a la base de datos. Verifica DATABASE_URL.');
+  }
 
   try {
     await client.connect();
@@ -356,6 +358,12 @@ export const updateUserProfileInDb = async (profile: UserProfile): Promise<boole
     return true;
   } catch (error: any) {
     console.error("Update User Error:", error);
+    // Asegurar que siempre cerramos la conexión
+    try {
+      await client.end();
+    } catch (e) {
+      // Ignorar errores al cerrar
+    }
     // Lanzar el error para que el componente pueda manejarlo
     throw new Error(error.message || 'Error al actualizar el perfil en la base de datos');
   }
