@@ -5,13 +5,15 @@ import {
   Save, Crown, Calendar, Globe,
   Coins, Sparkles, Key, Eye, EyeOff, ShieldCheck,
   Check, Zap, Loader2, CheckCircle2, XCircle, AlertTriangle, Lock, ArrowRight,
-  ChevronRight, FileText, Scale, TrendingUp, HelpCircle, Calculator, ExternalLink, RefreshCw
+  ChevronRight, FileText, Scale, TrendingUp, HelpCircle, Calculator, ExternalLink, RefreshCw,
+  Search, AlertCircle, X, ArrowLeft, Plus
 } from 'lucide-react';
 import { UserProfile, PaymentIntegration, ProfileType, SpanishFiscalConfig } from '../types';
 import { testAiConnection } from '../services/geminiService';
 import { updateUserPasswordInDb } from '../services/neon';
 import { sendPasswordChangedEmail } from '../services/resendService';
 import { useAlert } from './AlertSystem';
+import { ACTIVITY_SECTORS, getIvaArticleForActivity, ActivitySector } from '../data/activitySectors';
 
 interface UserProfileSettingsProps {
   currentUser: UserProfile;
@@ -35,6 +37,12 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
 
   // Stripe Portal State
   const [isRedirectingToPortal, setIsRedirectingToPortal] = useState(false);
+
+  // Activity Selection Modal State
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [selectedSector, setSelectedSector] = useState<string>(profile.fiscalConfig?.activitySector || '');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>(profile.fiscalConfig?.activitySubcategory || '');
+  const [searchSector, setSearchSector] = useState('');
 
   const alert = useAlert();
 
@@ -600,8 +608,58 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                          </select>
                       </div>
                       <div>
-                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Actividad Principal</label>
-                         <input type="text" value={profile.fiscalConfig?.actividadPrincipal || ''} onChange={(e) => handleFiscalChange('actividadPrincipal', e.target.value)} placeholder="Ej: Servicios profesionales" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500" />
+                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Actividad Económica</label>
+                         <div className="space-y-2">
+                            {profile.fiscalConfig?.activitySector && profile.fiscalConfig?.activitySubcategory ? (
+                              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-bold text-[#1c2938]">
+                                      {ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector)?.name || 'Rubro no encontrado'}
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                      {ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector)?.subcategories.find(sub => sub.id === profile.fiscalConfig?.activitySubcategory)?.name || 'Subcategoría no encontrada'}
+                                    </p>
+                                    {profile.fiscalConfig?.ivaArticle && (
+                                      <p className="text-xs text-indigo-600 mt-1 font-medium">
+                                        Art. {profile.fiscalConfig.ivaArticle === 'ART_21' ? '21' : profile.fiscalConfig.ivaArticle === 'ART_69_70' ? '69-70' : profile.fiscalConfig.ivaArticle === 'ART_69' ? '69' : profile.fiscalConfig.ivaArticle === 'ART_70' ? '70' : '69-70 (Mixto)'}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSector(profile.fiscalConfig?.activitySector || '');
+                                      setSelectedSubcategory(profile.fiscalConfig?.activitySubcategory || '');
+                                      setShowActivityModal(true);
+                                    }}
+                                    className="ml-3 px-4 py-2 bg-indigo-500 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-colors"
+                                  >
+                                    Cambiar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setShowActivityModal(true)}
+                                className="w-full p-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-sm font-bold text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors flex items-center justify-center gap-2"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Seleccionar actividad económica
+                              </button>
+                            )}
+                            {profile.fiscalConfig?.actividadPrincipal && (
+                              <input 
+                                type="text" 
+                                value={profile.fiscalConfig.actividadPrincipal} 
+                                onChange={(e) => handleFiscalChange('actividadPrincipal', e.target.value)} 
+                                placeholder="Descripción adicional (opcional)" 
+                                className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-medium outline-none focus:border-indigo-500" 
+                              />
+                            )}
+                         </div>
+                         <p className="text-xs text-slate-400 mt-1">
+                            Esto afectará las menciones legales en facturas futuras. Las facturas ya emitidas no cambiarán.
+                         </p>
                       </div>
                       <div>
                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Código CNAE (Opcional)</label>
@@ -684,6 +742,200 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
            </div>
         </div>
       </div>
+
+      {/* Activity Selection Modal */}
+      {showActivityModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-[#1c2938]">Seleccionar Actividad Económica</h2>
+                <p className="text-sm text-slate-500 mt-1">Esto afectará las menciones legales en facturas futuras</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowActivityModal(false);
+                  setSelectedSector(profile.fiscalConfig?.activitySector || '');
+                  setSelectedSubcategory(profile.fiscalConfig?.activitySubcategory || '');
+                  setSearchSector('');
+                }}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {(() => {
+                const selectedSectorData = ACTIVITY_SECTORS.find(s => s.id === selectedSector);
+                const filteredSectors = searchSector 
+                  ? ACTIVITY_SECTORS.filter(s => s.name.toLowerCase().includes(searchSector.toLowerCase()))
+                  : ACTIVITY_SECTORS;
+
+                if (!selectedSector) {
+                  return (
+                    <div className="space-y-4">
+                      {/* Search Bar */}
+                      <div className="relative">
+                        <Search className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={searchSector}
+                          onChange={(e) => setSearchSector(e.target.value)}
+                          placeholder="Buscar rubro (ej: Tecnología, Diseño, Consultoría...)"
+                          className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-indigo-500 transition-all"
+                        />
+                      </div>
+
+                      {/* Sector Selection */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {filteredSectors.map((sector) => (
+                          <button
+                            key={sector.id}
+                            onClick={() => {
+                              setSelectedSector(sector.id);
+                              setSelectedSubcategory('');
+                            }}
+                            className="p-4 bg-slate-50 border-2 border-slate-100 rounded-xl hover:border-indigo-500 hover:shadow-md transition-all text-left group"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="font-bold text-[#1c2938] text-sm group-hover:text-indigo-600 transition-colors">
+                                {sector.name}
+                              </h3>
+                              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              {sector.subcategories.length} {sector.subcategories.length === 1 ? 'opción' : 'opciones'}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {/* Back Button */}
+                    <button
+                      onClick={() => {
+                        setSelectedSector('');
+                        setSelectedSubcategory('');
+                      }}
+                      className="flex items-center gap-2 text-slate-500 hover:text-[#1c2938] transition-colors font-medium text-sm"
+                    >
+                      <ArrowLeft className="w-4 h-4" /> Volver a rubros
+                    </button>
+
+                    {/* Sector Info */}
+                    <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-5 rounded-xl text-white">
+                      <h3 className="text-xl font-bold mb-1">{selectedSectorData?.name}</h3>
+                      <p className="text-white/80 text-sm">
+                        Selecciona la subcategoría que mejor describe tu actividad específica
+                      </p>
+                    </div>
+
+                    {/* Subcategory Selection */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {selectedSectorData?.subcategories.map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={() => setSelectedSubcategory(sub.id)}
+                          className={`p-4 bg-white border-2 rounded-xl text-left transition-all ${
+                            selectedSubcategory === sub.id
+                              ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                              : 'border-slate-100 hover:border-indigo-300'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-bold text-[#1c2938] text-sm">{sub.name}</h4>
+                            {selectedSubcategory === sub.id && (
+                              <CheckCircle2 className="w-5 h-5 text-indigo-500" />
+                            )}
+                          </div>
+                          {sub.description && (
+                            <p className="text-xs text-slate-500 mt-1">{sub.description}</p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Info Box about IVA Article */}
+                    {selectedSubcategory && (() => {
+                      const subcategoryData = selectedSectorData?.subcategories.find(s => s.id === selectedSubcategory);
+                      const ivaArticle = getIvaArticleForActivity(selectedSector, selectedSubcategory);
+                      const articleText = ivaArticle === 'ART_21' ? '21' : ivaArticle === 'ART_69_70' ? '69 y 70' : ivaArticle === 'ART_69' ? '69' : ivaArticle === 'ART_70' ? '70' : '69 o 70 (según el caso)';
+                      const articleDescription = ivaArticle === 'ART_21' 
+                        ? 'exportación de bienes físicos'
+                        : ivaArticle === 'ART_69_70'
+                        ? 'regla de localización de servicios (artículos 69 y 70)'
+                        : ivaArticle === 'ART_69'
+                        ? 'servicios prestados a empresarios/profesionales (artículo 69)'
+                        : ivaArticle === 'ART_70'
+                        ? 'servicios prestados a particulares (artículo 70)'
+                        : 'servicios (artículos 69 o 70 según el caso)';
+                      
+                      return (
+                        <div className="bg-blue-50 border-2 border-blue-200 p-5 rounded-xl">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="font-bold text-blue-900 mb-2">Información Fiscal</h4>
+                              <p className="text-sm text-blue-800 mb-2">
+                                Para tu actividad <strong>({subcategoryData?.name})</strong>, 
+                                aplicarán los artículos <strong>{articleText}</strong> de la Ley del IVA ({articleDescription}).
+                              </p>
+                              <p className="text-xs text-blue-700">
+                                {ivaArticle === 'ART_21' 
+                                  ? 'Cuando exportes bienes físicos fuera de España, la operación estará exenta de IVA español según el artículo 21.'
+                                  : 'Cuando factures servicios a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente (regla de localización).'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowActivityModal(false);
+                  setSelectedSector(profile.fiscalConfig?.activitySector || '');
+                  setSelectedSubcategory(profile.fiscalConfig?.activitySubcategory || '');
+                  setSearchSector('');
+                }}
+                className="px-6 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveActivity}
+                disabled={!selectedSector || !selectedSubcategory || isSaving}
+                className="px-6 py-2 bg-indigo-500 text-white font-bold rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Guardar Actividad
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
