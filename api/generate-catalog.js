@@ -1,4 +1,4 @@
-// Importación dinámica para mejor compatibilidad con Vercel
+// Constantes
 const AI_ERROR_BLOCKED = 'AI_BLOCKED_MISSING_KEYS';
 
 export default async function handler(req, res) {
@@ -16,13 +16,32 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Importación dinámica para evitar problemas en Vercel
+    // Importación dinámica - intentar con diferentes rutas según el entorno
     let geminiService;
     try {
+      // En Vercel, los archivos TypeScript se compilan a .js en .vercel/output
+      // Intentar importar desde la ruta compilada
       geminiService = await import('../services/geminiService.js');
-    } catch (importError) {
-      console.error('Error importing geminiService:', importError);
-      // Si falla la importación, devolver error pero permitir continuar
+    } catch (importError1) {
+      try {
+        // Fallback: intentar sin extensión
+        geminiService = await import('../services/geminiService');
+      } catch (importError2) {
+        console.error('Error importing geminiService (attempt 1):', importError1);
+        console.error('Error importing geminiService (attempt 2):', importError2);
+        // Si falla la importación, devolver error pero permitir continuar
+        return res.status(503).json({ 
+          error: 'Servicio de IA temporalmente no disponible. Puedes continuar sin generar el catálogo automáticamente.',
+          items: [],
+          requiresApiKey: false,
+          canContinue: true
+        });
+      }
+    }
+
+    // Verificar que la función existe
+    if (!geminiService || !geminiService.suggestCatalogItems) {
+      console.error('suggestCatalogItems no encontrado en geminiService');
       return res.status(503).json({ 
         error: 'Servicio de IA temporalmente no disponible. Puedes continuar sin generar el catálogo automáticamente.',
         items: [],
