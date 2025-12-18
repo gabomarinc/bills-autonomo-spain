@@ -73,7 +73,7 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
           baseCotizacionSS: baseCotizacion,
           fechaAltaAutonomo: fechaAlta,
           tipoReduccion,
-          bonificacionReduccion: aplicaTarifaPlana(fechaAlta) && tipoReduccion === 'TARIFA_PLANA'
+          bonificacionReduccion: (aplicaTarifaPlana(fechaAlta) && tipoReduccion === 'TARIFA_PLANA') ? 'TARIFA_PLANA' : tipoReduccion
         }
       };
       await onUpdateProfile(updated);
