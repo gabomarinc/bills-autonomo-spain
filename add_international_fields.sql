@@ -26,3 +26,4 @@ ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'España';
 -- Índice para búsquedas por país del cliente
 CREATE INDEX IF NOT EXISTS idx_invoices_client_country ON invoices(user_id, client_country);
 CREATE INDEX IF NOT EXISTS idx_invoices_operation_type ON invoices(user_id, operation_type);
+

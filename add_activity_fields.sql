@@ -27,3 +27,4 @@ ADD COLUMN IF NOT EXISTS iva_article TEXT;
 --   - ART_69: Servicios prestados a empresarios/profesionales
 --   - ART_70: Servicios prestados a particulares
 --   - MIXTO: Actividades que pueden requerir ambos artículos según el caso
+

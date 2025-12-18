@@ -9,6 +9,7 @@ import {
 import { Invoice, ParsedInvoiceData, UserProfile, InvoiceItem, InvoiceStatus, CatalogItem } from '../types';
 import { parseInvoiceRequest, getDiscountRecommendation, AI_ERROR_BLOCKED } from '../services/geminiService';
 import { getLegalMentionByIvaArticle } from '../data/activitySectors';
+import { getExchangeRateForInvoiceDate, convertToEur, SUPPORTED_CURRENCIES } from '../services/exchangeRateService';
 
 interface InvoiceWizardProps {
   currentUser: UserProfile;
@@ -80,6 +81,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     legalMention?: string;
     items: InvoiceItem[];
     currency: string;
+    invoiceCurrency?: string; // Moneda de facturación (puede ser diferente de currency para compatibilidad)
     notes: string;
     validityDate: string; 
   }>({
@@ -91,9 +93,15 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     legalMention: initialData?.legalMention,
     items: initialData?.items || [],
     currency: initialData?.currency || currentUser.defaultCurrency || 'EUR',
+    invoiceCurrency: initialData?.invoiceCurrency || initialData?.currency || currentUser.defaultCurrency || 'EUR',
     notes: initialData?.notes || '', 
     validityDate: initialData ? new Date(initialData.date).toISOString().split('T')[0] : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
+
+  // Multicurrency state
+  const [exchangeRate, setExchangeRate] = useState<{ rate: number; date: string; source: string } | null>(null);
+  const [baseAmountEur, setBaseAmountEur] = useState<number | null>(null);
+  const [isLoadingExchangeRate, setIsLoadingExchangeRate] = useState(false);
 
   const [generatedId, setGeneratedId] = useState(initialData?.id || '');
   const [finalInvoiceObj, setFinalInvoiceObj] = useState<Invoice | null>(null); 
@@ -164,6 +172,62 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       }
     }
   }, [draft.clientCountry]);
+
+  // Efecto para calcular conversión a EUR cuando cambia la moneda o el total
+  useEffect(() => {
+    const calculateExchangeRate = async () => {
+      const invoiceCurrency = draft.invoiceCurrency || draft.currency;
+      
+      // Si es EUR, no hay conversión
+      if (invoiceCurrency.toUpperCase() === 'EUR') {
+        setExchangeRate(null);
+        setBaseAmountEur(null);
+        return;
+      }
+
+      // Calcular total actual
+      const subtotal = draft.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const discount = subtotal * (discountRate / 100);
+      const totalBeforeTax = subtotal - discount;
+      const taxAmount = applyIva ? totalBeforeTax * (getIvaRate(ivaType) / 100) : 0;
+      const total = totalBeforeTax + taxAmount;
+
+      if (total <= 0) {
+        setExchangeRate(null);
+        setBaseAmountEur(null);
+        return;
+      }
+
+      setIsLoadingExchangeRate(true);
+      try {
+        // Usar fecha de factura o fecha actual
+        const invoiceDate = draft.validityDate || new Date().toISOString().split('T')[0];
+        const rateData = await getExchangeRateForInvoiceDate(invoiceCurrency, invoiceDate);
+        
+        if (rateData) {
+          const converted = await convertToEur(total, invoiceCurrency, invoiceDate);
+          
+          setExchangeRate({
+            rate: rateData.rateToEur,
+            date: rateData.rateDate,
+            source: rateData.source
+          });
+          setBaseAmountEur(converted.amountEur);
+        } else {
+          setExchangeRate(null);
+          setBaseAmountEur(null);
+        }
+      } catch (error) {
+        console.error('Error calculating exchange rate:', error);
+        setExchangeRate(null);
+        setBaseAmountEur(null);
+      } finally {
+        setIsLoadingExchangeRate(false);
+      }
+    };
+
+    calculateExchangeRate();
+  }, [draft.invoiceCurrency, draft.currency, draft.items, draft.validityDate, discountRate, applyIva, ivaType]);
 
   // Sync IVA/IRPF & discount visibility with existing items on load
   useEffect(() => {
@@ -415,6 +479,9 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
         newId = generateUniqueId();
     }
 
+    const invoiceCurrency = draft.invoiceCurrency || draft.currency;
+    const invoiceDate = initialData?.date || draft.validityDate || new Date().toISOString().split('T')[0];
+    
     const finalInvoice: Invoice = {
       id: newId,
       clientName: draft.clientName,
@@ -423,7 +490,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       clientCountry: draft.clientCountry || 'España',
       operationType: draft.operationType || 'NACIONAL',
       legalMention: draft.operationType && draft.operationType !== 'NACIONAL' ? getLegalMention(draft.operationType) : undefined,
-      date: initialData?.date || new Date().toISOString(), 
+      date: invoiceDate, 
       items: draft.items,
       total: totals.total,
       discountRate: totals.effectiveRate,
@@ -435,7 +502,12 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       status: isOffline ? 'PendingSync' : targetStatus,
       currency: draft.currency,
       type: docType,
-      timeline: initialData?.timeline 
+      timeline: initialData?.timeline,
+      // Multicurrency fields
+      invoiceCurrency: invoiceCurrency,
+      baseAmountEur: baseAmountEur || (invoiceCurrency.toUpperCase() === 'EUR' ? totals.total : undefined),
+      exchangeRateBce: exchangeRate?.rate || undefined,
+      exchangeRateDate: exchangeRate?.date || undefined
     };
     
     await onSave(finalInvoice);
@@ -783,7 +855,21 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
 
                       <div className="flex gap-2">
                          <div className="w-20"><input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value))} className="w-full p-2 bg-slate-50 rounded-lg text-sm text-center outline-none focus:ring-1 focus:ring-[#27bea5]" placeholder="Cant" /></div>
-                         <div className="flex-1 relative"><span className="absolute left-3 top-2 text-slate-400 text-sm">{draft.currency === 'EUR' ? '€' : (draft.currency === 'USD' ? '$' : '€')}</span><input type="number" value={item.price} onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value))} className="w-full p-2 pl-6 bg-slate-50 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#27bea5]" placeholder="Precio" /></div>
+                         <div className="flex-1 relative">
+                           <span className="absolute left-3 top-2 text-slate-400 text-sm">
+                             {(() => {
+                               const currency = draft.invoiceCurrency || draft.currency;
+                               return SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
+                             })()}
+                           </span>
+                           <input 
+                             type="number" 
+                             value={item.price} 
+                             onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value))} 
+                             className="w-full p-2 pl-6 bg-slate-50 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#27bea5]" 
+                             placeholder="Precio" 
+                           />
+                         </div>
                       </div>
                     </div>
                     <button onClick={() => removeItem(idx)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
@@ -803,11 +889,41 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                    <input type="date" value={draft.validityDate} onChange={(e) => setDraft({...draft, validityDate: e.target.value})} className="w-full p-2 rounded-xl border border-slate-200 bg-slate-50 outline-none text-sm" />
                  </div>
                  <div>
-                   <label className="block text-xs font-bold text-slate-500 mb-1">Moneda</label>
-                   <select value={draft.currency} onChange={(e) => setDraft({...draft, currency: e.target.value})} className="w-full p-2 rounded-xl border border-slate-200 bg-slate-50 outline-none text-sm">
-                         <option value="EUR">EUR - Euro</option>
-                         <option value="USD">USD - Dólar Americano</option>
+                   <label className="block text-xs font-bold text-slate-500 mb-1">Moneda de Facturación</label>
+                   <select 
+                     value={draft.invoiceCurrency || draft.currency} 
+                     onChange={(e) => {
+                       const newCurrency = e.target.value;
+                       setDraft({...draft, currency: newCurrency, invoiceCurrency: newCurrency});
+                     }} 
+                     className="w-full p-2 rounded-xl border border-slate-200 bg-slate-50 outline-none text-sm"
+                   >
+                     {SUPPORTED_CURRENCIES.map(curr => (
+                       <option key={curr.code} value={curr.code}>
+                         {curr.code} - {curr.name} ({curr.symbol})
+                       </option>
+                     ))}
                    </select>
+                   {/* Mostrar conversión a EUR si no es EUR */}
+                   {(draft.invoiceCurrency || draft.currency).toUpperCase() !== 'EUR' && baseAmountEur && exchangeRate && (
+                     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                       <div className="flex items-center justify-between text-xs">
+                         <span className="text-blue-700 font-medium">Equivalente en EUR:</span>
+                         <span className="text-blue-900 font-bold">€{baseAmountEur.toFixed(2)}</span>
+                       </div>
+                       <div className="mt-1 text-[10px] text-blue-600">
+                         Tipo de cambio: 1 {draft.invoiceCurrency || draft.currency} = {exchangeRate.rate.toFixed(4)} EUR
+                         <br />
+                         <span className="text-blue-500">Fuente: {exchangeRate.source} ({exchangeRate.date})</span>
+                       </div>
+                       {isLoadingExchangeRate && (
+                         <div className="mt-1 flex items-center gap-1 text-[10px] text-blue-600">
+                           <Loader2 className="w-3 h-3 animate-spin" />
+                           Obteniendo tipo de cambio...
+                         </div>
+                       )}
+                     </div>
+                   )}
                  </div>
               </div>
               <div>
@@ -827,7 +943,19 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Estimado</p>
-                      <p className="text-3xl font-bold">{draft.currency === 'EUR' ? '€' : (draft.currency === 'USD' ? '$' : '€')} {totals.total.toFixed(2)}</p>
+                      <p className="text-3xl font-bold">
+                        {(() => {
+                          const currency = draft.invoiceCurrency || draft.currency;
+                          const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
+                          return symbol;
+                        })()} {totals.total.toFixed(2)}
+                      </p>
+                      {/* Mostrar conversión a EUR si no es EUR */}
+                      {(draft.invoiceCurrency || draft.currency).toUpperCase() !== 'EUR' && baseAmountEur && (
+                        <p className="text-sm text-slate-400 mt-1">
+                          ≈ €{baseAmountEur.toFixed(2)}
+                        </p>
+                      )}
                     </div>
                   </div>
 

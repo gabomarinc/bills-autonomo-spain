@@ -11,6 +11,7 @@ import { Invoice, UserProfile, TimelineEvent, InvoiceStatus } from '../types';
 import DocumentTimeline from './DocumentTimeline';
 import { sendEmail, generateDocumentHtml, getEmailStatus } from '../services/resendService';
 import { useAlert } from './AlertSystem';
+import { convertToEur, SUPPORTED_CURRENCIES } from '../services/exchangeRateService';
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -30,6 +31,24 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentCurrency, setPaymentCurrency] = useState(invoice.invoiceCurrency || invoice.currency || 'EUR');
+  const [paymentExchangeRate, setPaymentExchangeRate] = useState<number | null>(null);
+  const [paymentReceivedEur, setPaymentReceivedEur] = useState<number | null>(null);
+  const [exchangeDifference, setExchangeDifference] = useState<number | null>(null);
+  const [isCalculatingPayment, setIsCalculatingPayment] = useState(false);
+
+  // Reset payment modal state when it opens
+  useEffect(() => {
+    if (isPaymentModalOpen) {
+      setPaymentCurrency(invoice.invoiceCurrency || invoice.currency || 'EUR');
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentAmount('');
+      setPaymentReceivedEur(null);
+      setPaymentExchangeRate(null);
+      setExchangeDifference(null);
+    }
+  }, [isPaymentModalOpen, invoice.invoiceCurrency, invoice.currency]);
 
   // Ref for PDF Generation
   const documentRef = useRef<HTMLDivElement>(null);
@@ -106,7 +125,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   }, 0);
 
   const amountPaid = invoice.amountPaid || 0;
-  const remainingBalance = Math.max(0, invoice.total - amountPaid);
+  // Para facturas en otra moneda, usar baseAmountEur y paymentReceivedEur para cálculos
+  const invoiceTotal = invoice.baseAmountEur || invoice.total;
+  const paidEur = invoice.paymentReceivedEur || (invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' ? 0 : amountPaid);
+  const remainingBalance = Math.max(0, invoiceTotal - paidEur);
   
   const isQuote = invoice.type === 'Quote';
   const branding = issuer.branding || { primaryColor: '#27bea5', templateStyle: 'Modern' };
@@ -884,14 +906,25 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                         <Wallet className="w-8 h-8" />
                     </div>
                     <h3 className="text-xl font-bold text-[#1c2938]">Registrar Pago</h3>
-                    <p className="text-sm text-slate-500 mt-1">Saldo pendiente: {invoice.currency} {remainingBalance.toFixed(2)}</p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Saldo pendiente: {(() => {
+                        const currency = invoice.invoiceCurrency || invoice.currency;
+                        const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
+                        return `${symbol} ${remainingBalance.toFixed(2)}`;
+                      })()}
+                      {invoice.baseAmountEur && (
+                        <span className="block mt-1 text-xs">(€{invoice.baseAmountEur.toFixed(2)} para declaración)</span>
+                      )}
+                    </p>
                 </div>
 
                 <div className="space-y-4">
                     <div>
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Monto Recibido</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-4 text-slate-400 font-bold">$</span>
+                            <span className="absolute left-4 top-4 text-slate-400 font-bold">
+                              {SUPPORTED_CURRENCIES.find(c => c.code === paymentCurrency)?.symbol || '€'}
+                            </span>
                             <input 
                                 type="number" 
                                 value={paymentAmount}
@@ -902,12 +935,126 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                             />
                         </div>
                     </div>
+
+                    {/* Selector de moneda del pago */}
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Moneda del Pago</label>
+                        <select 
+                            value={paymentCurrency}
+                            onChange={(e) => {
+                              setPaymentCurrency(e.target.value);
+                              setPaymentReceivedEur(null);
+                              setPaymentExchangeRate(null);
+                              setExchangeDifference(null);
+                            }}
+                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-green-500 text-sm"
+                        >
+                            {SUPPORTED_CURRENCIES.map(curr => (
+                                <option key={curr.code} value={curr.code}>
+                                    {curr.code} - {curr.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Fecha del pago */}
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Fecha de Recepción</label>
+                        <input 
+                            type="date" 
+                            value={paymentDate}
+                            onChange={(e) => setPaymentDate(e.target.value)}
+                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-green-500 text-sm"
+                        />
+                    </div>
+
+                    {/* Mostrar conversión a EUR si es necesario */}
+                    {paymentAmount && parseFloat(paymentAmount) > 0 && paymentCurrency.toUpperCase() !== 'EUR' && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                        {isCalculatingPayment ? (
+                          <div className="flex items-center gap-2 text-blue-700 text-sm">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Calculando conversión...
+                          </div>
+                        ) : paymentReceivedEur ? (
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between text-blue-800">
+                              <span className="font-medium">Equivalente en EUR:</span>
+                              <span className="font-bold">€{paymentReceivedEur.toFixed(2)}</span>
+                            </div>
+                            {paymentExchangeRate && (
+                              <div className="text-blue-600">
+                                Tipo de cambio: 1 {paymentCurrency} = {paymentExchangeRate.toFixed(4)} EUR
+                              </div>
+                            )}
+                            {invoice.baseAmountEur && exchangeDifference !== null && (
+                              <div className={`mt-2 pt-2 border-t border-blue-200 ${exchangeDifference !== 0 ? 'text-orange-700' : 'text-blue-700'}`}>
+                                <div className="flex justify-between font-medium">
+                                  <span>Diferencia de cambio:</span>
+                                  <span>€{exchangeDifference.toFixed(2)}</span>
+                                </div>
+                                {exchangeDifference !== 0 && (
+                                  <p className="text-[10px] mt-1 italic">
+                                    Esta diferencia se registrará como gasto financiero deducible
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setIsCalculatingPayment(true);
+                              try {
+                                const converted = await convertToEur(parseFloat(paymentAmount), paymentCurrency, paymentDate);
+                                setPaymentReceivedEur(converted.amountEur);
+                                setPaymentExchangeRate(converted.rate?.rateToEur || null);
+                                
+                                if (invoice.baseAmountEur) {
+                                  setExchangeDifference(invoice.baseAmountEur - converted.amountEur);
+                                }
+                              } catch (error) {
+                                alert.addToast('error', 'Error', 'No se pudo calcular la conversión. Verifica tu conexión.');
+                              } finally {
+                                setIsCalculatingPayment(false);
+                              }
+                            }}
+                            className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                          >
+                            Calcular Conversión a EUR
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Mostrar info si la factura es en otra moneda */}
+                    {invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && invoice.baseAmountEur && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                        <p className="font-medium mb-1">⚠️ Factura en {invoice.invoiceCurrency}</p>
+                        <p>Facturado: {invoice.invoiceCurrency} {invoice.total.toFixed(2)}</p>
+                        <p>Para declaración: €{invoice.baseAmountEur.toFixed(2)}</p>
+                        {invoice.exchangeRateBce && (
+                          <p className="text-amber-600 mt-1">
+                            Tipo de cambio usado: {invoice.exchangeRateBce.toFixed(4)} (fecha: {invoice.exchangeRateDate})
+                          </p>
+                        )}
+                      </div>
+                    )}
                     
                     <button 
                         onClick={handleRegisterPayment}
-                        className="w-full py-4 bg-green-500 text-white rounded-2xl font-bold text-lg hover:bg-green-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 active:translate-y-0"
+                        disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isCalculatingPayment}
+                        className="w-full py-4 bg-green-500 text-white rounded-2xl font-bold text-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2"
                     >
-                        Confirmar
+                        {isCalculatingPayment ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Calculando...
+                          </>
+                        ) : (
+                          'Confirmar Pago'
+                        )}
                     </button>
                 </div>
             </div>

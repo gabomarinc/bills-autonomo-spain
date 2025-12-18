@@ -12,3 +12,4 @@ ADD COLUMN IF NOT EXISTS contact_name TEXT;
 
 -- Comentario: El campo contact_name almacena el nombre de la persona de contacto
 -- dentro de la empresa/cliente, diferente del nombre de la empresa (name)
+

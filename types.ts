@@ -249,6 +249,17 @@ export interface Invoice {
   successProbability?: number; // 0-100 (Only for Quotes)
   receiptUrl?: string; // New: For Expense receipts
   resendEmailId?: string; // New: Track email status via Resend
+
+  // Multicurrency Support (NEW)
+  invoiceCurrency?: string; // Moneda en que se factura (EUR, USD, GBP, etc.) - por defecto igual a currency
+  baseAmountEur?: number; // Importe convertido a EUR usando tipo de cambio oficial del BCE
+  exchangeRateBce?: number; // Tipo de cambio oficial del BCE usado
+  exchangeRateDate?: string; // Fecha del tipo de cambio (fecha de factura o anterior)
+  paymentReceivedEur?: number; // Lo que realmente llegó al banco en EUR
+  paymentReceivedOriginal?: number; // Lo que llegó en moneda original
+  paymentExchangeRate?: number; // Tipo de cambio que aplicó el banco
+  paymentDate?: string; // Fecha en que se recibió el pago
+  exchangeDifference?: number; // Diferencia entre factura y pago (base_amount_eur - payment_received_eur) - gasto financiero deducible
 }
 
 export interface ParsedInvoiceData {

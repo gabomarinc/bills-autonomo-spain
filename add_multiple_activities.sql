@@ -10,3 +10,4 @@ ADD COLUMN IF NOT EXISTS activity_subcategories JSONB;
 -- - activity_subcategories: Array JSON de IDs de subcategorías (ej: ["desarrollo-web", "desarrollo-movil"])
 -- - Se mantiene activity_subcategory para compatibilidad hacia atrás (primera subcategoría del array)
 -- - El sistema calculará iva_article como 'MIXTO' si hay múltiples artículos diferentes
+

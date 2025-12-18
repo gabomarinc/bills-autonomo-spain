@@ -550,7 +550,17 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
         status: row.status,
         date: row.date,
         type: row.type,
-        amountPaid: row.data.amountPaid ? parseFloat(row.data.amountPaid) : 0 
+        amountPaid: row.data?.amountPaid ? parseFloat(row.data.amountPaid) : 0,
+        // Multicurrency fields
+        invoiceCurrency: row.invoice_currency || row.data?.invoiceCurrency || row.currency || 'EUR',
+        baseAmountEur: row.base_amount_eur ? parseFloat(row.base_amount_eur) : (row.data?.baseAmountEur ? parseFloat(row.data.baseAmountEur) : undefined),
+        exchangeRateBce: row.exchange_rate_bce ? parseFloat(row.exchange_rate_bce) : (row.data?.exchangeRateBce ? parseFloat(row.data.exchangeRateBce) : undefined),
+        exchangeRateDate: row.exchange_rate_date || row.data?.exchangeRateDate,
+        paymentReceivedEur: row.payment_received_eur ? parseFloat(row.payment_received_eur) : (row.data?.paymentReceivedEur ? parseFloat(row.data.paymentReceivedEur) : undefined),
+        paymentReceivedOriginal: row.payment_received_original ? parseFloat(row.payment_received_original) : (row.data?.paymentReceivedOriginal ? parseFloat(row.data.paymentReceivedOriginal) : undefined),
+        paymentExchangeRate: row.payment_exchange_rate ? parseFloat(row.payment_exchange_rate) : (row.data?.paymentExchangeRate ? parseFloat(row.data.paymentExchangeRate) : undefined),
+        paymentDate: row.payment_date || row.data?.paymentDate,
+        exchangeDifference: row.exchange_difference ? parseFloat(row.exchange_difference) : (row.data?.exchangeDifference ? parseFloat(row.data.exchangeDifference) : undefined)
       }));
       allDocs = [...allDocs, ...mappedInvoices];
     }
@@ -812,13 +822,30 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
         await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_country TEXT DEFAULT \'España\';');
         await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS operation_type TEXT DEFAULT \'NACIONAL\';');
         await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS legal_mention TEXT;');
+        // Multicurrency fields
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_currency TEXT DEFAULT \'EUR\';');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS base_amount_eur NUMERIC;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS exchange_rate_bce NUMERIC;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_received_eur NUMERIC;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_received_original NUMERIC;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_exchange_rate NUMERIC;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_date DATE;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS exchange_difference NUMERIC;');
       } catch (e) {
         // Columns might already exist, ignore
       }
 
       const query = `
-        INSERT INTO invoices (id, user_id, client_name, client_tax_id, client_email, client_address, client_country, operation_type, legal_mention, total, status, date, type, currency, iva_amount, iva_repercutido, irpf_retention, irpf_amount, discount_rate, amount_paid, data)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        INSERT INTO invoices (
+          id, user_id, client_name, client_tax_id, client_email, client_address, 
+          client_country, operation_type, legal_mention, 
+          total, status, date, type, currency, 
+          invoice_currency, base_amount_eur, exchange_rate_bce, exchange_rate_date,
+          payment_received_eur, payment_received_original, payment_exchange_rate, payment_date, exchange_difference,
+          iva_amount, iva_repercutido, irpf_retention, irpf_amount, discount_rate, amount_paid, data
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
         ON CONFLICT (id) DO UPDATE SET 
           user_id = EXCLUDED.user_id, client_name = EXCLUDED.client_name, client_tax_id = EXCLUDED.client_tax_id,
           client_email = EXCLUDED.client_email, client_address = EXCLUDED.client_address,
@@ -826,6 +853,15 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
           operation_type = COALESCE(EXCLUDED.operation_type, invoices.operation_type, 'NACIONAL'),
           legal_mention = EXCLUDED.legal_mention,
           total = EXCLUDED.total, status = EXCLUDED.status, date = EXCLUDED.date, currency = EXCLUDED.currency,
+          invoice_currency = COALESCE(EXCLUDED.invoice_currency, invoices.invoice_currency, EXCLUDED.currency, 'EUR'),
+          base_amount_eur = EXCLUDED.base_amount_eur,
+          exchange_rate_bce = EXCLUDED.exchange_rate_bce,
+          exchange_rate_date = EXCLUDED.exchange_rate_date,
+          payment_received_eur = EXCLUDED.payment_received_eur,
+          payment_received_original = EXCLUDED.payment_received_original,
+          payment_exchange_rate = EXCLUDED.payment_exchange_rate,
+          payment_date = EXCLUDED.payment_date,
+          exchange_difference = EXCLUDED.exchange_difference,
           iva_amount = EXCLUDED.iva_amount, iva_repercutido = EXCLUDED.iva_repercutido,
           irpf_retention = EXCLUDED.irpf_retention, irpf_amount = EXCLUDED.irpf_amount,
           discount_rate = EXCLUDED.discount_rate, amount_paid = EXCLUDED.amount_paid, data = EXCLUDED.data, updated_at = NOW();
@@ -835,6 +871,15 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
         invoice.clientEmail || null, invoice.clientAddress || null,
         invoice.clientCountry || 'España', invoice.operationType || 'NACIONAL', invoice.legalMention || null,
         invoice.total, invoice.status, invoice.date, invoice.type, invoice.currency || 'EUR',
+        invoice.invoiceCurrency || invoice.currency || 'EUR',
+        invoice.baseAmountEur || null,
+        invoice.exchangeRateBce || null,
+        invoice.exchangeRateDate || null,
+        invoice.paymentReceivedEur || null,
+        invoice.paymentReceivedOriginal || null,
+        invoice.paymentExchangeRate || null,
+        invoice.paymentDate || null,
+        invoice.exchangeDifference || null,
         invoice.ivaAmount || 0, invoice.ivaRepercutido || 0,
         invoice.irpfRetention || 0, invoice.irpfAmount || 0,
         invoice.discountRate || 0, invoice.amountPaid || 0,
