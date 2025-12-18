@@ -90,17 +90,23 @@ const updateUserProfileInDb = async (profile) => {
         try {
           await client.query('ALTER TABLE autonomo_config ADD COLUMN IF NOT EXISTS activity_sector TEXT;');
           await client.query('ALTER TABLE autonomo_config ADD COLUMN IF NOT EXISTS activity_subcategory TEXT;');
+          await client.query('ALTER TABLE autonomo_config ADD COLUMN IF NOT EXISTS activity_subcategories JSONB;');
           await client.query('ALTER TABLE autonomo_config ADD COLUMN IF NOT EXISTS iva_article TEXT;');
         } catch (e) {
           // Columns might already exist, ignore
         }
 
+        // Guardar activitySubcategories como JSON array
+        const activitySubcategoriesJson = fiscalConfig.activitySubcategories 
+          ? JSON.stringify(fiscalConfig.activitySubcategories) 
+          : null;
+
         await client.query(
           `INSERT INTO autonomo_config (
             user_id, base_cotizacion, fecha_alta, bonificacion_reduccion, tipo_reduccion,
-            regimen_fiscal, actividad_principal, codigo_cnae, activity_sector, activity_subcategory, iva_article,
+            regimen_fiscal, actividad_principal, codigo_cnae, activity_sector, activity_subcategory, activity_subcategories, iva_article,
             iva_regimen, prorrateo_iva, porcentaje_prorrateo, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
           ON CONFLICT (user_id) DO UPDATE SET
             base_cotizacion = EXCLUDED.base_cotizacion,
             fecha_alta = EXCLUDED.fecha_alta,
@@ -111,6 +117,7 @@ const updateUserProfileInDb = async (profile) => {
             codigo_cnae = EXCLUDED.codigo_cnae,
             activity_sector = EXCLUDED.activity_sector,
             activity_subcategory = EXCLUDED.activity_subcategory,
+            activity_subcategories = EXCLUDED.activity_subcategories,
             iva_article = EXCLUDED.iva_article,
             iva_regimen = EXCLUDED.iva_regimen,
             prorrateo_iva = EXCLUDED.prorrateo_iva,
@@ -127,6 +134,7 @@ const updateUserProfileInDb = async (profile) => {
             fiscalConfig.codigoCnae || null,
             fiscalConfig.activitySector || null,
             fiscalConfig.activitySubcategory || null,
+            activitySubcategoriesJson,
             fiscalConfig.ivaArticle || null,
             fiscalConfig.ivaRegimen || 'GENERAL',
             fiscalConfig.prorrateoIVA || false,

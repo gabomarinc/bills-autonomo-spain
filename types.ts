@@ -113,8 +113,9 @@ export interface SpanishFiscalConfig {
   actividadPrincipal: string; // Código CNAE o descripción
   codigoCnae?: string; // Código CNAE específico
   activitySector?: string; // Rubro principal (ej: "Tecnología y Software")
-  activitySubcategory?: string; // Subcategoría específica (ej: "Desarrollo Web")
-  ivaArticle?: 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO'; // Artículo de IVA aplicable
+  activitySubcategory?: string; // Subcategoría específica (ej: "Desarrollo Web") - DEPRECATED: usar activitySubcategories
+  activitySubcategories?: string[]; // Múltiples subcategorías específicas (ej: ["Desarrollo Web", "Desarrollo Móvil"])
+  ivaArticle?: 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO'; // Artículo de IVA aplicable (se calcula según las actividades)
   fechaAltaAutonomo?: string; // Para calcular tarifa plana
   baseCotizacionSS?: number; // Base de cotización Seguridad Social
   bonificacionReduccion?: 'TARIFA_PLANA' | 'REDUCCION_50' | 'REDUCCION_25' | 'NINGUNA';

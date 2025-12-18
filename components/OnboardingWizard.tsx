@@ -41,7 +41,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
 
   // Step 2 State - Activity Selection (NEW)
   const [selectedSector, setSelectedSector] = useState<string>('');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [searchSector, setSearchSector] = useState('');
 
   // Step 3 State - Branding (renumbered from Step 2)
@@ -92,23 +92,51 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
   };
 
   const generateCatalog = async () => {
-    if (!businessDesc) return;
+    if (!businessDesc || !businessDesc.trim()) {
+      alert('Por favor ingresa una descripción de tu negocio.');
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await fetch('/api/generate-catalog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessDescription: businessDesc })
+        body: JSON.stringify({ businessDescription: businessDesc.trim() })
       });
+      
+      // Verificar si la respuesta es JSON válido
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        alert('Error del servidor. Por favor intenta más tarde o contacta a soporte.');
+        return;
+      }
+      
       const data = await response.json();
+      
+      if (!response.ok) {
+        // Manejar errores del servidor
+        if (data.requiresApiKey) {
+          alert('API Key de IA no configurada. Puedes continuar sin generar el catálogo automáticamente.');
+        } else {
+          alert(data.error || 'Error al generar catálogo. Intenta más tarde.');
+        }
+        return;
+      }
+      
       if (data.items && data.items.length > 0) {
         setCatalogItems(data.items);
       } else {
-        alert('No se pudieron generar servicios. Intenta con una descripción más detallada.');
+        alert(data.error || 'No se pudieron generar servicios. Intenta con una descripción más detallada.');
       }
     } catch (error) {
       console.error('Error generando catálogo:', error);
-      alert('Error al generar catálogo. Intenta más tarde.');
+      if (error instanceof SyntaxError) {
+        alert('Error de comunicación con el servidor. Verifica tu conexión e intenta más tarde.');
+      } else {
+        alert('Error al generar catálogo. Intenta más tarde.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -203,8 +231,16 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         regimenFiscal: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICOLA' | 'GANADERO' | 'FORESTAL',
         actividadPrincipal: businessDesc || '',
         activitySector: selectedSector || undefined,
-        activitySubcategory: selectedSubcategory || undefined,
-        ivaArticle: selectedSector && selectedSubcategory ? getIvaArticleForActivity(selectedSector, selectedSubcategory) : undefined,
+        activitySubcategory: selectedSubcategories.length > 0 ? selectedSubcategories[0] : undefined, // Mantener compatibilidad
+        activitySubcategories: selectedSubcategories.length > 0 ? selectedSubcategories : undefined,
+        ivaArticle: (() => {
+          if (!selectedSector || selectedSubcategories.length === 0) return undefined;
+          const articles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
+          const uniqueArticles = [...new Set(articles)];
+          // Si hay múltiples artículos diferentes, usar MIXTO
+          if (uniqueArticles.length > 1) return 'MIXTO';
+          return uniqueArticles[0] as 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO';
+        })(),
         ivaRegimen: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO',
         prorrateoIVA: false
       },
@@ -517,7 +553,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                   key={sector.id}
                   onClick={() => {
                     setSelectedSector(sector.id);
-                    setSelectedSubcategory(''); // Reset subcategory when changing sector
+                    setSelectedSubcategories([]); // Reset subcategories when changing sector
                   }}
                   className="p-6 bg-white border-2 border-slate-100 rounded-2xl hover:border-[#27bea5] hover:shadow-lg transition-all text-left group"
                 >
@@ -539,7 +575,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
               <button
                 onClick={() => {
                   setSelectedSector('');
-                  setSelectedSubcategory('');
+                  setSelectedSubcategories([]);
                 }}
                 className="flex items-center gap-2 text-slate-500 hover:text-[#1c2938] transition-colors font-medium"
               >
@@ -550,49 +586,67 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
               <div className="bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-6 rounded-2xl text-white">
                 <h3 className="text-2xl font-bold mb-2">{selectedSectorData?.name}</h3>
                 <p className="text-white/80 text-sm">
-                  Selecciona la subcategoría que mejor describe tu actividad específica
+                  Selecciona todas las subcategorías que describen tu actividad (puedes seleccionar varias)
                 </p>
               </div>
 
-              {/* Subcategory Selection */}
+              {/* Subcategory Selection - Multiple Selection with Checkboxes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
-                {selectedSectorData?.subcategories.map((sub) => (
-                  <button
-                    key={sub.id}
-                    onClick={() => setSelectedSubcategory(sub.id)}
-                    className={`p-5 bg-white border-2 rounded-2xl text-left transition-all ${
-                      selectedSubcategory === sub.id
-                        ? 'border-[#27bea5] bg-[#27bea5]/5 shadow-lg'
-                        : 'border-slate-100 hover:border-[#27bea5]/50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-bold text-[#1c2938]">{sub.name}</h4>
-                      {selectedSubcategory === sub.id && (
-                        <CheckCircle2 className="w-5 h-5 text-[#27bea5]" />
-                      )}
-                    </div>
-                    {sub.description && (
-                      <p className="text-xs text-slate-500 mt-1">{sub.description}</p>
-                    )}
-                  </button>
-                ))}
+                {selectedSectorData?.subcategories.map((sub) => {
+                  const isSelected = selectedSubcategories.includes(sub.id);
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedSubcategories(prev => prev.filter(id => id !== sub.id));
+                        } else {
+                          setSelectedSubcategories(prev => [...prev, sub.id]);
+                        }
+                      }}
+                      className={`p-5 bg-white border-2 rounded-2xl text-left transition-all ${
+                        isSelected
+                          ? 'border-[#27bea5] bg-[#27bea5]/5 shadow-lg'
+                          : 'border-slate-100 hover:border-[#27bea5]/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                            isSelected 
+                              ? 'bg-[#27bea5] border-[#27bea5]' 
+                              : 'border-slate-300 bg-white'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-[#1c2938]">{sub.name}</h4>
+                            {sub.description && (
+                              <p className="text-xs text-slate-500 mt-1">{sub.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Info Box about IVA Article */}
-              {selectedSubcategory && (() => {
-                const subcategoryData = selectedSectorData?.subcategories.find(s => s.id === selectedSubcategory);
-                const ivaArticle = getIvaArticleForActivity(selectedSector, selectedSubcategory);
-                const articleText = ivaArticle === 'ART_21' ? '21' : ivaArticle === 'ART_69_70' ? '69 y 70' : ivaArticle === 'ART_69' ? '69' : ivaArticle === 'ART_70' ? '70' : '69 o 70 (según el caso)';
-                const articleDescription = ivaArticle === 'ART_21' 
-                  ? 'exportación de bienes físicos'
-                  : ivaArticle === 'ART_69_70'
-                  ? 'regla de localización de servicios (artículos 69 y 70)'
-                  : ivaArticle === 'ART_69'
-                  ? 'servicios prestados a empresarios/profesionales (artículo 69)'
-                  : ivaArticle === 'ART_70'
-                  ? 'servicios prestados a particulares (artículo 70)'
-                  : 'servicios (artículos 69 o 70 según el caso)';
+              {/* Info Box about IVA Article - Show info for all selected */}
+              {selectedSubcategories.length > 0 && (() => {
+                const selectedSubs = selectedSectorData?.subcategories.filter(s => selectedSubcategories.includes(s.id)) || [];
+                const ivaArticles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
+                const uniqueArticles = [...new Set(ivaArticles)];
+                const isMixed = uniqueArticles.length > 1;
+                const mainArticle = uniqueArticles[0] || 'ART_69_70';
+                
+                const articleText = isMixed 
+                  ? '69-70 (Mixto según actividad)'
+                  : mainArticle === 'ART_21' ? '21' 
+                  : mainArticle === 'ART_69_70' ? '69 y 70' 
+                  : mainArticle === 'ART_69' ? '69' 
+                  : mainArticle === 'ART_70' ? '70' 
+                  : '69 o 70';
                 
                 return (
                   <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-2xl">
@@ -600,14 +654,21 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                       <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-bold text-blue-900 mb-2">Información Fiscal</h4>
-                        <p className="text-sm text-blue-800 mb-3">
-                          Para tu actividad <strong>({subcategoryData?.name})</strong>, 
-                          aplicarán los artículos <strong>{articleText}</strong> de la Ley del IVA ({articleDescription}).
+                        <p className="text-sm text-blue-800 mb-2">
+                          Has seleccionado <strong>{selectedSubcategories.length}</strong> {selectedSubcategories.length === 1 ? 'actividad' : 'actividades'}: 
+                        </p>
+                        <ul className="text-xs text-blue-700 mb-3 list-disc list-inside space-y-1">
+                          {selectedSubs.map(sub => (
+                            <li key={sub.id}>{sub.name}</li>
+                          ))}
+                        </ul>
+                        <p className="text-sm text-blue-800 mb-2">
+                          Aplicarán los artículos <strong>{articleText}</strong> de la Ley del IVA.
                         </p>
                         <p className="text-xs text-blue-700">
-                          {ivaArticle === 'ART_21' 
-                            ? 'Cuando exportes bienes físicos fuera de España, la operación estará exenta de IVA español según el artículo 21. El IVA, si aplica, se gestiona en el país de destino.'
-                            : 'Cuando factures servicios a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente (regla de localización). Las facturas se emitirán exentas de IVA español con la mención legal correspondiente.'}
+                          {isMixed 
+                            ? 'Tienes actividades mixtas. El artículo aplicable dependerá del tipo específico de servicio en cada factura.'
+                            : 'Cuando factures servicios a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente (regla de localización).'}
                         </p>
                       </div>
                     </div>
@@ -628,7 +689,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
           </button>
           <button 
             onClick={() => setStep(3)}
-            disabled={!selectedSector || !selectedSubcategory}
+            disabled={!selectedSector || selectedSubcategories.length === 0}
             className="group bg-[#1c2938] text-white py-4 px-10 rounded-2xl font-bold text-lg hover:bg-[#27bea5] disabled:opacity-30 disabled:hover:bg-[#1c2938] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer"
           >
             Siguiente <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
