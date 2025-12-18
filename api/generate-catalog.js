@@ -50,13 +50,27 @@ export default async function handler(req, res) {
       });
     }
 
-    // Usar API keys del usuario si están disponibles, sino usar process.env.API_KEY
-    console.log('Llamando a suggestCatalogItems con:', { 
-      businessDescription: businessDescription.trim().substring(0, 50),
-      hasApiKeys: !!apiKeys,
-      hasEnvKey: !!process.env.API_KEY
+    // Verificar si hay API key antes de intentar generar
+    const hasUserApiKey = apiKeys?.gemini && apiKeys.gemini.trim();
+    const hasEnvApiKey = process.env.API_KEY && process.env.API_KEY.trim();
+    
+    console.log('Verificando API keys:', { 
+      hasUserApiKey: !!hasUserApiKey,
+      hasEnvApiKey: !!hasEnvApiKey,
+      businessDescription: businessDescription.trim().substring(0, 50)
     });
     
+    if (!hasUserApiKey && !hasEnvApiKey) {
+      console.warn('No hay API key configurada');
+      return res.status(503).json({ 
+        error: 'API Key de IA no configurada. Configura tu API Key en Ajustes o contacta a soporte para configurar la API Key del sistema.',
+        items: [],
+        requiresApiKey: true,
+        canContinue: true
+      });
+    }
+    
+    // Usar API keys del usuario si están disponibles, sino usar process.env.API_KEY
     const items = await geminiService.suggestCatalogItems(businessDescription.trim(), apiKeys, true);
     
     console.log('Resultado de suggestCatalogItems:', { 
@@ -65,20 +79,8 @@ export default async function handler(req, res) {
     });
     
     if (!items || items.length === 0) {
-      // Verificar si hay API key configurada
-      const hasApiKey = (apiKeys?.gemini && apiKeys.gemini.trim()) || process.env.API_KEY;
-      
-      if (!hasApiKey) {
-        return res.status(503).json({ 
-          error: 'API Key de IA no configurada. Configura tu API Key en Ajustes o contacta a soporte.',
-          items: [],
-          requiresApiKey: true,
-          canContinue: true
-        });
-      }
-      
       return res.status(200).json({ 
-        error: 'No se pudieron generar servicios. Intenta con una descripción más detallada.',
+        error: 'No se pudieron generar servicios. Intenta con una descripción más detallada o verifica tu API Key.',
         items: [],
         canContinue: true
       });
