@@ -52,7 +52,7 @@ const MagicInput: React.FC<MagicInputProps> = ({ onParsed, apiKeys }) => {
       
       <p className="text-white/90 text-sm mb-4">
         {hasAiAccess 
-          ? 'Escribe o dicta: "Factura a Juan Pérez 500 dólares por consultoría de marketing".'
+          ? 'Escribe o dicta: "Factura a Juan Pérez 500 euros por consultoría de marketing".'
           : 'Configura tus API Keys en Ajustes para habilitar el asistente inteligente.'
         }
       </p>

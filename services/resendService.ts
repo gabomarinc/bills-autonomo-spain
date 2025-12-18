@@ -222,7 +222,7 @@ export const generateDocumentHtml = (invoice: Invoice, issuer: UserProfile): str
                                 <tr>
                                     <td style="padding: 24px; text-align: center;">
                                         <p style="color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 700; margin: 0 0 8px 0;">Total a Pagar</p>
-                                        <p style="color: #1c2938; font-size: 32px; font-weight: 800; margin: 0;">${invoice.currency} ${invoice.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+                                        <p style="color: #1c2938; font-size: 32px; font-weight: 800; margin: 0;">{invoice.currency === 'EUR' ? '€' : invoice.currency} {invoice.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
                                     </td>
                                 </tr>
                             </table>

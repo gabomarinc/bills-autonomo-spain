@@ -655,7 +655,8 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                  <div>
                    <label className="block text-xs font-bold text-slate-500 mb-1">Moneda</label>
                    <select value={draft.currency} onChange={(e) => setDraft({...draft, currency: e.target.value})} className="w-full p-2 rounded-xl border border-slate-200 bg-slate-50 outline-none text-sm">
-                         {['EUR', 'USD'].map(c => <option key={c} value={c}>{c}</option>)}
+                         <option value="EUR">EUR - Euro</option>
+                         <option value="USD">USD - Dólar Americano</option>
                    </select>
                  </div>
               </div>
@@ -676,7 +677,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Estimado</p>
-                      <p className="text-3xl font-bold">{draft.currency === 'EUR' ? '€' : (draft.currency === 'USD' ? '$' : draft.currency)} {totals.total.toFixed(2)}</p>
+                      <p className="text-3xl font-bold">{draft.currency === 'EUR' ? '€' : (draft.currency === 'USD' ? '$' : '€')} {totals.total.toFixed(2)}</p>
                     </div>
                   </div>
 

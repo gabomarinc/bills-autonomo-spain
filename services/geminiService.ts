@@ -171,7 +171,7 @@ export const suggestCatalogItems = async (businessDescription: string, _keys?: A
         };
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
-            contents: `Sugiere 3-5 servicios o productos con precios estimados para: ${businessDescription}. Precios en USD.`,
+            contents: `Sugiere 3-5 servicios o productos con precios estimados para: ${businessDescription}. Precios en EUR (Euros).`,
             config: { responseMimeType: "application/json", responseSchema: schema }
         }));
         
@@ -350,7 +350,7 @@ export const analyzePriceMarket = async (
 
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
-            contents: `Actúa como experto en precios. ${contextPrompt} Analiza: "${itemName}". Devuelve rangos en USD.`,
+            contents: `Actúa como experto en precios. ${contextPrompt} Analiza: "${itemName}". Devuelve rangos en EUR (Euros).`,
             config: { responseMimeType: "application/json", responseSchema: schema }
         }));
 
@@ -393,7 +393,7 @@ export const getDiscountRecommendation = async (
         
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
-            contents: `Recomienda un descuento para venta de $${amount} a "${clientName}". Prioriza rentabilidad.`,
+            contents: `Recomienda un descuento para venta de €${amount} a "${clientName}". Prioriza rentabilidad.`,
             config: { responseMimeType: "application/json", responseSchema: schema }
         }));
         
@@ -414,7 +414,7 @@ export const generateRevenueInsight = async (
         const ai = getAiClient();
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
-            contents: `Eres un CFO. Datos: Mes Actual $${currentRevenue}, Anterior $${prevRevenue}, Var ${percentChange}%.
+            contents: `Eres un CFO. Datos: Mes Actual €${currentRevenue}, Anterior €${prevRevenue}, Var ${percentChange}%.
             Genera una frase ESTRATÉGICA y CORTA (max 10 palabras).`,
         }));
         return response.text?.trim() || null;

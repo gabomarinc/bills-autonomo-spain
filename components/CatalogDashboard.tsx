@@ -147,7 +147,7 @@ const CatalogDashboard: React.FC<CatalogDashboardProps> = ({ items, userCountry,
                <Calculator className="w-4 h-4" />
                <div className="text-xs">
                  <span className="block font-bold uppercase tracking-wider opacity-70">Costo Base</span>
-                 <span className="font-bold text-sm">${referenceHourlyRate.toFixed(0)}/hr</span>
+                 <span className="font-bold text-sm">€{referenceHourlyRate.toFixed(0)}/hr</span>
                </div>
              </div>
            )}
@@ -273,7 +273,7 @@ const CatalogDashboard: React.FC<CatalogDashboardProps> = ({ items, userCountry,
                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Estrategia de Precio</label>
                        {referenceHourlyRate && referenceHourlyRate > 0 && (
                           <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                             <Calculator className="w-3 h-3" /> Costo Base: ${referenceHourlyRate.toFixed(0)}/hr
+                             <Calculator className="w-3 h-3" /> Costo Base: €{referenceHourlyRate.toFixed(0)}/hr
                           </span>
                        )}
                     </div>
@@ -281,7 +281,7 @@ const CatalogDashboard: React.FC<CatalogDashboardProps> = ({ items, userCountry,
                     <div className="flex flex-col gap-4">
                        <div className="flex gap-4 items-stretch">
                          <div className="relative flex-1 group">
-                            <span className="absolute left-4 top-4 text-slate-400 font-medium">$</span>
+                            <span className="absolute left-4 top-4 text-slate-400 font-medium">€</span>
                             <input 
                               type="number"
                               value={formData.price}

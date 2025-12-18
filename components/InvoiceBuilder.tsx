@@ -16,7 +16,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ isOffline, onSave, curr
   const [items, setItems] = useState<InvoiceItem[]>([
     { id: '1', description: '', quantity: 1, price: 0, tax: 7 }
   ]);
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('EUR');
   const [type, setType] = useState<'Invoice' | 'Quote' | 'Expense'>('Invoice');
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -145,6 +145,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ isOffline, onSave, curr
                onChange={(e) => setCurrency(e.target.value)}
                className="w-full rounded-lg border-slate-300 border px-3 py-2 focus:ring-[#27bea5]"
              >
+               <option value="EUR">EUR - Euro</option>
                <option value="USD">USD - Dólar Americano</option>
                <option value="EUR">EUR - Euro</option>
                <option value="MXN">MXN - Peso Mexicano</option>

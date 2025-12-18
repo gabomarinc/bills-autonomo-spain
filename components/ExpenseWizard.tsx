@@ -236,7 +236,7 @@ const ExpenseWizard: React.FC<ExpenseWizardProps> = ({ currentUser, onSave, onCa
                         <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Importe Total</label>
                             <div className="relative group">
-                              <span className="absolute left-4 top-4 text-slate-400 font-bold">$</span>
+                              <span className="absolute left-4 top-4 text-slate-400 font-bold">€</span>
                               <input 
                                 type="number"
                                 value={expenseData.amount}

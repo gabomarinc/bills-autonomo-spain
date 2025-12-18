@@ -266,7 +266,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
             </div>
             <div className="mt-auto p-3 border-t border-slate-50 flex justify-between items-center">
                <span className="text-[6px] font-bold text-slate-400">TOTAL</span>
-               <div style={{ color: primaryColor }} className="text-[10px] font-bold">$1,250.00</div>
+               <div style={{ color: primaryColor }} className="text-[10px] font-bold">€1,250.00</div>
             </div>
           </div>
         );
@@ -298,7 +298,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
             </div>
             <div className="mt-auto text-right">
                <p className="text-[8px] text-slate-400 uppercase">Total a Pagar</p>
-               <span style={{ color: primaryColor }} className="text-xs font-bold tracking-tighter text-2xl">$1,250</span>
+               <span style={{ color: primaryColor }} className="text-xs font-bold tracking-tighter text-2xl">€1,250</span>
             </div>
           </div>
         );
@@ -731,7 +731,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                               <ShoppingBag className="w-6 h-6" />
                            </div>
                            <div className="flex items-center text-xl font-bold text-[#1c2938]">
-                              <span className="text-slate-400 mr-1 text-sm">$</span>
+                              <span className="text-slate-400 mr-1 text-sm">€</span>
                               <input 
                                  type="number"
                                  value={item.price}
@@ -964,7 +964,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                  <h3 className="text-3xl font-bold text-[#1c2938]">Suscripción Kônsul</h3>
                  <Crown className="w-8 h-8 text-amber-500 fill-amber-500" />
               </div>
-              <p className="text-6xl font-black text-[#1c2938] mb-2">$5 <span className="text-xl font-medium text-slate-400">/mes</span></p>
+              <p className="text-6xl font-black text-[#1c2938] mb-2">€5 <span className="text-xl font-medium text-slate-400">/mes</span></p>
               <p className="text-slate-500 mb-8">Acceso total a todas las herramientas.</p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-left max-w-lg mx-auto mb-10">

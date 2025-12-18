@@ -141,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
              <ChevronRight className="w-4 h-4 rotate-90" />
           </div>
           <h1 className="text-6xl font-black text-[#1c2938] tracking-tight">
-             ${stats.monthlyRevenue.toLocaleString()}
+             €{stats.monthlyRevenue.toLocaleString()}
           </h1>
           
           {/* Mobile Goal Progress */}
@@ -183,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                 <Wallet className="w-5 h-5" />
              </div>
              <div className="relative z-10">
-                <p className="text-2xl font-black text-[#1c2938]">${stats.monthlyRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-black text-[#1c2938]">€{stats.monthlyRevenue.toLocaleString()}</p>
                 <p className="text-xs font-bold text-slate-700 mt-1">Total Facturado</p>
              </div>
           </button>
@@ -198,7 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                 <Hourglass className="w-5 h-5" />
              </div>
              <div className="relative z-10">
-                <p className="text-2xl font-black text-[#1c2938]">${stats.pendingAmount.toLocaleString()}</p>
+                <p className="text-2xl font-black text-[#1c2938]">€{stats.pendingAmount.toLocaleString()}</p>
                 <p className="text-xs font-bold text-slate-700 mt-1">Pendientes</p>
              </div>
           </button>
@@ -213,7 +213,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                 <BarChart3 className="w-5 h-5" />
              </div>
              <div className="relative z-10">
-                <p className="text-2xl font-black text-[#1c2938]">${stats.pipelineAmount.toLocaleString()}</p>
+                <p className="text-2xl font-black text-[#1c2938]">€{stats.pipelineAmount.toLocaleString()}</p>
                 <p className="text-xs font-bold text-slate-700 mt-1">Pipeline Activo</p>
              </div>
           </button>
@@ -328,7 +328,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                     )}
                   </p>
                   <h2 className="text-6xl lg:text-7xl font-black tracking-tighter text-white drop-shadow-sm">
-                    ${stats.monthlyRevenue.toLocaleString()}
+                    €{stats.monthlyRevenue.toLocaleString()}
                   </h2>
                   
                   {/* Hero Progress Bar */}
@@ -344,8 +344,8 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                     {/* Tick marks or labels */}
                     {stats.monthlyTarget > 0 && (
                         <div className="flex justify-between mt-3 text-sm font-medium text-slate-400">
-                            <span>$0</span>
-                            <span className="text-slate-300">Meta: ${stats.monthlyTarget.toLocaleString()}</span>
+                            <span>€0</span>
+                            <span className="text-slate-300">Meta: €{stats.monthlyTarget.toLocaleString()}</span>
                         </div>
                     )}
                   </div>
@@ -496,7 +496,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                           <span className="text-xs font-bold text-purple-800 uppercase flex items-center gap-1">
                              <Lightbulb className="w-3 h-3" /> Pipeline
                           </span>
-                          <span className="font-bold text-purple-700">${stats.pipelineAmount.toLocaleString()}</span>
+                          <span className="font-bold text-purple-700">€{stats.pipelineAmount.toLocaleString()}</span>
                       </div>
 
                       {/* Borradores */}
@@ -617,7 +617,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                     {/* Status & Amount */}
                     <div className="text-right flex flex-col items-end gap-1">
                       <span className="font-bold text-[#1c2938] text-lg tracking-tight">
-                          ${inv.total.toLocaleString()}
+                          €{inv.total.toLocaleString()}
                       </span>
                       <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wide ${getStatusColor(inv.status)}`}>
                           {inv.status === 'PendingSync' ? 'Cola Offline' : inv.status}
