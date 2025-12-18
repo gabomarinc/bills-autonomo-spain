@@ -1015,13 +1015,19 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                   <ShoppingBag className="w-16 h-16 mb-4 opacity-20" />
                   <p className="font-medium mb-2 text-slate-400">Tus servicios aparecerán aquí</p>
                   {businessDesc && !isLoading && (
-                    <div className="text-center mt-2">
-                      <p className="text-xs text-slate-400 mb-1">
+                    <div className="text-center mt-4 space-y-3">
+                      <p className="text-xs text-slate-400 mb-2">
                         Haz clic en "Generar" para crear tu catálogo con IA
                       </p>
-                      <p className="text-xs text-slate-300 italic">
+                      <p className="text-xs text-slate-300 italic mb-4">
                         O puedes continuar y agregar servicios manualmente más tarde
                       </p>
+                      <button 
+                        onClick={() => setStep(6)}
+                        className="px-6 py-2 bg-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-300 transition-colors text-sm"
+                      >
+                        Continuar sin catálogo
+                      </button>
                     </div>
                   )}
                   {!businessDesc && (
