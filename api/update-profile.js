@@ -1,3 +1,5 @@
+import { updateUserProfileInDb } from '../services/neon.ts';
+
 export default async function handler(req, res) {
   // Asegurar que siempre devolvamos JSON
   try {
@@ -10,9 +12,6 @@ export default async function handler(req, res) {
     if (!profile || !profile.id) {
       return res.status(400).json({ error: 'Profile data is required' });
     }
-
-    // Importar dinámicamente para evitar problemas de inicialización
-    const { updateUserProfileInDb } = await import('../services/neon');
     
     const success = await updateUserProfileInDb(profile);
     if (!success) {
