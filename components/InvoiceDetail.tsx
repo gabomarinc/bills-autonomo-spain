@@ -110,6 +110,18 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     };
   }, [invoice.resendEmailId, invoice.timeline, onUpdateInvoice]);
 
+  // Reset payment modal state when it opens
+  useEffect(() => {
+    if (isPaymentModalOpen) {
+      setPaymentCurrency(invoice.invoiceCurrency || invoice.currency || 'EUR');
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentAmount('');
+      setPaymentReceivedEur(null);
+      setPaymentExchangeRate(null);
+      setExchangeDifference(null);
+    }
+  }, [isPaymentModalOpen, invoice.invoiceCurrency, invoice.currency]);
+
   // --- CALCULATION LOGIC ---
   const subtotal = invoice.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const discountRate = invoice.discountRate || 0;
