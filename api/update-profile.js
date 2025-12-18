@@ -1,7 +1,75 @@
-import { updateUserProfileInDb } from '../services/neon.ts';
+import { Client } from '@neondatabase/serverless';
+import bcrypt from 'bcryptjs';
+
+const getDbClient = () => {
+  try {
+    const url = process.env.DATABASE_URL;
+    if (!url) {
+      console.warn("DATABASE_URL environment variable is not set.");
+      return null;
+    }
+    if (!url.startsWith('postgres://') && !url.startsWith('postgresql://')) {
+      console.warn("Invalid Database URL format");
+      return null;
+    }
+    return new Client(url);
+  } catch (error) {
+    console.error("Error initializing DB Client:", error);
+    return null;
+  }
+};
+
+const updateUserProfileInDb = async (profile) => {
+  const client = getDbClient();
+  if (!client) {
+    throw new Error('No se pudo conectar a la base de datos. Verifica DATABASE_URL.');
+  }
+
+  try {
+    await client.connect();
+    const profileData = { ...profile };
+    
+    // Eliminar campos que se guardan en columnas separadas
+    delete profileData.id;
+    delete profileData.name;
+    delete profileData.email;
+    delete profileData.type;
+    delete profileData.password;
+    delete profileData.stripeCustomerId;
+    delete profileData.plan;
+    delete profileData.renewalDate;
+
+    const dbType = (profile.type || '').includes('Empresa') ? 'COMPANY' : 'FREELANCE';
+
+    await client.query(
+      `UPDATE users 
+       SET name = $1, type = $2, profile_data = $3, stripe_customer_id = $4, plan_name = $5, renewal_date = $6, updated_at = NOW() 
+       WHERE id = $7`,
+      [
+        profile.name, 
+        dbType, 
+        JSON.stringify(profileData), 
+        profile.stripeCustomerId || null,
+        profile.plan || 'Free',
+        profile.renewalDate || null,
+        profile.id
+      ]
+    );
+
+    await client.end();
+    return true;
+  } catch (error) {
+    console.error("Update User Error:", error);
+    try {
+      await client.end();
+    } catch (e) {
+      // Ignorar errores al cerrar
+    }
+    throw new Error(error.message || 'Error al actualizar el perfil en la base de datos');
+  }
+};
 
 export default async function handler(req, res) {
-  // Asegurar que siempre devolvamos JSON
   try {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' });
@@ -21,11 +89,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Update Profile API Error:', error);
-    // Asegurar que siempre devolvamos JSON, incluso en caso de error
     const errorMessage = error instanceof Error ? error.message : 'Error updating profile';
     return res.status(500).json({ 
-      error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: errorMessage
     });
   }
 }
