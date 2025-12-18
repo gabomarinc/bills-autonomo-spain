@@ -5,8 +5,16 @@ import {
   Building2, Briefcase, Globe, Sparkles, Tag, StickyNote, Target 
 } from 'lucide-react';
 
+// Lista de países de la UE y otros países comunes
+const EU_COUNTRIES = [
+  'Alemania', 'Austria', 'Bélgica', 'Bulgaria', 'Chipre', 'Croacia', 'Dinamarca',
+  'Eslovaquia', 'Eslovenia', 'España', 'Estonia', 'Finlandia', 'Francia', 'Grecia',
+  'Hungría', 'Irlanda', 'Italia', 'Letonia', 'Lituania', 'Luxemburgo', 'Malta',
+  'Países Bajos', 'Polonia', 'Portugal', 'República Checa', 'Rumanía', 'Suecia'
+];
+
 interface ClientWizardProps {
-  onSave: (clientData: { name: string; contactName?: string; taxId: string; email: string; address: string; phone: string; tags: string; notes: string; status: 'CLIENT' | 'PROSPECT' }) => void;
+  onSave: (clientData: { name: string; contactName?: string; taxId: string; email: string; address: string; phone: string; country?: string; tags: string; notes: string; status: 'CLIENT' | 'PROSPECT' }) => void;
   onCancel: () => void;
 }
 
@@ -21,6 +29,7 @@ const ClientWizard: React.FC<ClientWizardProps> = ({ onSave, onCancel }) => {
     email: '',
     phone: '',
     address: '',
+    country: 'España',
     tags: '',
     notes: '',
     status: 'PROSPECT' as 'CLIENT' | 'PROSPECT'
@@ -188,6 +197,38 @@ const ClientWizard: React.FC<ClientWizardProps> = ({ onSave, onCancel }) => {
                            className="w-full pl-14 p-4 text-lg font-medium text-[#1c2938] bg-white border-2 border-slate-100 rounded-2xl focus:border-[#27bea5] focus:ring-0 outline-none transition-all placeholder:text-slate-200 shadow-sm resize-none h-20"
                            placeholder="Calle Gran Vía, 45, 3º B, 28013 Madrid"
                          />
+                      </div>
+                   </div>
+
+                   <div className="group">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">País</label>
+                      <div className="relative">
+                         <Globe className="absolute left-4 top-4 w-6 h-6 text-slate-300 group-focus-within:text-[#27bea5] transition-colors" />
+                         <select 
+                           value={formData.country}
+                           onChange={(e) => handleChange('country', e.target.value)}
+                           className="w-full pl-14 p-4 text-lg font-medium text-[#1c2938] bg-white border-2 border-slate-100 rounded-2xl focus:border-[#27bea5] focus:ring-0 outline-none transition-all appearance-none shadow-sm cursor-pointer"
+                         >
+                            <option value="España">España</option>
+                            <optgroup label="Unión Europea">
+                              {EU_COUNTRIES.filter(c => c !== 'España').map(country => (
+                                <option key={country} value={country}>{country}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Otros Países">
+                              <option value="Estados Unidos">Estados Unidos</option>
+                              <option value="México">México</option>
+                              <option value="Colombia">Colombia</option>
+                              <option value="Argentina">Argentina</option>
+                              <option value="Chile">Chile</option>
+                              <option value="Perú">Perú</option>
+                              <option value="Panamá">Panamá</option>
+                              <option value="Reino Unido">Reino Unido</option>
+                              <option value="Canadá">Canadá</option>
+                              <option value="Brasil">Brasil</option>
+                              <option value="Otro">Otro</option>
+                            </optgroup>
+                         </select>
                       </div>
                    </div>
 

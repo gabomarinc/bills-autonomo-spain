@@ -532,6 +532,9 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
         userId: row.user_id || userId,
         clientName: row.client_name,
         clientTaxId: row.client_tax_id,
+        clientCountry: row.client_country || row.data?.clientCountry || 'España',
+        operationType: row.operation_type || row.data?.operationType || 'NACIONAL',
+        legalMention: row.legal_mention || row.data?.legalMention,
         total: parseFloat(row.total),
         status: row.status,
         date: row.date,
@@ -598,17 +601,19 @@ export const fetchClientsFromDb = async (userId: string): Promise<DbClient[]> =>
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    // Add contact_name column if it doesn't exist
+    // Add contact_name and country columns if they don't exist
     try {
       await client.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS contact_name TEXT;');
       await client.query('ALTER TABLE prospects ADD COLUMN IF NOT EXISTS contact_name TEXT;');
+      await client.query('ALTER TABLE clients ADD COLUMN IF NOT EXISTS country TEXT DEFAULT \'España\';');
+      await client.query('ALTER TABLE prospects ADD COLUMN IF NOT EXISTS country TEXT DEFAULT \'España\';');
     } catch (e) {
       // Column might already exist, ignore
     }
     const query = `
-      SELECT id, name, contact_name, tax_id, email, address, phone, tags, notes, 'CLIENT' as status FROM clients WHERE user_id = $1
+      SELECT id, name, contact_name, tax_id, email, address, phone, country, tags, notes, 'CLIENT' as status FROM clients WHERE user_id = $1
       UNION ALL
-      SELECT id, name, contact_name, tax_id, email, address, phone, tags, notes, 'PROSPECT' as status FROM prospects WHERE user_id = $1
+      SELECT id, name, contact_name, tax_id, email, address, phone, country, tags, notes, 'PROSPECT' as status FROM prospects WHERE user_id = $1
     `;
     const result = await client.query(query, [userId]);
     await client.end();
@@ -620,6 +625,7 @@ export const fetchClientsFromDb = async (userId: string): Promise<DbClient[]> =>
       email: row.email,
       address: row.address,
       phone: row.phone,
+      country: row.country || 'España',
       tags: row.tags,
       notes: row.notes,
       status: row.status as 'CLIENT' | 'PROSPECT'
@@ -714,8 +720,8 @@ export const saveClientToDb = async (clientData: DbClient, userId: string, statu
     await clientDb.connect();
     if (status === 'CLIENT') {
         const upsertClient = `
-            INSERT INTO clients (id, user_id, name, contact_name, tax_id, email, address, phone, tags, notes, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+            INSERT INTO clients (id, user_id, name, contact_name, tax_id, email, address, phone, country, tags, notes, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
             ON CONFLICT (id) DO UPDATE SET 
               name = EXCLUDED.name,
               contact_name = COALESCE(EXCLUDED.contact_name, clients.contact_name),
@@ -723,21 +729,22 @@ export const saveClientToDb = async (clientData: DbClient, userId: string, statu
               email = COALESCE(EXCLUDED.email, clients.email),
               address = COALESCE(EXCLUDED.address, clients.address),
               phone = COALESCE(EXCLUDED.phone, clients.phone),
+              country = COALESCE(EXCLUDED.country, clients.country, 'España'),
               tags = COALESCE(EXCLUDED.tags, clients.tags),
               notes = COALESCE(EXCLUDED.notes, clients.notes),
               updated_at = NOW();
         `;
-        await clientDb.query(upsertClient, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.tags, clientData.notes]);
+        await clientDb.query(upsertClient, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', clientData.tags, clientData.notes]);
         await clientDb.query('DELETE FROM prospects WHERE id = $1', [id]);
     } else {
         const checkClient = await clientDb.query('SELECT id FROM clients WHERE id = $1', [id]);
         if ((checkClient.rowCount || 0) > 0) {
-             const updateClient = `UPDATE clients SET contact_name = COALESCE($1, contact_name), tax_id = COALESCE($2, tax_id), email = COALESCE($3, email), address = COALESCE($4, address), phone = COALESCE($5, phone), updated_at = NOW() WHERE id = $6`;
-             await clientDb.query(updateClient, [clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, id]);
+             const updateClient = `UPDATE clients SET contact_name = COALESCE($1, contact_name), tax_id = COALESCE($2, tax_id), email = COALESCE($3, email), address = COALESCE($4, address), phone = COALESCE($5, phone), country = COALESCE($6, country, 'España'), updated_at = NOW() WHERE id = $7`;
+             await clientDb.query(updateClient, [clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', id]);
         } else {
              const upsertProspect = `
-                INSERT INTO prospects (id, user_id, name, contact_name, tax_id, email, address, phone, tags, notes, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                INSERT INTO prospects (id, user_id, name, contact_name, tax_id, email, address, phone, country, tags, notes, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
                 ON CONFLICT (id) DO UPDATE SET 
                   name = EXCLUDED.name,
                   contact_name = COALESCE(EXCLUDED.contact_name, prospects.contact_name),
@@ -745,11 +752,12 @@ export const saveClientToDb = async (clientData: DbClient, userId: string, statu
                   email = COALESCE(EXCLUDED.email, prospects.email),
                   address = COALESCE(EXCLUDED.address, prospects.address),
                   phone = COALESCE(EXCLUDED.phone, prospects.phone),
+                  country = COALESCE(EXCLUDED.country, prospects.country, 'España'),
                   tags = COALESCE(EXCLUDED.tags, prospects.tags),
                   notes = COALESCE(EXCLUDED.notes, prospects.notes),
                   updated_at = NOW();
             `;
-            await clientDb.query(upsertProspect, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.tags, clientData.notes]);
+            await clientDb.query(upsertProspect, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', clientData.tags, clientData.notes]);
         }
     }
     await clientDb.end();
@@ -788,12 +796,24 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
         JSON.stringify(invoice)
       ]);
     } else {
+      // Add columns if they don't exist (migration)
+      try {
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_country TEXT DEFAULT \'España\';');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS operation_type TEXT DEFAULT \'NACIONAL\';');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS legal_mention TEXT;');
+      } catch (e) {
+        // Columns might already exist, ignore
+      }
+
       const query = `
-        INSERT INTO invoices (id, user_id, client_name, client_tax_id, client_email, client_address, total, status, date, type, currency, iva_amount, iva_repercutido, irpf_retention, irpf_amount, discount_rate, amount_paid, data)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        INSERT INTO invoices (id, user_id, client_name, client_tax_id, client_email, client_address, client_country, operation_type, legal_mention, total, status, date, type, currency, iva_amount, iva_repercutido, irpf_retention, irpf_amount, discount_rate, amount_paid, data)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
         ON CONFLICT (id) DO UPDATE SET 
           user_id = EXCLUDED.user_id, client_name = EXCLUDED.client_name, client_tax_id = EXCLUDED.client_tax_id,
           client_email = EXCLUDED.client_email, client_address = EXCLUDED.client_address,
+          client_country = COALESCE(EXCLUDED.client_country, invoices.client_country, 'España'),
+          operation_type = COALESCE(EXCLUDED.operation_type, invoices.operation_type, 'NACIONAL'),
+          legal_mention = EXCLUDED.legal_mention,
           total = EXCLUDED.total, status = EXCLUDED.status, date = EXCLUDED.date, currency = EXCLUDED.currency,
           iva_amount = EXCLUDED.iva_amount, iva_repercutido = EXCLUDED.iva_repercutido,
           irpf_retention = EXCLUDED.irpf_retention, irpf_amount = EXCLUDED.irpf_amount,
@@ -802,6 +822,7 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
       await client.query(query, [
         invoice.id, invoice.userId, invoice.clientName, invoice.clientTaxId, 
         invoice.clientEmail || null, invoice.clientAddress || null,
+        invoice.clientCountry || 'España', invoice.operationType || 'NACIONAL', invoice.legalMention || null,
         invoice.total, invoice.status, invoice.date, invoice.type, invoice.currency || 'EUR',
         invoice.ivaAmount || 0, invoice.ivaRepercutido || 0,
         invoice.irpfRetention || 0, invoice.irpfAmount || 0,

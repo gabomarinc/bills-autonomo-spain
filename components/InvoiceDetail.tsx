@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Printer, Share2, Download, Building2, 
   CheckCircle2, Loader2, Send, MessageCircle, Smartphone, Mail, Check, AlertTriangle, Edit2, 
-  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link
+  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link, FileText
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -473,6 +473,16 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                   </div>
               )}
 
+              {/* LEGAL MENTION */}
+              {invoice.legalMention && (
+                  <div className="p-6 rounded-xl text-sm bg-blue-50/50 border border-blue-100">
+                      <p className="font-bold mb-2 flex items-center gap-2 text-blue-700 uppercase tracking-wider text-xs">
+                          <FileText className="w-4 h-4"/> Mención Legal
+                      </p>
+                      <p className="text-blue-800 text-xs italic leading-relaxed">{invoice.legalMention}</p>
+                  </div>
+              )}
+
               {isQuote ? (
                 <div style={{ backgroundColor: color + '15', color: color }} className="p-6 rounded-xl text-sm border border-transparent">
                   <p className="font-bold mb-2 flex items-center gap-2 text-lg"><CheckCircle2 className="w-5 h-5"/> Condiciones</p>
@@ -630,6 +640,14 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
            </div>
        )}
 
+       {/* LEGAL MENTION */}
+       {invoice.legalMention && (
+           <div className="mb-8 p-4 border-t border-slate-200 bg-blue-50/50 rounded-lg">
+               <p className="font-serif font-bold text-xs text-slate-700 mb-1 uppercase tracking-wide">Mención Legal:</p>
+               <p className="font-serif text-xs text-slate-600 italic leading-relaxed">{invoice.legalMention}</p>
+           </div>
+       )}
+
        {/* BANK INFO CLASSIC */}
        {!isQuote && (
            <div className="mb-8 p-4 border border-slate-200 rounded text-center">
@@ -715,6 +733,14 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
        {invoice.notes && (
            <div className="mt-16 text-slate-500 text-sm">
                {invoice.notes}
+           </div>
+       )}
+
+       {/* LEGAL MENTION */}
+       {invoice.legalMention && (
+           <div className="mt-8 pt-8 border-t border-slate-100">
+               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mención Legal</p>
+               <p className="text-xs text-slate-500 italic leading-relaxed">{invoice.legalMention}</p>
            </div>
        )}
 

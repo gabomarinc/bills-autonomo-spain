@@ -287,6 +287,7 @@ const AppContent: React.FC = () => {
           email: clientData.email, 
           address: clientData.address,
           phone: clientData.phone,
+          country: clientData.country || 'España',
           tags: clientData.tags,
           notes: clientData.notes
         }, currentUser.id, clientData.status);

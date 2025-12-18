@@ -30,6 +30,7 @@ export interface DbClient {
   email?: string;
   phone?: string;
   address?: string;
+  country?: string; // País del cliente (para operaciones internacionales)
   tags?: string; // Comma separated string
   notes?: string;
   status?: 'CLIENT' | 'PROSPECT';
@@ -217,6 +218,9 @@ export interface Invoice {
   clientTaxId?: string;
   clientEmail?: string; // Added client email for sending
   clientAddress?: string; // New field for Client Editing
+  clientCountry?: string; // País del cliente (para operaciones internacionales)
+  operationType?: 'NACIONAL' | 'EXPORTACION' | 'INTRACOMUNITARIA'; // Tipo de operación fiscal
+  legalMention?: string; // Mención legal automática según tipo de operación
   date: string;
   items: InvoiceItem[];
   total: number;

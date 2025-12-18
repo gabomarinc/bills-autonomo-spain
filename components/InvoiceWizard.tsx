@@ -4,7 +4,7 @@ import {
   Mic, Send, Sparkles, Check, ArrowLeft, Edit2, Loader2, 
   FileText, FileBadge, Calendar, User, Search, Plus, Trash2, 
   ShoppingBag, Calculator, ChevronDown, Building2, Eye,
-  Coins, Lock, AlertTriangle, Settings, Save, Archive, Percent, DollarSign, BrainCircuit, Scissors, X
+  Coins, Lock, AlertTriangle, Settings, Save, Archive, Percent, DollarSign, BrainCircuit, Scissors, X, Globe
 } from 'lucide-react';
 import { Invoice, ParsedInvoiceData, UserProfile, InvoiceItem, InvoiceStatus, CatalogItem } from '../types';
 import { parseInvoiceRequest, getDiscountRecommendation, AI_ERROR_BLOCKED } from '../services/geminiService';
@@ -74,6 +74,9 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     clientName: string;
     clientTaxId: string;
     clientEmail?: string;
+    clientCountry?: string;
+    operationType?: 'NACIONAL' | 'EXPORTACION' | 'INTRACOMUNITARIA';
+    legalMention?: string;
     items: InvoiceItem[];
     currency: string;
     notes: string;
@@ -82,6 +85,9 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     clientName: initialData?.clientName || '',
     clientTaxId: initialData?.clientTaxId || '',
     clientEmail: initialData?.clientEmail || '',
+    clientCountry: initialData?.clientCountry || 'España',
+    operationType: initialData?.operationType || 'NACIONAL',
+    legalMention: initialData?.legalMention,
     items: initialData?.items || [],
     currency: initialData?.currency || currentUser.defaultCurrency || 'EUR',
     notes: initialData?.notes || '', 
@@ -105,6 +111,61 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       default: return 21;
     }
   };
+
+  // Lista de países de la UE
+  const EU_COUNTRIES = [
+    'Alemania', 'Austria', 'Bélgica', 'Bulgaria', 'Chipre', 'Croacia', 'Dinamarca',
+    'Eslovaquia', 'Eslovenia', 'España', 'Estonia', 'Finlandia', 'Francia', 'Grecia',
+    'Hungría', 'Irlanda', 'Italia', 'Letonia', 'Lituania', 'Luxemburgo', 'Malta',
+    'Países Bajos', 'Polonia', 'Portugal', 'República Checa', 'Rumanía', 'Suecia'
+  ];
+
+  // Generar mención legal según tipo de operación
+  const getLegalMention = (operationType: 'NACIONAL' | 'EXPORTACION' | 'INTRACOMUNITARIA'): string => {
+    switch(operationType) {
+      case 'EXPORTACION':
+        return 'Operación exenta por exportación de servicios según artículo 21 de la Ley 37/1992 del IVA.';
+      case 'INTRACOMUNITARIA':
+        return 'Operación intracomunitaria exenta de IVA según artículo 70 de la Directiva 2006/112/CE.';
+      default:
+        return '';
+    }
+  };
+
+  // Detectar tipo de operación basado en el país
+  const detectOperationType = (country: string): 'NACIONAL' | 'EXPORTACION' | 'INTRACOMUNITARIA' => {
+    if (country === 'España') return 'NACIONAL';
+    if (EU_COUNTRIES.includes(country)) return 'INTRACOMUNITARIA';
+    return 'EXPORTACION';
+  };
+
+  // Efecto para actualizar tipo de operación y IVA cuando cambia el país
+  useEffect(() => {
+    if (draft.clientCountry) {
+      const detectedType = detectOperationType(draft.clientCountry);
+      const legalMention = getLegalMention(detectedType);
+      
+      setDraft(prev => ({
+        ...prev,
+        operationType: detectedType,
+        legalMention: legalMention || undefined
+      }));
+
+      // Si es exportación o intracomunitaria, aplicar 0% IVA automáticamente
+      if (detectedType === 'EXPORTACION' || detectedType === 'INTRACOMUNITARIA') {
+        setApplyIva(false);
+        setIvaType('EXENTO');
+        setDraft(prev => ({
+          ...prev,
+          items: prev.items.map(item => ({ 
+            ...item, 
+            tax: 0,
+            taxType: 'EXENTO'
+          }))
+        }));
+      }
+    }
+  }, [draft.clientCountry]);
 
   // Sync IVA/IRPF & discount visibility with existing items on load
   useEffect(() => {
@@ -244,11 +305,16 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
 
   // --- LOGIC: Client Autocomplete ---
   const handleClientSelect = (client: any) => {
+    const clientCountry = client.country || 'España';
+    const detectedType = detectOperationType(clientCountry);
     setDraft(prev => ({ 
       ...prev, 
       clientName: client.name, 
       clientTaxId: client.taxId || '',
-      clientEmail: client.email || ''
+      clientEmail: client.email || '',
+      clientCountry: clientCountry,
+      operationType: detectedType,
+      legalMention: getLegalMention(detectedType)
     }));
     setClientSearch(client.name);
     setShowClientDropdown(false);
@@ -356,6 +422,9 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       clientName: draft.clientName,
       clientTaxId: draft.clientTaxId,
       clientEmail: draft.clientEmail,
+      clientCountry: draft.clientCountry || 'España',
+      operationType: draft.operationType || 'NACIONAL',
+      legalMention: draft.operationType && draft.operationType !== 'NACIONAL' ? getLegalMention(draft.operationType) : undefined,
       date: initialData?.date || new Date().toISOString(), 
       items: draft.items,
       total: totals.total,
@@ -589,6 +658,89 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                    <label className="block text-xs font-bold text-slate-500 mb-1">Email</label>
                    <input value={draft.clientEmail || ''} onChange={(e) => setDraft({...draft, clientEmail: e.target.value})} placeholder="email@cliente.com" className="w-full p-3 rounded-xl border border-slate-200 bg-white outline-none" />
                 </div>
+              </div>
+
+              {/* País del Cliente y Tipo de Operación */}
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">País del Cliente</label>
+                  <select 
+                    value={draft.clientCountry || 'España'} 
+                    onChange={(e) => setDraft({...draft, clientCountry: e.target.value})}
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-white outline-none focus:border-[#27bea5]"
+                  >
+                    <option value="España">España</option>
+                    <optgroup label="Unión Europea">
+                      {EU_COUNTRIES.filter(c => c !== 'España').map(country => (
+                        <option key={country} value={country}>{country}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Otros Países">
+                      <option value="Estados Unidos">Estados Unidos</option>
+                      <option value="México">México</option>
+                      <option value="Colombia">Colombia</option>
+                      <option value="Argentina">Argentina</option>
+                      <option value="Chile">Chile</option>
+                      <option value="Perú">Perú</option>
+                      <option value="Panamá">Panamá</option>
+                      <option value="Reino Unido">Reino Unido</option>
+                      <option value="Canadá">Canadá</option>
+                      <option value="Brasil">Brasil</option>
+                      <option value="Otro">Otro</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                {/* Información sobre Tipo de Operación */}
+                {draft.operationType && draft.operationType !== 'NACIONAL' && (
+                  <div className={`p-4 rounded-xl border-2 ${
+                    draft.operationType === 'EXPORTACION' 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-purple-50 border-purple-200'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        draft.operationType === 'EXPORTACION' 
+                          ? 'bg-blue-100 text-blue-600' 
+                          : 'bg-purple-100 text-purple-600'
+                      }`}>
+                        {draft.operationType === 'EXPORTACION' ? (
+                          <Globe className="w-5 h-5" />
+                        ) : (
+                          <Building2 className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-sm text-slate-800 mb-1">
+                          {draft.operationType === 'EXPORTACION' ? 'Operación de Exportación' : 'Operación Intracomunitaria'}
+                        </h4>
+                        <p className="text-xs text-slate-600 mb-2">
+                          {draft.operationType === 'EXPORTACION' 
+                            ? 'Esta factura NO aplica IVA español. El cliente está fuera de la UE, por lo que la operación está exenta de IVA según la normativa española. El IVA, si aplica, se gestiona en el país del cliente según su normativa local.'
+                            : 'Esta factura NO aplica IVA español. El cliente está en la UE y tiene NIF intracomunitario válido. La operación está exenta de IVA según la normativa europea. Debes declarar esta operación en el Modelo 349 (Declaración Recapitulativa Intracomunitaria).'}
+                        </p>
+                        {draft.legalMention && (
+                          <div className="mt-2 p-2 bg-white rounded-lg border border-slate-200">
+                            <p className="text-xs font-medium text-slate-700 italic">
+                              "{draft.legalMention}"
+                            </p>
+                            <p className="text-[10px] text-slate-500 mt-1">
+                              Esta mención legal se incluirá automáticamente en la factura.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {draft.operationType === 'NACIONAL' && draft.clientCountry === 'España' && (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-xs text-slate-600">
+                      <span className="font-bold">Operación Nacional:</span> Se aplicará IVA español según el tipo seleccionado (General 21%, Reducido 10%, Superreducido 4% o Exento 0%).
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 
