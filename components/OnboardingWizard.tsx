@@ -164,9 +164,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       fiscalConfig: {
         entityType: (personType === 'JURIDICA' ? 'JURIDICA' : 'FISICA') as 'FISICA' | 'JURIDICA',
         nif: taxId,
-        regimenFiscal: 'GENERAL',
+        regimenFiscal: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICOLA' | 'GANADERO' | 'FORESTAL',
         actividadPrincipal: businessDesc || '',
-        ivaRegimen: 'GENERAL',
+        ivaRegimen: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO',
         prorrateoIVA: false
       },
       branding: { primaryColor, templateStyle, logoUrl: logoPreview || undefined },

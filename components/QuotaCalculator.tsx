@@ -67,6 +67,7 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
         fiscalConfig: {
           ...currentUser.fiscalConfig,
           entityType: currentUser.fiscalConfig?.entityType || 'FISICA',
+          nif: currentUser.fiscalConfig?.nif || currentUser.taxId || '',
           baseCotizacionSS: baseCotizacion,
           fechaAltaAutonomo: fechaAlta,
           tipoReduccion,
@@ -249,6 +250,7 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
             </h4>
             <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
               {historialAnual.map((cuota, idx) => {
+                if (!cuota.mes) return null;
                 const mesNombre = new Date(2024, cuota.mes - 1, 1).toLocaleDateString('es-ES', { month: 'long' });
                 return (
                   <div key={idx} className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
