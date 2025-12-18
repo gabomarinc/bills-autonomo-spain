@@ -7,7 +7,6 @@ import {
   User, CheckCircle2, Hash, Lock, Eye, EyeOff, Crown, Rocket, Star
 } from 'lucide-react';
 import { UserProfile, CatalogItem, EmailConfig, ProfileType } from '../types';
-import { suggestCatalogItems, generateEmailTemplate } from '../services/geminiService';
 import { createUserInDb } from '../services/neon'; // Import for direct DB creation
 import { sendWelcomeEmail } from '../services/resendService'; // Import Email Service
 
