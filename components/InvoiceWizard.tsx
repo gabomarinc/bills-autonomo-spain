@@ -608,7 +608,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                       availableServices.map(svc => (
                           <button key={svc.id} onClick={() => addItem(svc)} className="flex justify-between items-center p-2 bg-white rounded-lg border border-slate-100 hover:border-[#27bea5] text-left w-full mb-2">
                             <span className="text-sm font-medium text-slate-700">{svc.name}</span>
-                            <span className="text-sm font-bold text-[#1c2938]">${svc.price}</span>
+                            <span className="text-sm font-bold text-[#1c2938]">€{svc.price}</span>
                           </button>
                       ))
                   ) : (
@@ -633,7 +633,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
 
                       <div className="flex gap-2">
                          <div className="w-20"><input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value))} className="w-full p-2 bg-slate-50 rounded-lg text-sm text-center outline-none focus:ring-1 focus:ring-[#27bea5]" placeholder="Cant" /></div>
-                         <div className="flex-1 relative"><span className="absolute left-3 top-2 text-slate-400 text-sm">{draft.currency === 'EUR' ? '€' : '$'}</span><input type="number" value={item.price} onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value))} className="w-full p-2 pl-6 bg-slate-50 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#27bea5]" placeholder="Precio" /></div>
+                         <div className="flex-1 relative"><span className="absolute left-3 top-2 text-slate-400 text-sm">{draft.currency === 'EUR' ? '€' : (draft.currency === 'USD' ? '$' : '€')}</span><input type="number" value={item.price} onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value))} className="w-full p-2 pl-6 bg-slate-50 rounded-lg text-sm outline-none focus:ring-1 focus:ring-[#27bea5]" placeholder="Precio" /></div>
                       </div>
                     </div>
                     <button onClick={() => removeItem(idx)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
