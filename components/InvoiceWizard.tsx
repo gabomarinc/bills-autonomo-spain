@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Invoice, ParsedInvoiceData, UserProfile, InvoiceItem, InvoiceStatus, CatalogItem } from '../types';
 import { parseInvoiceRequest, getDiscountRecommendation, AI_ERROR_BLOCKED } from '../services/geminiService';
+import { getLegalMentionByIvaArticle } from '../data/activitySectors';
 
 interface InvoiceWizardProps {
   currentUser: UserProfile;
@@ -120,16 +121,13 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     'Países Bajos', 'Polonia', 'Portugal', 'República Checa', 'Rumanía', 'Suecia'
   ];
 
-  // Generar mención legal según tipo de operación
+  // Generar mención legal según tipo de operación y actividad del usuario
   const getLegalMention = (operationType: 'NACIONAL' | 'EXPORTACION' | 'INTRACOMUNITARIA'): string => {
-    switch(operationType) {
-      case 'EXPORTACION':
-        return 'Operación exenta por exportación de servicios según artículo 21 de la Ley 37/1992 del IVA.';
-      case 'INTRACOMUNITARIA':
-        return 'Operación intracomunitaria exenta de IVA según artículo 70 de la Directiva 2006/112/CE.';
-      default:
-        return '';
-    }
+    // Obtener el artículo de IVA del perfil del usuario según su actividad
+    const userIvaArticle = currentUser.fiscalConfig?.ivaArticle || 'ART_69_70';
+    
+    // Usar la función helper que considera tanto el artículo como el tipo de operación
+    return getLegalMentionByIvaArticle(userIvaArticle, operationType);
   };
 
   // Detectar tipo de operación basado en el país

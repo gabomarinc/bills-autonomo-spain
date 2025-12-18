@@ -9,12 +9,13 @@ import {
 import { UserProfile, CatalogItem, EmailConfig, ProfileType } from '../types';
 import { createUserInDb } from '../services/neon'; // Import for direct DB creation
 import { sendWelcomeEmail } from '../services/resendService'; // Import Email Service
+import { ACTIVITY_SECTORS, getIvaArticleForActivity, ActivitySector } from '../data/activitySectors';
 
 interface OnboardingWizardProps {
   onComplete: (profileData: Partial<UserProfile> & { password?: string, email?: string }) => void;
 }
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 // España configuration
 const DEFAULT_COUNTRY = 'España';
@@ -38,30 +39,35 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [manualEntryMode, setManualEntryMode] = useState(false);
 
-  // Step 2 State
+  // Step 2 State - Activity Selection (NEW)
+  const [selectedSector, setSelectedSector] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [searchSector, setSearchSector] = useState('');
+
+  // Step 3 State - Branding (renumbered from Step 2)
   const [primaryColor, setPrimaryColor] = useState('#27bea5');
   const [templateStyle, setTemplateStyle] = useState<'Modern' | 'Classic' | 'Minimal'>('Modern');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Step 3 State
+  // Step 4 State - Finance (renumbered from Step 3)
   const [bankAccount, setBankAccount] = useState('');
   const [acceptsOnline, setAcceptsOnline] = useState(false);
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
 
-  // Step 4 State
+  // Step 5 State - Catalog (renumbered from Step 4)
   const [businessDesc, setBusinessDesc] = useState('');
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
 
-  // Step 5 State
+  // Step 6 State - Comms (renumbered from Step 5)
   const [tone, setTone] = useState<'Formal' | 'Casual' | null>(null);
   const [emailPreview, setEmailPreview] = useState('');
 
-  // Step 6 State (Channels)
+  // Step 7 State - Channels (renumbered from Step 6)
   const [whatsappCountryCode, setWhatsappCountryCode] = useState(DEFAULT_PHONE_CODE);
   const [whatsappNumber, setWhatsappNumber] = useState('');
 
-  // Step 7 State (Plan) - MODIFIED: Default to Paid, no Free option
+  // Step 8 State - Plan (renumbered from Step 7)
   const [selectedPlan, setSelectedPlan] = useState<'Emprendedor Pro'>('Emprendedor Pro');
 
   // --- ACTIONS ---
@@ -196,6 +202,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         nif: taxId,
         regimenFiscal: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICOLA' | 'GANADERO' | 'FORESTAL',
         actividadPrincipal: businessDesc || '',
+        activitySector: selectedSector || undefined,
+        activitySubcategory: selectedSubcategory || undefined,
+        ivaArticle: selectedSector && selectedSubcategory ? getIvaArticleForActivity(selectedSector, selectedSubcategory) : undefined,
         ivaRegimen: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO',
         prorrateoIVA: false
       },
@@ -474,7 +483,146 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     </div>
   );
 
-  const renderStep2_Branding = () => (
+  const renderStep2_Activity = () => {
+    const selectedSectorData = ACTIVITY_SECTORS.find(s => s.id === selectedSector);
+    const filteredSectors = searchSector 
+      ? ACTIVITY_SECTORS.filter(s => s.name.toLowerCase().includes(searchSector.toLowerCase()))
+      : ACTIVITY_SECTORS;
+
+    return (
+      <div className="animate-in fade-in slide-in-from-right-8 duration-500">
+        <div className="text-center mb-10">
+          <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Tu Actividad Económica</h2>
+          <p className="text-slate-500 text-lg">Selecciona el rubro que mejor describe tu actividad. Esto nos ayuda a aplicar la normativa fiscal correcta.</p>
+        </div>
+
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              value={searchSector}
+              onChange={(e) => setSearchSector(e.target.value)}
+              placeholder="Buscar rubro (ej: Tecnología, Diseño, Consultoría...)"
+              className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-100 rounded-2xl outline-none focus:border-[#27bea5] transition-all text-lg"
+            />
+          </div>
+
+          {/* Sector Selection */}
+          {!selectedSector ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
+              {filteredSectors.map((sector) => (
+                <button
+                  key={sector.id}
+                  onClick={() => {
+                    setSelectedSector(sector.id);
+                    setSelectedSubcategory(''); // Reset subcategory when changing sector
+                  }}
+                  className="p-6 bg-white border-2 border-slate-100 rounded-2xl hover:border-[#27bea5] hover:shadow-lg transition-all text-left group"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-bold text-[#1c2938] text-lg group-hover:text-[#27bea5] transition-colors">
+                      {sector.name}
+                    </h3>
+                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#27bea5] transition-colors" />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {sector.subcategories.length} {sector.subcategories.length === 1 ? 'opción' : 'opciones'}
+                  </p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Back Button */}
+              <button
+                onClick={() => {
+                  setSelectedSector('');
+                  setSelectedSubcategory('');
+                }}
+                className="flex items-center gap-2 text-slate-500 hover:text-[#1c2938] transition-colors font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" /> Volver a rubros
+              </button>
+
+              {/* Sector Info */}
+              <div className="bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-6 rounded-2xl text-white">
+                <h3 className="text-2xl font-bold mb-2">{selectedSectorData?.name}</h3>
+                <p className="text-white/80 text-sm">
+                  Selecciona la subcategoría que mejor describe tu actividad específica
+                </p>
+              </div>
+
+              {/* Subcategory Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
+                {selectedSectorData?.subcategories.map((sub) => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setSelectedSubcategory(sub.id)}
+                    className={`p-5 bg-white border-2 rounded-2xl text-left transition-all ${
+                      selectedSubcategory === sub.id
+                        ? 'border-[#27bea5] bg-[#27bea5]/5 shadow-lg'
+                        : 'border-slate-100 hover:border-[#27bea5]/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-bold text-[#1c2938]">{sub.name}</h4>
+                      {selectedSubcategory === sub.id && (
+                        <CheckCircle2 className="w-5 h-5 text-[#27bea5]" />
+                      )}
+                    </div>
+                    {sub.description && (
+                      <p className="text-xs text-slate-500 mt-1">{sub.description}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Info Box about IVA Article */}
+              {selectedSubcategory && (
+                <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-2xl">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-blue-900 mb-2">Información Fiscal</h4>
+                      <p className="text-sm text-blue-800 mb-3">
+                        Para tu actividad ({selectedSectorData?.subcategories.find(s => s.id === selectedSubcategory)?.name}), 
+                        aplicarán los artículos <strong>69 y 70</strong> de la Ley del IVA (regla de localización de servicios).
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        Esto significa que cuando factures a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente, 
+                        no según la normativa española. Las facturas se emitirán exentas de IVA español con la mención legal correspondiente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between items-center mt-10 pt-8 border-t border-slate-100">
+          <button 
+            onClick={() => setStep(1)}
+            className="text-slate-500 hover:text-[#1c2938] font-medium flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" /> Atrás
+          </button>
+          <button 
+            onClick={() => setStep(3)}
+            disabled={!selectedSector || !selectedSubcategory}
+            className="group bg-[#1c2938] text-white py-4 px-10 rounded-2xl font-bold text-lg hover:bg-[#27bea5] disabled:opacity-30 disabled:hover:bg-[#1c2938] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer"
+          >
+            Siguiente <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStep3_Branding = () => (
     <div className="animate-in fade-in slide-in-from-right-8 duration-500">
       <div className="text-center mb-10">
         <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Diseña tu Marca</h2>
@@ -550,7 +698,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                 Atrás
               </button>
               <button 
-                onClick={() => setStep(3)}
+                onClick={() => setStep(5)}
                 className="flex-[2] bg-[#1c2938] text-white py-4 rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
               >
                 Se ve genial <ArrowRight className="w-5 h-5" />
@@ -592,7 +740,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     </div>
   );
 
-  const renderStep3_Finance = () => (
+  const renderStep4_Finance = () => (
     <div className="animate-in fade-in slide-in-from-right-8 duration-500">
       <div className="text-center mb-10">
         <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Tu Bóveda Financiera</h2>
@@ -669,13 +817,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
 
         <div className="flex gap-4 pt-4">
           <button 
-            onClick={() => setStep(2)}
+            onClick={() => setStep(3)}
             className="flex-1 py-4 font-bold text-slate-500 hover:text-[#1c2938] hover:bg-white rounded-2xl transition-colors cursor-pointer"
           >
             Atrás
           </button>
           <button 
-            onClick={() => setStep(4)}
+            onClick={() => setStep(5)}
             className="flex-[2] bg-[#1c2938] text-white py-4 rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
           >
             Guardar Billetera <ArrowRight className="w-5 h-5" />
@@ -686,7 +834,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     </div>
   );
 
-  const renderStep4_Catalog = () => (
+  const renderStep5_Catalog = () => (
     <div className="animate-in fade-in slide-in-from-right-8 duration-500">
       <div className="text-center mb-10">
         <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Tu Oferta de Valor</h2>
@@ -753,7 +901,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                   {/* Next Step Card */}
                   <div className="flex items-center justify-center p-6">
                      <button 
-                       onClick={() => setStep(5)}
+                       onClick={() => setStep(6)}
                        className="w-full bg-[#1c2938] text-white py-4 rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2 cursor-pointer"
                      >
                        Continuar <ArrowRight className="w-5 h-5" />
@@ -771,7 +919,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     </div>
   );
 
-  const renderStep5_Comms = () => (
+  const renderStep6_Comms = () => (
     <div className="animate-in fade-in slide-in-from-right-8 duration-500">
       <div className="text-center mb-10">
         <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Tu Voz ante el Cliente</h2>
@@ -850,7 +998,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
            </div>
            <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-full flex justify-center">
               <button 
-                onClick={() => setStep(6)}
+                onClick={() => setStep(7)}
                 disabled={!tone}
                 className="bg-[#27bea5] text-white px-10 py-4 rounded-full font-bold shadow-xl hover:bg-[#22a890] hover:scale-105 transition-all flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
               >
@@ -862,7 +1010,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     </div>
   );
 
-  const renderStep6_Channels = () => (
+  const renderStep7_Channels = () => (
     <div className="animate-in fade-in slide-in-from-right-8 duration-500">
       <div className="text-center mb-10">
         <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Conexiones Finales</h2>
@@ -935,7 +1083,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
 
       <div className="flex justify-center mt-12">
         <button 
-          onClick={() => setStep(7)} // Move to Step 7 (Plan)
+          onClick={() => setStep(8)} // Move to Step 8 (Plan)
           className="bg-[#1c2938] text-white py-5 px-16 rounded-[2rem] font-bold text-xl hover:bg-[#27bea5] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center gap-3 cursor-pointer"
         >
           Siguiente <ArrowRight className="w-6 h-6" />
@@ -944,7 +1092,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     </div>
   );
 
-  const renderStep7_Plan = () => (
+  const renderStep8_Plan = () => (
     <div className="animate-in fade-in slide-in-from-right-8 duration-500">
       <div className="text-center mb-10">
         <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Activa tu Suscripción</h2>
@@ -1051,18 +1199,19 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       <div className="flex-1 flex flex-col justify-center py-8 relative z-10 px-4">
         <div className="w-full">
           {step === 1 && renderStep1_Fiscal()}
-          {step === 2 && renderStep2_Branding()}
-          {step === 3 && renderStep3_Finance()}
-          {step === 4 && renderStep4_Catalog()}
-          {step === 5 && renderStep5_Comms()}
-          {step === 6 && renderStep6_Channels()}
-          {step === 7 && renderStep7_Plan()}
+          {step === 2 && renderStep2_Activity()}
+          {step === 3 && renderStep3_Branding()}
+          {step === 4 && renderStep4_Finance()}
+          {step === 5 && renderStep5_Catalog()}
+          {step === 6 && renderStep6_Comms()}
+          {step === 7 && renderStep7_Channels()}
+          {step === 8 && renderStep8_Plan()}
         </div>
       </div>
       
       {/* Footer / Skip */}
       <div className="text-center pb-8 relative z-10">
-         {step > 1 && step < 6 && (
+         {step > 1 && step < 8 && (
             <button onClick={() => setStep(step + 1 as Step)} className="text-slate-400 hover:text-slate-600 text-sm font-medium">
               Saltar por ahora
             </button>

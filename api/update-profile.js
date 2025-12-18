@@ -86,12 +86,21 @@ const updateUserProfileInDb = async (profile) => {
       const fechaAlta = fiscalConfig.fechaAltaAutonomo || new Date().toISOString().split('T')[0];
       
       try {
+        // Add activity columns if they don't exist (migration)
+        try {
+          await client.query('ALTER TABLE autonomo_config ADD COLUMN IF NOT EXISTS activity_sector TEXT;');
+          await client.query('ALTER TABLE autonomo_config ADD COLUMN IF NOT EXISTS activity_subcategory TEXT;');
+          await client.query('ALTER TABLE autonomo_config ADD COLUMN IF NOT EXISTS iva_article TEXT;');
+        } catch (e) {
+          // Columns might already exist, ignore
+        }
+
         await client.query(
           `INSERT INTO autonomo_config (
             user_id, base_cotizacion, fecha_alta, bonificacion_reduccion, tipo_reduccion,
-            regimen_fiscal, actividad_principal, codigo_cnae, iva_regimen, 
-            prorrateo_iva, porcentaje_prorrateo, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+            regimen_fiscal, actividad_principal, codigo_cnae, activity_sector, activity_subcategory, iva_article,
+            iva_regimen, prorrateo_iva, porcentaje_prorrateo, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
           ON CONFLICT (user_id) DO UPDATE SET
             base_cotizacion = EXCLUDED.base_cotizacion,
             fecha_alta = EXCLUDED.fecha_alta,
@@ -100,6 +109,9 @@ const updateUserProfileInDb = async (profile) => {
             regimen_fiscal = EXCLUDED.regimen_fiscal,
             actividad_principal = EXCLUDED.actividad_principal,
             codigo_cnae = EXCLUDED.codigo_cnae,
+            activity_sector = EXCLUDED.activity_sector,
+            activity_subcategory = EXCLUDED.activity_subcategory,
+            iva_article = EXCLUDED.iva_article,
             iva_regimen = EXCLUDED.iva_regimen,
             prorrateo_iva = EXCLUDED.prorrateo_iva,
             porcentaje_prorrateo = EXCLUDED.porcentaje_prorrateo,
@@ -113,6 +125,9 @@ const updateUserProfileInDb = async (profile) => {
             fiscalConfig.regimenFiscal || 'GENERAL',
             fiscalConfig.actividadPrincipal || null,
             fiscalConfig.codigoCnae || null,
+            fiscalConfig.activitySector || null,
+            fiscalConfig.activitySubcategory || null,
+            fiscalConfig.ivaArticle || null,
             fiscalConfig.ivaRegimen || 'GENERAL',
             fiscalConfig.prorrateoIVA || false,
             fiscalConfig.porcentajeProrrateo || 100

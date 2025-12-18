@@ -112,6 +112,9 @@ export interface SpanishFiscalConfig {
   regimenFiscal: 'GENERAL' | 'SIMPLIFICADO' | 'AGRICOLA' | 'GANADERO' | 'FORESTAL';
   actividadPrincipal: string; // Código CNAE o descripción
   codigoCnae?: string; // Código CNAE específico
+  activitySector?: string; // Rubro principal (ej: "Tecnología y Software")
+  activitySubcategory?: string; // Subcategoría específica (ej: "Desarrollo Web")
+  ivaArticle?: 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO'; // Artículo de IVA aplicable
   fechaAltaAutonomo?: string; // Para calcular tarifa plana
   baseCotizacionSS?: number; // Base de cotización Seguridad Social
   bonificacionReduccion?: 'TARIFA_PLANA' | 'REDUCCION_50' | 'REDUCCION_25' | 'NINGUNA';
