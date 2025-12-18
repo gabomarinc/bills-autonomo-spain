@@ -71,6 +71,60 @@ const updateUserProfileInDb = async (profile) => {
 
     console.log(`Usuario ${profile.id} actualizado correctamente. Filas afectadas: ${result.rowCount}`);
     
+    // También guardar/actualizar en autonomo_config si hay datos de cuotas
+    // Esto permite consultas más eficientes y mejor organización
+    if (profile.fiscalConfig && (profile.fiscalConfig.baseCotizacionSS || profile.fiscalConfig.fechaAltaAutonomo)) {
+      const fiscalConfig = profile.fiscalConfig;
+      
+      // Convertir bonificacionReduccion: si es string 'TARIFA_PLANA', etc., es true
+      const bonificacionReduccion = fiscalConfig.bonificacionReduccion === 'TARIFA_PLANA' || 
+                                    fiscalConfig.bonificacionReduccion === 'REDUCCION_50' || 
+                                    fiscalConfig.bonificacionReduccion === 'REDUCCION_25' ||
+                                    fiscalConfig.bonificacionReduccion === true;
+      
+      // Asegurar que fecha_alta tenga un valor válido
+      const fechaAlta = fiscalConfig.fechaAltaAutonomo || new Date().toISOString().split('T')[0];
+      
+      try {
+        await client.query(
+          `INSERT INTO autonomo_config (
+            user_id, base_cotizacion, fecha_alta, bonificacion_reduccion, tipo_reduccion,
+            regimen_fiscal, actividad_principal, codigo_cnae, iva_regimen, 
+            prorrateo_iva, porcentaje_prorrateo, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+          ON CONFLICT (user_id) DO UPDATE SET
+            base_cotizacion = EXCLUDED.base_cotizacion,
+            fecha_alta = EXCLUDED.fecha_alta,
+            bonificacion_reduccion = EXCLUDED.bonificacion_reduccion,
+            tipo_reduccion = EXCLUDED.tipo_reduccion,
+            regimen_fiscal = EXCLUDED.regimen_fiscal,
+            actividad_principal = EXCLUDED.actividad_principal,
+            codigo_cnae = EXCLUDED.codigo_cnae,
+            iva_regimen = EXCLUDED.iva_regimen,
+            prorrateo_iva = EXCLUDED.prorrateo_iva,
+            porcentaje_prorrateo = EXCLUDED.porcentaje_prorrateo,
+            updated_at = NOW()`,
+          [
+            profile.id,
+            fiscalConfig.baseCotizacionSS || 1134.0,
+            fechaAlta,
+            bonificacionReduccion,
+            fiscalConfig.tipoReduccion || 'NINGUNA',
+            fiscalConfig.regimenFiscal || 'GENERAL',
+            fiscalConfig.actividadPrincipal || null,
+            fiscalConfig.codigoCnae || null,
+            fiscalConfig.ivaRegimen || 'GENERAL',
+            fiscalConfig.prorrateoIVA || false,
+            fiscalConfig.porcentajeProrrateo || 100
+          ]
+        );
+        console.log(`✅ Configuración de autónomo guardada en autonomo_config para usuario ${profile.id}`);
+      } catch (configError) {
+        console.error('Error guardando en autonomo_config:', configError);
+        // No lanzar error, solo loguear - los datos ya están en profile_data
+      }
+    }
+
     // Verificar que se guardó correctamente
     const verify = await client.query('SELECT profile_data FROM users WHERE id = $1', [profile.id]);
     if (verify.rows.length > 0) {
