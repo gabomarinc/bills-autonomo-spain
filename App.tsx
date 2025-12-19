@@ -179,13 +179,30 @@ const AppContent: React.FC = () => {
   };
 
   const handleSaveInvoice = async (invoice: Invoice) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      console.error('❌ No hay usuario actual para guardar factura/cotización');
+      alert.addToast('error', 'Error', 'No hay sesión activa. Por favor inicia sesión nuevamente.');
+      return;
+    }
+    
+    console.log('💾 Iniciando guardado de factura/cotización:', {
+      id: invoice.id,
+      type: invoice.type,
+      clientName: invoice.clientName,
+      total: invoice.total,
+      status: invoice.status,
+      userId: currentUser.id
+    });
+    
     // Guardar en base de datos primero
     const saved = await saveInvoiceToDb({ ...invoice, userId: currentUser.id });
     if (!saved) {
-      console.error('Error guardando factura/cotización en base de datos');
+      console.error('❌ Error guardando factura/cotización en base de datos');
+      alert.addToast('error', 'Error al Guardar', 'No se pudo guardar el documento en la base de datos. Por favor intenta de nuevo.');
       return;
     }
+    
+    console.log('✅ Guardado exitoso en BD, actualizando estado local...');
     // Actualizar estado local
     const exists = invoices.find(i => i.id === invoice.id);
     if (exists) {
