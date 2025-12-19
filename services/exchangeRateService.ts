@@ -154,9 +154,9 @@ export const getLatestExchangeRate = async (
       };
     }
 
-    // Si no hay en BD, obtener del BCE (último disponible)
+    // Si no hay en BD, obtener vía API route (último disponible)
     const today = new Date().toISOString().split('T')[0];
-    const rate = await fetchFromBCE(normalizedCurrency, today);
+    const rate = await fetchExchangeRateFromAPI(normalizedCurrency, today);
     
     await client.end();
     return rate;
