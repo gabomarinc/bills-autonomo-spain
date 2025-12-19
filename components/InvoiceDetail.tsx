@@ -34,25 +34,6 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
-
-  // Normalize paymentPlan to ensure all dates are strings
-  const normalizePaymentPlan = (plan: any): PaymentPlan | undefined => {
-    if (!plan || !plan.payments || !Array.isArray(plan.payments)) return undefined;
-    
-    return {
-      totalPayments: plan.totalPayments || plan.payments.length,
-      payments: plan.payments.map((p: any) => ({
-        amount: typeof p.amount === 'number' ? p.amount : parseFloat(p.amount) || 0,
-        dueDate: dateToISOString(p.dueDate), // Asegurar que siempre sea string
-        paid: Boolean(p.paid),
-        paidDate: p.paidDate ? dateToISOString(p.paidDate) : undefined,
-        paymentId: p.paymentId || `payment_${Date.now()}_${Math.random()}`
-      }))
-    };
-  };
-
-  // Normalized payment plan
-  const normalizedPaymentPlan = invoice.paymentPlan ? normalizePaymentPlan(invoice.paymentPlan) : undefined;
   
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
