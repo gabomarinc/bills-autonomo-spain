@@ -243,13 +243,25 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                 currency: invoiceCurrency,
                 rate: rateData.rateToEur,
                 convertedEur: converted.amountEur,
-                calculation: `${total} * ${rateData.rateToEur} = ${converted.amountEur}`
+                calculation: `${total} * ${rateData.rateToEur} = ${converted.amountEur}`,
+                expectedCalculation: `${total} USD * ${rateData.rateToEur} = ${(total * rateData.rateToEur).toFixed(2)} EUR`
               });
               
-              setBaseAmountEur(converted.amountEur);
+              // Verificar que el cálculo es correcto
+              const expectedEur = total * rateData.rateToEur;
+              if (Math.abs(converted.amountEur - expectedEur) > 0.01) {
+                console.warn('Conversion mismatch! Expected:', expectedEur, 'Got:', converted.amountEur);
+                // Usar el cálculo directo si hay discrepancia
+                setBaseAmountEur(Math.round(expectedEur * 100) / 100);
+              } else {
+                setBaseAmountEur(converted.amountEur);
+              }
             } else {
               console.error('Invalid conversion result:', converted);
-              setBaseAmountEur(null);
+              // Fallback: calcular directamente
+              const directCalculation = total * rateData.rateToEur;
+              console.log('Using direct calculation as fallback:', directCalculation);
+              setBaseAmountEur(Math.round(directCalculation * 100) / 100);
             }
           } else {
             // Si no hay total, no mostrar conversión pero mantener el tipo de cambio disponible
