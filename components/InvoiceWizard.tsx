@@ -178,6 +178,12 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     const calculateExchangeRate = async () => {
       const invoiceCurrency = draft.invoiceCurrency || draft.currency;
       
+      console.log('calculateExchangeRate triggered:', {
+        invoiceCurrency,
+        itemsCount: draft.items.length,
+        items: draft.items
+      });
+      
       // Si es EUR, no hay conversión
       if (invoiceCurrency.toUpperCase() === 'EUR') {
         setExchangeRate(null);
@@ -197,6 +203,16 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       const totalBeforeTax = subtotal - discount;
       const taxAmount = applyIva ? totalBeforeTax * (getIvaRate(ivaType) / 100) : 0;
       const total = totalBeforeTax + taxAmount;
+      
+      console.log('Total calculation:', {
+        subtotal,
+        discount,
+        totalBeforeTax,
+        taxAmount,
+        total,
+        applyIva,
+        ivaType
+      });
 
       if (total <= 0) {
         setExchangeRate(null);
@@ -221,8 +237,18 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
             date: rateDateString,
             source: rateData.source || 'BCE'
           });
+          
+          // Debug: verificar que la conversión se está aplicando
+          console.log('Currency conversion:', {
+            originalTotal: total,
+            currency: invoiceCurrency,
+            rate: rateData.rateToEur,
+            convertedEur: converted.amountEur
+          });
+          
           setBaseAmountEur(converted.amountEur);
         } else {
+          console.warn('No rate data available for currency:', invoiceCurrency);
           setExchangeRate(null);
           setBaseAmountEur(null);
         }
@@ -946,7 +972,12 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                      value={draft.invoiceCurrency || draft.currency} 
                      onChange={(e) => {
                        const newCurrency = e.target.value;
-                       setDraft({...draft, currency: newCurrency, invoiceCurrency: newCurrency});
+                       console.log('Currency changed to:', newCurrency);
+                       setDraft(prev => ({
+                         ...prev, 
+                         currency: newCurrency, 
+                         invoiceCurrency: newCurrency
+                       }));
                      }} 
                      className="w-full p-2 rounded-xl border border-slate-200 bg-slate-50 outline-none text-sm"
                    >

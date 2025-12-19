@@ -346,6 +346,15 @@ export const convertToEur = async (
 
   const amountEur = amount * rate.rateToEur;
   
+  // Debug: verificar cálculo
+  console.log('convertToEur calculation:', {
+    amount,
+    fromCurrency,
+    rateToEur: rate.rateToEur,
+    calculatedEur: amountEur,
+    roundedEur: Math.round(amountEur * 100) / 100
+  });
+  
   return {
     amountEur: Math.round(amountEur * 100) / 100, // Redondear a 2 decimales
     rate: rate
