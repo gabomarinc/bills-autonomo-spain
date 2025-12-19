@@ -278,10 +278,11 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
   useEffect(() => {
     const invoiceCurrency = draft.invoiceCurrency || draft.currency;
     
-    // Si no es EUR y no hay exchangeRate establecido, calcularlo
-    if (invoiceCurrency.toUpperCase() !== 'EUR' && !exchangeRate) {
+    // Si no es EUR, siempre intentar obtener el tipo de cambio (incluso si ya existe, para actualizarlo si cambió la moneda)
+    if (invoiceCurrency.toUpperCase() !== 'EUR') {
       const calculateInitialRate = async () => {
         try {
+          setIsLoadingExchangeRate(true);
           const invoiceDate = draft.validityDate || new Date().toISOString().split('T')[0];
           const rateData = await getExchangeRateForInvoiceDate(invoiceCurrency, invoiceDate);
           
@@ -292,14 +293,24 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
               date: rateDateString,
               source: rateData.source || 'BCE'
             });
-            console.log('Initial exchange rate set:', rateData);
+            console.log('Initial exchange rate set for', invoiceCurrency, ':', rateData);
+          } else {
+            console.warn('No rate data found for', invoiceCurrency);
+            setExchangeRate(null);
           }
         } catch (error) {
           console.error('Error setting initial exchange rate:', error);
+          setExchangeRate(null);
+        } finally {
+          setIsLoadingExchangeRate(false);
         }
       };
       
       calculateInitialRate();
+    } else {
+      // Si es EUR, limpiar el tipo de cambio
+      setExchangeRate(null);
+      setBaseAmountEur(null);
     }
   }, [draft.invoiceCurrency, draft.currency, draft.validityDate]);
 
