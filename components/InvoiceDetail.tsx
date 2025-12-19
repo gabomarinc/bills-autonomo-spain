@@ -34,6 +34,25 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
+
+  // Normalize paymentPlan to ensure all dates are strings
+  const normalizePaymentPlan = (plan: any): PaymentPlan | undefined => {
+    if (!plan || !plan.payments || !Array.isArray(plan.payments)) return undefined;
+    
+    return {
+      totalPayments: plan.totalPayments || plan.payments.length,
+      payments: plan.payments.map((p: any) => ({
+        amount: typeof p.amount === 'number' ? p.amount : parseFloat(p.amount) || 0,
+        dueDate: dateToISOString(p.dueDate), // Asegurar que siempre sea string
+        paid: Boolean(p.paid),
+        paidDate: p.paidDate ? dateToISOString(p.paidDate) : undefined,
+        paymentId: p.paymentId || `payment_${Date.now()}_${Math.random()}`
+      }))
+    };
+  };
+
+  // Normalized payment plan
+  const normalizedPaymentPlan = invoice.paymentPlan ? normalizePaymentPlan(invoice.paymentPlan) : undefined;
   
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -59,15 +78,14 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       setPaymentMethod('BANCO');
       
       // Si hay plan de pagos, seleccionar el primer pago pendiente
-      if (invoice.paymentPlan && invoice.paymentPlan.payments && invoice.paymentPlan.payments.length > 0) {
-        const firstUnpaidIndex = invoice.paymentPlan.payments.findIndex(p => !p.paid);
+      if (normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0) {
+        const firstUnpaidIndex = normalizedPaymentPlan.payments.findIndex(p => !p.paid);
         if (firstUnpaidIndex >= 0) {
           setSelectedPaymentIndex(firstUnpaidIndex);
-          const selectedPayment = invoice.paymentPlan.payments[firstUnpaidIndex];
+          const selectedPayment = normalizedPaymentPlan.payments[firstUnpaidIndex];
           setPaymentAmount(selectedPayment.amount.toFixed(2));
-          // Asegurar que dueDate sea un string (ISO format)
-          const dueDateStr = dateToISOString(selectedPayment.dueDate);
-          setPaymentDate(dueDateStr);
+          // dueDate ya está normalizado como string
+          setPaymentDate(selectedPayment.dueDate);
         } else {
           setSelectedPaymentIndex(null);
         }
@@ -1003,17 +1021,17 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             )}
             
             {/* Show payment plan info */}
-            {invoice.paymentPlan && invoice.paymentPlan.payments && invoice.paymentPlan.payments.length > 0 && (
+            {normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0 && (
               <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Plan de Pagos</p>
                 <div className="space-y-1">
-                  {invoice.paymentPlan.payments.map((payment, idx) => (
+                  {normalizedPaymentPlan.payments.map((payment, idx) => (
                     <div key={idx} className="flex items-center justify-between text-xs">
                       <span className="text-amber-700">
                         Pago {idx + 1}: {(() => {
                           try {
-                            const dateStr = dateToISOString(payment.dueDate);
-                            return new Date(dateStr).toLocaleDateString();
+                            // dueDate ya está normalizado como string
+                            return new Date(payment.dueDate).toLocaleDateString();
                           } catch (e) {
                             return 'Fecha inválida';
                           }
@@ -1143,22 +1161,21 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
                 <div className="space-y-4">
                     {/* Selector de pago del plan si existe */}
-                    {invoice.paymentPlan && invoice.paymentPlan.payments && invoice.paymentPlan.payments.length > 0 && (
+                    {normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0 && (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                         <label className="text-xs font-bold text-amber-800 uppercase tracking-widest mb-2 block">
                           Seleccionar Pago del Plan
                         </label>
                         <div className="space-y-2">
-                          {invoice.paymentPlan.payments.map((payment, idx) => (
+                          {normalizedPaymentPlan.payments.map((payment, idx) => (
                             <button
                               key={idx}
                               type="button"
                               onClick={() => {
                                 setSelectedPaymentIndex(idx);
                                 setPaymentAmount(payment.amount.toFixed(2));
-                                // Asegurar que dueDate sea un string (ISO format)
-                                const dueDateStr = dateToISOString(payment.dueDate);
-                                setPaymentDate(dueDateStr);
+                                // dueDate ya está normalizado como string
+                                setPaymentDate(payment.dueDate);
                               }}
                               className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
                                 selectedPaymentIndex === idx
@@ -1178,8 +1195,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                                     Vence: {(() => {
                                       try {
                                         if (!payment.dueDate) return 'Fecha no definida';
-                                        const dateStr = dateToISOString(payment.dueDate);
-                                        return new Date(dateStr).toLocaleDateString();
+                                        // dueDate ya está normalizado como string
+                                        return new Date(payment.dueDate).toLocaleDateString();
                                       } catch (e) {
                                         return 'Fecha inválida';
                                       }
