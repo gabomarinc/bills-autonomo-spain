@@ -214,12 +214,6 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
         ivaType
       });
 
-      if (total <= 0) {
-        setExchangeRate(null);
-        setBaseAmountEur(null);
-        return;
-      }
-
       setIsLoadingExchangeRate(true);
       try {
         // Usar fecha de factura o fecha actual
@@ -227,33 +221,40 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
         const rateData = await getExchangeRateForInvoiceDate(invoiceCurrency, invoiceDate);
         
         if (rateData && rateData.rateToEur) {
-          const converted = await convertToEur(total, invoiceCurrency, invoiceDate);
-          
           // Asegurar que rateDate sea siempre un string (ya viene como string de la interfaz)
           const rateDateString = rateData.rateDate || new Date().toISOString().split('T')[0];
           
-          // Verificar que la conversión se aplicó correctamente
-          if (converted && converted.amountEur && !isNaN(converted.amountEur)) {
-            setExchangeRate({
-              rate: rateData.rateToEur,
-              date: rateDateString,
-              source: rateData.source || 'BCE'
-            });
+          // Siempre establecer el tipo de cambio, incluso si el total es 0
+          setExchangeRate({
+            rate: rateData.rateToEur,
+            date: rateDateString,
+            source: rateData.source || 'BCE'
+          });
+          
+          // Solo calcular conversión si hay un total > 0
+          if (total > 0) {
+            const converted = await convertToEur(total, invoiceCurrency, invoiceDate);
             
-            // Debug: verificar que la conversión se está aplicando
-            console.log('Currency conversion:', {
-              originalTotal: total,
-              currency: invoiceCurrency,
-              rate: rateData.rateToEur,
-              convertedEur: converted.amountEur,
-              calculation: `${total} * ${rateData.rateToEur} = ${converted.amountEur}`
-            });
-            
-            setBaseAmountEur(converted.amountEur);
+            // Verificar que la conversión se aplicó correctamente
+            if (converted && converted.amountEur && !isNaN(converted.amountEur)) {
+              // Debug: verificar que la conversión se está aplicando
+              console.log('Currency conversion:', {
+                originalTotal: total,
+                currency: invoiceCurrency,
+                rate: rateData.rateToEur,
+                convertedEur: converted.amountEur,
+                calculation: `${total} * ${rateData.rateToEur} = ${converted.amountEur}`
+              });
+              
+              setBaseAmountEur(converted.amountEur);
+            } else {
+              console.error('Invalid conversion result:', converted);
+              setBaseAmountEur(null);
+            }
           } else {
-            console.error('Invalid conversion result:', converted);
-            setExchangeRate(null);
+            // Si no hay total, no mostrar conversión pero mantener el tipo de cambio disponible
             setBaseAmountEur(null);
+            console.log('No total to convert, but exchange rate is available:', rateData.rateToEur);
           }
         } else {
           console.warn('No rate data available for currency:', invoiceCurrency, rateData);
@@ -995,13 +996,15 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                        </option>
                      ))}
                    </select>
-                   {/* Mostrar conversión a EUR si no es EUR */}
-                   {(draft.invoiceCurrency || draft.currency).toUpperCase() !== 'EUR' && baseAmountEur && exchangeRate && (
+                   {/* Mostrar tipo de cambio si no es EUR */}
+                   {(draft.invoiceCurrency || draft.currency).toUpperCase() !== 'EUR' && exchangeRate && (
                      <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                       <div className="flex items-center justify-between text-xs">
-                         <span className="text-blue-700 font-medium">Equivalente en EUR:</span>
-                         <span className="text-blue-900 font-bold">€{baseAmountEur.toFixed(2)}</span>
-                       </div>
+                       {baseAmountEur && (
+                         <div className="flex items-center justify-between text-xs mb-2">
+                           <span className="text-blue-700 font-medium">Equivalente en EUR:</span>
+                           <span className="text-blue-900 font-bold">€{baseAmountEur.toFixed(2)}</span>
+                         </div>
+                       )}
                        <div className="mt-1 text-[10px] text-blue-600">
                          Tipo de cambio: 1 {draft.invoiceCurrency || draft.currency} = {exchangeRate.rate.toFixed(4)} EUR
                          <br />

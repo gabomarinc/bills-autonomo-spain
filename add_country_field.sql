@@ -12,3 +12,4 @@ CREATE INDEX IF NOT EXISTS idx_prospects_country ON prospects(user_id, country);
 -- 1. Determinar automáticamente el tipo de operación (NACIONAL, INTRACOMUNITARIA, EXPORTACION)
 -- 2. Aplicar las reglas de IVA correctas según el país
 -- 3. Autocompletar el país cuando se crea una factura/cotización para ese cliente
+
