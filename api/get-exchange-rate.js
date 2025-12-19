@@ -119,28 +119,28 @@ export default async function handler(req, res) {
       console.error('Currency-api failed:', alt2Error.message);
     }
 
-    // Si todas las APIs fallaron, intentar con fixer.io (gratuito, sin API key para EUR base)
+    // Si todas las APIs fallaron, intentar con RatesDB (gratuito, datos del BCE)
     try {
-      const lastResortUrl = `https://api.fixer.io/latest?base=EUR&symbols=${normalizedCurrency}`;
+      const lastResortUrl = `https://free.ratesdb.com/v1/rates?from=${normalizedCurrency}&to=EUR`;
       const response = await fetch(lastResortUrl);
       
       if (response.ok) {
         const data = await response.json();
-        if (data.rates && data.rates[normalizedCurrency]) {
-          const rateFromEur = data.rates[normalizedCurrency];
-          const rateToEur = 1 / rateFromEur;
+        if (data.rate) {
+          // RatesDB devuelve directamente el rate de FROM a TO (GBP a EUR)
+          const rateToEur = parseFloat(data.rate);
           
-          console.log(`Fixer.io (last resort): Found ${normalizedCurrency} rate: ${rateToEur}`);
+          console.log(`RatesDB (last resort): Found ${normalizedCurrency} to EUR rate: ${rateToEur}`);
           return res.status(200).json({
             currency: normalizedCurrency,
             rateToEur: Math.round(rateToEur * 10000) / 10000,
             rateDate: targetDate,
-            source: 'FIXER_IO'
+            source: 'RATESDB'
           });
         }
       }
     } catch (lastResortError) {
-      console.error('Last resort API (fixer.io) also failed:', lastResortError.message);
+      console.error('Last resort API (RatesDB) also failed:', lastResortError.message);
     }
 
     console.error(`All exchange rate APIs failed for ${normalizedCurrency}`);
