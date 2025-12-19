@@ -273,6 +273,36 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     calculateExchangeRate();
   }, [draft.invoiceCurrency, draft.currency, draft.items, draft.validityDate, discountValue, discountType, applyIva, ivaType]);
 
+  // Efecto adicional: Asegurar que el tipo de cambio se calcule cuando el componente se monta o cuando cambia la moneda
+  // Esto es especialmente importante cuando se crea desde el dashboard sin initialData
+  useEffect(() => {
+    const invoiceCurrency = draft.invoiceCurrency || draft.currency;
+    
+    // Si no es EUR y no hay exchangeRate establecido, calcularlo
+    if (invoiceCurrency.toUpperCase() !== 'EUR' && !exchangeRate) {
+      const calculateInitialRate = async () => {
+        try {
+          const invoiceDate = draft.validityDate || new Date().toISOString().split('T')[0];
+          const rateData = await getExchangeRateForInvoiceDate(invoiceCurrency, invoiceDate);
+          
+          if (rateData && rateData.rateToEur) {
+            const rateDateString = rateData.rateDate || new Date().toISOString().split('T')[0];
+            setExchangeRate({
+              rate: rateData.rateToEur,
+              date: rateDateString,
+              source: rateData.source || 'BCE'
+            });
+            console.log('Initial exchange rate set:', rateData);
+          }
+        } catch (error) {
+          console.error('Error setting initial exchange rate:', error);
+        }
+      };
+      
+      calculateInitialRate();
+    }
+  }, [draft.invoiceCurrency, draft.currency, draft.validityDate]);
+
   // Sync IVA/IRPF & discount visibility with existing items on load
   useEffect(() => {
     if (initialData?.items && initialData.items.length > 0) {
