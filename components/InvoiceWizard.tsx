@@ -215,8 +215,8 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
           
           setExchangeRate({
             rate: rateData.rateToEur,
-            date: rateData.rateDate,
-            source: rateData.source
+            date: typeof rateData.rateDate === 'string' ? rateData.rateDate : (rateData.rateDate instanceof Date ? rateData.rateDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+            source: rateData.source || 'BCE'
           });
           setBaseAmountEur(converted.amountEur);
         } else {
