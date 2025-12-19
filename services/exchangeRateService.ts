@@ -1,9 +1,10 @@
 /**
  * Servicio para obtener y gestionar tipos de cambio del Banco Central Europeo (BCE)
  * 
- * Fuentes:
- * - BCE XML: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
- * - API alternativa: https://api.exchangerate-api.com/v4/latest/EUR
+ * Fuentes (todas gratuitas, sin API key):
+ * - BCE XML: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml (oficial, actualización diaria)
+ * - Exchangerate.host: https://api.exchangerate.host/latest?base=EUR (gratuito, sin API key)
+ * - Currency-api: https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/eur.json (gratuito, sin API key)
  */
 
 import { Client } from '@neondatabase/serverless';
@@ -210,9 +211,9 @@ const fetchFromBCE = async (
     console.warn('Error fetching from BCE, trying alternative API:', error);
   }
 
-  // Fallback: usar API alternativa (más confiable y siempre disponible)
+  // Fallback 1: Exchangerate.host (gratuito, sin API key, siempre disponible)
   try {
-    const altUrl = `https://api.exchangerate-api.com/v4/latest/EUR`;
+    const altUrl = `https://api.exchangerate.host/latest?base=EUR`;
     const response = await fetch(altUrl);
     
     if (response.ok) {
@@ -226,12 +227,36 @@ const fetchFromBCE = async (
           currency: currency,
           rateToEur: Math.round(rateToEur * 10000) / 10000, // 4 decimales
           rateDate: date,
-          source: 'EXCHANGERATE_API'
+          source: 'EXCHANGERATE_HOST'
         };
       }
     }
   } catch (error) {
-    console.error('Error fetching from alternative API:', error);
+    console.warn('Error fetching from exchangerate.host, trying currency-api:', error);
+  }
+
+  // Fallback 2: Currency-api (gratuito, sin API key, CDN)
+  try {
+    const altUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/eur.json`;
+    const response = await fetch(altUrl);
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.eur && data.eur[currency.toLowerCase()]) {
+        // Esta API da: 1 EUR = X USD, necesitamos: 1 USD = Y EUR
+        const rateFromEur = data.eur[currency.toLowerCase()];
+        const rateToEur = 1 / rateFromEur;
+        
+        return {
+          currency: currency,
+          rateToEur: Math.round(rateToEur * 10000) / 10000, // 4 decimales
+          rateDate: date,
+          source: 'CURRENCY_API'
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching from currency-api:', error);
   }
 
   return null;
