@@ -971,7 +971,18 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                   {invoice.paymentPlan.payments.map((payment, idx) => (
                     <div key={idx} className="flex items-center justify-between text-xs">
                       <span className="text-amber-700">
-                        Pago {idx + 1}: {new Date(payment.dueDate).toLocaleDateString()}
+                        Pago {idx + 1}: {(() => {
+                          try {
+                            const dateStr = payment.dueDate instanceof Date 
+                              ? payment.dueDate.toISOString().split('T')[0]
+                              : typeof payment.dueDate === 'string'
+                              ? payment.dueDate.split('T')[0]
+                              : new Date().toISOString().split('T')[0];
+                            return new Date(dateStr).toLocaleDateString();
+                          } catch (e) {
+                            return 'Fecha inválida';
+                          }
+                        })()}
                       </span>
                       <span className={`font-bold ${payment.paid ? 'text-green-600' : 'text-amber-800'}`}>
                         {payment.paid ? '✓' : '○'} {invoice.currency} {payment.amount.toFixed(2)}
@@ -1110,7 +1121,13 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                               onClick={() => {
                                 setSelectedPaymentIndex(idx);
                                 setPaymentAmount(payment.amount.toFixed(2));
-                                setPaymentDate(payment.dueDate);
+                                // Asegurar que dueDate sea un string (ISO format)
+                                const dueDateStr = payment.dueDate instanceof Date 
+                                  ? payment.dueDate.toISOString().split('T')[0]
+                                  : typeof payment.dueDate === 'string'
+                                  ? payment.dueDate.split('T')[0] // Si es string ISO, tomar solo la fecha
+                                  : new Date().toISOString().split('T')[0]; // Fallback
+                                setPaymentDate(dueDateStr);
                               }}
                               className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
                                 selectedPaymentIndex === idx
