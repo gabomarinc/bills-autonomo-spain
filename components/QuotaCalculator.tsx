@@ -134,8 +134,28 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
                     min="1134"
                     max="4507.2"
                     step="0.01"
-                    value={baseCotizacion}
-                    onChange={(e) => setBaseCotizacion(parseFloat(e.target.value) || 1134)}
+                    value={baseCotizacion || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Permitir campo vacío temporalmente
+                      if (value === '') {
+                        setBaseCotizacion(0);
+                        return;
+                      }
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        setBaseCotizacion(numValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Si está vacío o es menor al mínimo, establecer el mínimo
+                      const value = parseFloat(e.target.value);
+                      if (!value || isNaN(value) || value < 1134) {
+                        setBaseCotizacion(1134);
+                      } else if (value > 4507.2) {
+                        setBaseCotizacion(4507.2);
+                      }
+                    }}
                     className="w-full pl-12 p-3 border border-slate-200 rounded-xl font-bold text-[#1c2938] outline-none focus:ring-2 focus:ring-[#27bea5]"
                   />
                 </div>
