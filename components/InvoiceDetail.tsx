@@ -1232,7 +1232,12 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                           O puedes registrar un pago parcial manualmente
                         </p>
                       </div>
-                    )}
+                        );
+                      } catch (e) {
+                        console.error('Error renderizando plan de pagos:', e);
+                        return null;
+                      }
+                    })()}
 
                     {/* Método de pago */}
                     <div>
