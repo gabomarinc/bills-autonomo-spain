@@ -141,8 +141,16 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     };
   };
 
-  // Normalized payment plan
-  const normalizedPaymentPlan = invoice.paymentPlan ? normalizePaymentPlan(invoice.paymentPlan) : undefined;
+  // Normalized payment plan - se calcula con useMemo para evitar recalcular en cada render
+  const normalizedPaymentPlan = useMemo(() => {
+    if (!invoice.paymentPlan) return undefined;
+    try {
+      return normalizePaymentPlan(invoice.paymentPlan);
+    } catch (e) {
+      console.error('Error normalizando paymentPlan:', e);
+      return undefined;
+    }
+  }, [invoice.paymentPlan]);
 
   // Reset payment modal state when it opens
   useEffect(() => {
