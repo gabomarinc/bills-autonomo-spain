@@ -237,7 +237,13 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             scale: 2,
             useCORS: true, 
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            ignoreElements: (element) => {
+                // Ocultar elementos con clase 'print:hidden' o 'no-pdf'
+                return element.classList.contains('no-pdf') || 
+                       window.getComputedStyle(element).display === 'none' ||
+                       element.closest('.no-pdf') !== null;
+            }
         });
 
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -309,17 +315,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const handleDownloadPdf = async () => {
       if (!documentRef.current) return;
       
-      const canvas = await html2canvas(documentRef.current, { 
-        scale: 2, 
-        useCORS: true, 
-        backgroundColor: '#ffffff',
-        ignoreElements: (element) => {
-            // Ocultar elementos con clase 'no-pdf'
-            return element.classList.contains('no-pdf') || 
-                   window.getComputedStyle(element).display === 'none' ||
-                   element.closest('.no-pdf') !== null;
-        }
-      });
+      const canvas = await html2canvas(documentRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -582,7 +578,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                     </span>
                     {/* Información interna de conversión - NO visible en PDF para cliente */}
                     {invoice.baseAmountEur && invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && (
-                      <p className="text-sm text-slate-500 mt-1 print:hidden">
+                      <p className="text-sm text-slate-500 mt-1 no-pdf">
                         (€{invoice.baseAmountEur.toFixed(2)} para declaración)
                       </p>
                     )}
@@ -599,7 +595,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                               <span className="font-bold text-slate-600 block">
                                 {invoice.invoiceCurrency} {amountPaid.toFixed(2)}
                               </span>
-                              <span className="text-xs text-slate-500 print:hidden">
+                              <span className="text-xs text-slate-500 no-pdf">
                                 (€{paidEur.toFixed(2)} para declaración)
                               </span>
                             </>
@@ -625,7 +621,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                             return `${symbol} ${(invoice.total - amountPaid).toFixed(2)}`;
                           })()}
                           {invoice.baseAmountEur && (
-                            <span className="block text-[10px] print:hidden">(€{remainingBalance.toFixed(2)} para declaración)</span>
+                            <span className="block text-[10px] no-pdf">(€{remainingBalance.toFixed(2)} para declaración)</span>
                           )}
                         </span>
                     </div>
@@ -1100,7 +1096,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
                     {/* Mostrar info si la factura es en otra moneda - NO visible en PDF para cliente */}
                     {invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && invoice.baseAmountEur && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 print:hidden">
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 no-pdf">
                         <p className="font-medium mb-1">⚠️ Factura en {invoice.invoiceCurrency}</p>
                         <p>Facturado: {invoice.invoiceCurrency} {invoice.total.toFixed(2)}</p>
                         <p>Para declaración: €{invoice.baseAmountEur.toFixed(2)}</p>
