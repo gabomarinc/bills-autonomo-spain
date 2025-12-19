@@ -64,15 +64,16 @@ export const calcularCuotaAutonomo = (
   let cuotaMensual = contingenciasComunes + desempleo + formacionProfesional;
 
   // Aplicar bonificaciones/reducciones
-  if (tieneBonificacion) {
-    if (tipoReduccion === 'TARIFA_PLANA') {
-      // Tarifa plana: 80€/mes primeros 12 meses (desde 2023)
-      cuotaMensual = 80.0;
-    } else if (tipoReduccion === 'REDUCCION_50') {
-      cuotaMensual = cuotaMensual * 0.5;
-    } else if (tipoReduccion === 'REDUCCION_25') {
-      cuotaMensual = cuotaMensual * 0.75;
-    }
+  if (tipoReduccion === 'TARIFA_PLANA' && tieneBonificacion) {
+    // Tarifa plana: 80€/mes primeros 12 meses (desde 2023)
+    // Solo aplica si tieneBonificacion es true (dentro de los primeros 12 meses)
+    cuotaMensual = 80.0;
+  } else if (tipoReduccion === 'REDUCCION_50') {
+    // Reducción 50%: aplica independientemente de tieneBonificacion
+    cuotaMensual = cuotaMensual * 0.5;
+  } else if (tipoReduccion === 'REDUCCION_25') {
+    // Reducción 25%: aplica independientemente de tieneBonificacion
+    cuotaMensual = cuotaMensual * 0.75;
   }
 
   // Calcular fecha de vencimiento (primer día del mes siguiente)
