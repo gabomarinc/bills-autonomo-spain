@@ -180,13 +180,19 @@ const AppContent: React.FC = () => {
 
   const handleSaveInvoice = async (invoice: Invoice) => {
     if (!currentUser) return;
+    // Guardar en base de datos primero
+    const saved = await saveInvoiceToDb({ ...invoice, userId: currentUser.id });
+    if (!saved) {
+      console.error('Error guardando factura/cotización en base de datos');
+      return;
+    }
+    // Actualizar estado local
     const exists = invoices.find(i => i.id === invoice.id);
     if (exists) {
       setInvoices(invoices.map(i => i.id === invoice.id ? invoice : i));
     } else {
       setInvoices([invoice, ...invoices]);
     }
-    await saveInvoiceToDb({ ...invoice, userId: currentUser.id });
     if (invoice.clientName) {
        if (invoice.type === 'Expense') {
            await saveProviderToDb({ name: invoice.clientName.trim(), category: invoice.items[0]?.description || 'General' }, currentUser.id);
