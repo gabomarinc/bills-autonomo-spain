@@ -1080,9 +1080,14 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                     <h3 className="text-xl font-bold text-[#1c2938]">Registrar Pago</h3>
                     <p className="text-sm text-slate-500 mt-1">
                       Saldo pendiente: {(() => {
-                        const currency = invoice.invoiceCurrency || invoice.currency;
-                        const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
-                        return `${symbol} ${remainingBalance.toFixed(2)}`;
+                        try {
+                          const currency = invoice.invoiceCurrency || invoice.currency || 'EUR';
+                          const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
+                          const balance = remainingBalance || 0;
+                          return `${symbol} ${balance.toFixed(2)}`;
+                        } catch (e) {
+                          return '€0.00';
+                        }
                       })()}
                       {invoice.baseAmountEur && (
                         <span className="block mt-1 text-xs print:hidden">(€{invoice.baseAmountEur.toFixed(2)} para declaración)</span>
