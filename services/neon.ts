@@ -564,7 +564,27 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
         // Quote-Invoice Relationship & Payment Plan
         parentQuoteId: row.parent_quote_id || row.data?.parentQuoteId,
         parentInvoiceId: row.parent_invoice_id || row.data?.parentInvoiceId,
-        paymentPlan: row.payment_plan && Object.keys(row.payment_plan).length > 0 ? row.payment_plan : (row.data?.paymentPlan || undefined)
+        paymentPlan: (() => {
+          try {
+            const plan = row.payment_plan && Object.keys(row.payment_plan).length > 0 ? row.payment_plan : (row.data?.paymentPlan || undefined);
+            if (!plan) return undefined;
+            // Asegurar que todas las fechas en el plan sean strings
+            if (plan.payments && Array.isArray(plan.payments)) {
+              return {
+                ...plan,
+                payments: plan.payments.map((p: any) => ({
+                  ...p,
+                  dueDate: typeof p.dueDate === 'string' ? p.dueDate.split('T')[0] : (p.dueDate ? new Date(p.dueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+                  paidDate: p.paidDate ? (typeof p.paidDate === 'string' ? p.paidDate.split('T')[0] : new Date(p.paidDate).toISOString().split('T')[0]) : undefined
+                }))
+              };
+            }
+            return plan;
+          } catch (e) {
+            console.error('Error normalizando paymentPlan desde BD:', e);
+            return undefined;
+          }
+        })()
       }));
       allDocs = [...allDocs, ...mappedInvoices];
     }
