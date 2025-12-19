@@ -1150,39 +1150,27 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
          </div>
       </div>
 
-      {/* PAYMENT MODAL - SIMPLIFICADO */}
+      {/* PAYMENT MODAL - VERSIÓN SIMPLIFICADA Y SEGURA */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-[#1c2938]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
                 <button 
                     onClick={() => setIsPaymentModalOpen(false)}
-                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-10"
+                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400"
                 >
                     <X className="w-5 h-5" />
                 </button>
                 
-                <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Wallet className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-xl font-bold text-[#1c2938]">Registrar Pago</h3>
-                    <p className="text-sm text-slate-500 mt-1">
-                      Saldo pendiente: {(() => {
-                        try {
-                          const currency = invoice.invoiceCurrency || invoice.currency || 'EUR';
-                          const symbol = currency === 'EUR' ? '€' : currency === 'USD' ? '$' : '€';
-                          const balance = remainingBalance || 0;
-                          return `${symbol} ${balance.toFixed(2)}`;
-                        } catch (e) {
-                          return '€0.00';
-                        }
-                      })()}
-                    </p>
-                </div>
-
+                <h3 className="text-xl font-bold text-[#1c2938] mb-4">Registrar Pago</h3>
+                
                 <div className="space-y-4">
-                    {/* Selector de pago del plan si existe - SIMPLIFICADO */}
-                    {normalizedPaymentPlan && normalizedPaymentPlan.payments && Array.isArray(normalizedPaymentPlan.payments) && normalizedPaymentPlan.payments.length > 0 && (
+                    {/* Selector de pago del plan - SOLO SI EXISTE Y ES VÁLIDO */}
+                    {(() => {
+                      try {
+                        if (!normalizedPaymentPlan || !normalizedPaymentPlan.payments || !Array.isArray(normalizedPaymentPlan.payments) || normalizedPaymentPlan.payments.length === 0) {
+                          return null;
+                        }
+                        return (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                         <label className="text-xs font-bold text-amber-800 uppercase tracking-widest mb-2 block">
                           Seleccionar Pago del Plan
