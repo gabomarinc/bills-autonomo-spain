@@ -309,7 +309,17 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const handleDownloadPdf = async () => {
       if (!documentRef.current) return;
       
-      const canvas = await html2canvas(documentRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await html2canvas(documentRef.current, { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#ffffff',
+        ignoreElements: (element) => {
+            // Ocultar elementos con clase 'no-pdf'
+            return element.classList.contains('no-pdf') || 
+                   window.getComputedStyle(element).display === 'none' ||
+                   element.closest('.no-pdf') !== null;
+        }
+      });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
