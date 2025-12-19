@@ -196,10 +196,17 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       const selectedPayment = updatedPaymentPlan.payments[selectedPaymentIndex];
       
       // Marcar el pago como pagado
+      // Asegurar que paidDate sea un string
+      const paidDateStr = paymentDate instanceof Date 
+        ? paymentDate.toISOString().split('T')[0]
+        : typeof paymentDate === 'string'
+        ? paymentDate.split('T')[0]
+        : new Date().toISOString().split('T')[0];
+      
       updatedPaymentPlan.payments[selectedPaymentIndex] = {
         ...selectedPayment,
         paid: true,
-        paidDate: paymentDate
+        paidDate: paidDateStr
       };
       
       updatedInvoice.paymentPlan = updatedPaymentPlan;
