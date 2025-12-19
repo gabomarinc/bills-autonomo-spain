@@ -1071,31 +1071,57 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                     {/* IVA Row with Toggle and Type Selector */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-center text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <span>IVA ({getIvaRate(ivaType)}%)</span>
-                          <button onClick={() => handleIvaToggle(!applyIva)} className={`w-8 h-4 rounded-full relative transition-colors ${applyIva ? 'bg-[#27bea5]' : 'bg-slate-600'}`}>
-                            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${applyIva ? 'left-4.5 translate-x-full' : 'left-0.5'}`} style={{ left: applyIva ? 'calc(100% - 14px)' : '2px' }}></div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium">IVA</span>
+                          <button 
+                            onClick={() => handleIvaToggle(!applyIva)} 
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#27bea5] focus:ring-offset-2 ${
+                              applyIva ? 'bg-[#27bea5]' : 'bg-slate-600'
+                            }`}
+                            role="switch"
+                            aria-checked={applyIva}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                applyIva ? 'translate-x-5' : 'translate-x-1'
+                              }`}
+                            />
                           </button>
+                          {applyIva && (
+                            <span className="text-xs text-slate-400">({getIvaRate(ivaType)}%)</span>
+                          )}
                         </div>
-                        <span>{totals.ivaAmount.toFixed(2)}</span>
+                        <span className="font-bold">{totals.ivaAmount.toFixed(2)}</span>
                       </div>
                       {applyIva && (
-                        <div className="flex gap-1 bg-black/20 rounded-lg p-1">
+                        <div className="flex gap-1.5 bg-black/20 rounded-lg p-1.5">
                           <button 
                             onClick={() => handleIvaTypeChange('GENERAL')} 
-                            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold ${ivaType === 'GENERAL' ? 'bg-[#27bea5] text-white' : 'text-slate-400'}`}
+                            className={`flex-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all ${
+                              ivaType === 'GENERAL' 
+                                ? 'bg-[#27bea5] text-white shadow-sm' 
+                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                            }`}
                           >
                             21%
                           </button>
                           <button 
                             onClick={() => handleIvaTypeChange('REDUCIDO')} 
-                            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold ${ivaType === 'REDUCIDO' ? 'bg-[#27bea5] text-white' : 'text-slate-400'}`}
+                            className={`flex-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all ${
+                              ivaType === 'REDUCIDO' 
+                                ? 'bg-[#27bea5] text-white shadow-sm' 
+                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                            }`}
                           >
                             10%
                           </button>
                           <button 
                             onClick={() => handleIvaTypeChange('SUPERREDUCIDO')} 
-                            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold ${ivaType === 'SUPERREDUCIDO' ? 'bg-[#27bea5] text-white' : 'text-slate-400'}`}
+                            className={`flex-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all ${
+                              ivaType === 'SUPERREDUCIDO' 
+                                ? 'bg-[#27bea5] text-white shadow-sm' 
+                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                            }`}
                           >
                             4%
                           </button>
