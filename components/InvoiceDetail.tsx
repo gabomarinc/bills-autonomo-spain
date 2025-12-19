@@ -56,8 +56,34 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       setPaymentReceivedEur(null);
       setPaymentExchangeRate(null);
       setExchangeDifference(null);
+      setPaymentMethod('BANCO');
+      
+      // Si hay plan de pagos, seleccionar el primer pago pendiente
+      if (invoice.paymentPlan && invoice.paymentPlan.payments && invoice.paymentPlan.payments.length > 0) {
+        const firstUnpaidIndex = invoice.paymentPlan.payments.findIndex(p => !p.paid);
+        if (firstUnpaidIndex >= 0) {
+          setSelectedPaymentIndex(firstUnpaidIndex);
+          const selectedPayment = invoice.paymentPlan.payments[firstUnpaidIndex];
+          setPaymentAmount(selectedPayment.amount.toFixed(2));
+          // Asegurar que dueDate sea un string (ISO format)
+          try {
+            const dueDateStr = selectedPayment.dueDate instanceof Date 
+              ? selectedPayment.dueDate.toISOString().split('T')[0]
+              : typeof selectedPayment.dueDate === 'string'
+              ? selectedPayment.dueDate.split('T')[0] // Si es string ISO, tomar solo la fecha
+              : new Date().toISOString().split('T')[0]; // Fallback
+            setPaymentDate(dueDateStr);
+          } catch (e) {
+            setPaymentDate(new Date().toISOString().split('T')[0]);
+          }
+        } else {
+          setSelectedPaymentIndex(null);
+        }
+      } else {
+        setSelectedPaymentIndex(null);
+      }
     }
-  }, [isPaymentModalOpen, invoice.invoiceCurrency, invoice.currency]);
+  }, [isPaymentModalOpen, invoice.invoiceCurrency, invoice.currency, invoice.paymentPlan]);
 
   // Ref for PDF Generation
   const documentRef = useRef<HTMLDivElement>(null);
@@ -1151,7 +1177,20 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                                     Pago {idx + 1} {payment.paid && '(Pagado ✓)'}
                                   </span>
                                   <p className="text-xs text-amber-700 mt-1">
-                                    Vence: {new Date(payment.dueDate).toLocaleDateString()}
+                                    Vence: {(() => {
+                                      try {
+                                        if (!payment.dueDate) return 'Fecha no definida';
+                                        const dateStr = payment.dueDate instanceof Date 
+                                          ? payment.dueDate.toISOString().split('T')[0]
+                                          : typeof payment.dueDate === 'string'
+                                          ? payment.dueDate.split('T')[0]
+                                          : null;
+                                        if (!dateStr) return 'Fecha inválida';
+                                        return new Date(dateStr).toLocaleDateString();
+                                      } catch (e) {
+                                        return 'Fecha inválida';
+                                      }
+                                    })()}
                                   </p>
                                 </div>
                                 <span className="font-bold text-amber-900">
