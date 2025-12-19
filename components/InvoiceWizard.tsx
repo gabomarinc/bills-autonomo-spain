@@ -602,7 +602,9 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       timeline: initialData?.timeline,
       // Multicurrency fields
       invoiceCurrency: invoiceCurrency,
-      baseAmountEur: baseAmountEur || (invoiceCurrency.toUpperCase() === 'EUR' ? totals.total : undefined),
+      baseAmountEur: invoiceCurrency.toUpperCase() === 'EUR' 
+        ? totals.total 
+        : (baseAmountEur || (exchangeRate ? totals.total * exchangeRate.rate : undefined)),
       exchangeRateBce: exchangeRate?.rate || undefined,
       exchangeRateDate: exchangeRate?.date || undefined
     };
