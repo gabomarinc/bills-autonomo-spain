@@ -142,10 +142,26 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   };
 
   // Normalized payment plan - se calcula con useMemo para evitar recalcular en cada render
+  // Si falla, simplemente retornamos undefined para que el modal funcione sin plan de pagos
   const normalizedPaymentPlan = useMemo(() => {
     if (!invoice.paymentPlan) return undefined;
     try {
-      return normalizePaymentPlan(invoice.paymentPlan);
+      const normalized = normalizePaymentPlan(invoice.paymentPlan);
+      // Validar que el resultado sea válido
+      if (normalized && normalized.payments && Array.isArray(normalized.payments)) {
+        // Validar cada pago
+        const validPayments = normalized.payments.filter(p => {
+          try {
+            return p && typeof p.amount === 'number' && typeof p.dueDate === 'string';
+          } catch {
+            return false;
+          }
+        });
+        if (validPayments.length > 0) {
+          return { ...normalized, payments: validPayments };
+        }
+      }
+      return undefined;
     } catch (e) {
       console.error('Error normalizando paymentPlan:', e);
       return undefined;
