@@ -703,25 +703,68 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                   <input 
                     value={clientSearch}
                     onChange={(e) => {
-                      setClientSearch(e.target.value);
+                      const value = e.target.value;
+                      setClientSearch(value);
                       setShowClientDropdown(true);
-                      if (draft.clientName !== e.target.value) setDraft(prev => ({...prev, clientName: e.target.value}));
+                      if (draft.clientName !== value) setDraft(prev => ({...prev, clientName: value}));
                     }}
-                    placeholder="Buscar cliente..."
+                    onFocus={() => setShowClientDropdown(true)}
+                    onBlur={(e) => {
+                      // Delay closing to allow click on dropdown item
+                      setTimeout(() => setShowClientDropdown(false), 200);
+                    }}
+                    placeholder="Buscar cliente o prospecto..."
                     className="flex-1 bg-transparent outline-none font-medium text-[#1c2938] placeholder:font-normal"
                   />
                 </div>
-                {showClientDropdown && clientSearch && (
+                {showClientDropdown && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden max-h-60 overflow-y-auto">
-                    {dbClients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).map((c, idx) => (
-                        <button key={c.id || idx} onClick={() => handleClientSelect(c)} className="w-full text-left px-4 py-3 hover:bg-[#27bea5]/10 transition-colors flex justify-between items-center group border-b border-slate-50 last:border-0">
-                            <div><p className="font-bold text-slate-800">{c.name}</p><p className="text-xs text-slate-500">{c.taxId || 'Sin NIF/CIF'}</p></div>
-                            <Check className="w-4 h-4 text-[#27bea5] opacity-0 group-hover:opacity-100" />
+                    {(() => {
+                      const searchTerm = clientSearch.toLowerCase().trim();
+                      const filteredClients = searchTerm 
+                        ? dbClients.filter(c => 
+                            c.name.toLowerCase().includes(searchTerm) ||
+                            (c.taxId && c.taxId.toLowerCase().includes(searchTerm)) ||
+                            (c.email && c.email.toLowerCase().includes(searchTerm))
+                          )
+                        : dbClients; // Mostrar todos si no hay búsqueda
+                      
+                      if (filteredClients.length === 0) {
+                        return (
+                          <div className="px-4 py-6 text-center">
+                            <p className="text-slate-400 text-sm mb-2">No se encontraron resultados</p>
+                            <p className="text-xs text-slate-500">Se creará "{clientSearch}" como nuevo cliente</p>
+                          </div>
+                        );
+                      }
+                      
+                      return filteredClients.map((c, idx) => (
+                        <button 
+                          key={c.id || idx} 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleClientSelect(c);
+                          }}
+                          onMouseDown={(e) => e.preventDefault()} // Prevent blur
+                          className="w-full text-left px-4 py-3 hover:bg-[#27bea5]/10 transition-colors flex justify-between items-center group border-b border-slate-50 last:border-0"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-slate-800">{c.name}</p>
+                              {c.status === 'PROSPECT' && (
+                                <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded uppercase font-bold">Prospecto</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {c.taxId || 'Sin NIF/CIF'}
+                              {c.email && ` • ${c.email}`}
+                            </p>
+                          </div>
+                          <Check className="w-4 h-4 text-[#27bea5] opacity-0 group-hover:opacity-100 flex-shrink-0" />
                         </button>
-                    ))}
-                    {dbClients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
-                        <div className="px-4 py-3 text-slate-400 text-sm">Creando "{clientSearch}"...</div>
-                    )}
+                      ));
+                    })()}
                   </div>
                 )}
               </div>
