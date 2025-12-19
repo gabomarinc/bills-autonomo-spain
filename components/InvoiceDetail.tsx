@@ -1157,11 +1157,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                                 setSelectedPaymentIndex(idx);
                                 setPaymentAmount(payment.amount.toFixed(2));
                                 // Asegurar que dueDate sea un string (ISO format)
-                                const dueDateStr = payment.dueDate instanceof Date 
-                                  ? payment.dueDate.toISOString().split('T')[0]
-                                  : typeof payment.dueDate === 'string'
-                                  ? payment.dueDate.split('T')[0] // Si es string ISO, tomar solo la fecha
-                                  : new Date().toISOString().split('T')[0]; // Fallback
+                                const dueDateStr = dateToISOString(payment.dueDate);
                                 setPaymentDate(dueDateStr);
                               }}
                               className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
