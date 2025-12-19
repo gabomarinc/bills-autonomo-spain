@@ -1134,10 +1134,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
          </div>
       </div>
 
-      {/* PAYMENT MODAL */}
+      {/* PAYMENT MODAL - SIMPLIFICADO */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-[#1c2938]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
-            <div className="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 relative my-8 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-[#1c2938]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative">
                 <button 
                     onClick={() => setIsPaymentModalOpen(false)}
                     className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-10"
@@ -1154,69 +1154,75 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                       Saldo pendiente: {(() => {
                         try {
                           const currency = invoice.invoiceCurrency || invoice.currency || 'EUR';
-                          const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
+                          const symbol = currency === 'EUR' ? '€' : currency === 'USD' ? '$' : '€';
                           const balance = remainingBalance || 0;
                           return `${symbol} ${balance.toFixed(2)}`;
                         } catch (e) {
                           return '€0.00';
                         }
                       })()}
-                      {invoice.baseAmountEur && (
-                        <span className="block mt-1 text-xs print:hidden">(€{invoice.baseAmountEur.toFixed(2)} para declaración)</span>
-                      )}
                     </p>
                 </div>
 
                 <div className="space-y-4">
-                    {/* Selector de pago del plan si existe */}
-                    {normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0 && (
+                    {/* Selector de pago del plan si existe - SIMPLIFICADO */}
+                    {normalizedPaymentPlan && normalizedPaymentPlan.payments && Array.isArray(normalizedPaymentPlan.payments) && normalizedPaymentPlan.payments.length > 0 && (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                         <label className="text-xs font-bold text-amber-800 uppercase tracking-widest mb-2 block">
                           Seleccionar Pago del Plan
                         </label>
                         <div className="space-y-2">
-                          {normalizedPaymentPlan.payments.map((payment, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => {
-                                setSelectedPaymentIndex(idx);
-                                setPaymentAmount(payment.amount.toFixed(2));
-                                // dueDate ya está normalizado como string
-                                setPaymentDate(payment.dueDate);
-                              }}
-                              className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                                selectedPaymentIndex === idx
-                                  ? 'border-amber-500 bg-amber-100'
-                                  : payment.paid
-                                  ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
-                                  : 'border-amber-200 bg-white hover:border-amber-300'
-                              }`}
-                              disabled={payment.paid}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <span className="font-bold text-sm text-amber-900">
-                                    Pago {idx + 1} {payment.paid && '(Pagado ✓)'}
+                          {normalizedPaymentPlan.payments.map((payment, idx) => {
+                            // Asegurar que dueDate sea string antes de renderizar
+                            let dueDateStr = '';
+                            try {
+                              if (payment.dueDate) {
+                                if (typeof payment.dueDate === 'string') {
+                                  dueDateStr = payment.dueDate.split('T')[0];
+                                } else {
+                                  dueDateStr = new Date(payment.dueDate).toISOString().split('T')[0];
+                                }
+                              }
+                            } catch (e) {
+                              dueDateStr = new Date().toISOString().split('T')[0];
+                            }
+                            
+                            const displayDate = dueDateStr ? new Date(dueDateStr).toLocaleDateString() : 'Fecha no definida';
+                            
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPaymentIndex(idx);
+                                  setPaymentAmount(String(payment.amount || 0));
+                                  setPaymentDate(dueDateStr || new Date().toISOString().split('T')[0]);
+                                }}
+                                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
+                                  selectedPaymentIndex === idx
+                                    ? 'border-amber-500 bg-amber-100'
+                                    : payment.paid
+                                    ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
+                                    : 'border-amber-200 bg-white hover:border-amber-300'
+                                }`}
+                                disabled={payment.paid}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="font-bold text-sm text-amber-900">
+                                      Pago {idx + 1} {payment.paid ? '(Pagado ✓)' : ''}
+                                    </span>
+                                    <p className="text-xs text-amber-700 mt-1">
+                                      Vence: {displayDate}
+                                    </p>
+                                  </div>
+                                  <span className="font-bold text-amber-900">
+                                    {invoice.currency || 'EUR'} {String(payment.amount || 0)}
                                   </span>
-                                  <p className="text-xs text-amber-700 mt-1">
-                                    Vence: {(() => {
-                                      try {
-                                        if (!payment.dueDate) return 'Fecha no definida';
-                                        // dueDate ya está normalizado como string
-                                        return new Date(payment.dueDate).toLocaleDateString();
-                                      } catch (e) {
-                                        return 'Fecha inválida';
-                                      }
-                                    })()}
-                                  </p>
                                 </div>
-                                <span className="font-bold text-amber-900">
-                                  {invoice.currency} {payment.amount.toFixed(2)}
-                                </span>
-                              </div>
-                            </button>
-                          ))}
+                              </button>
+                            );
+                          })}
                         </div>
                         <p className="text-xs text-amber-600 mt-2 italic">
                           O puedes registrar un pago parcial manualmente
