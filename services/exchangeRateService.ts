@@ -441,10 +441,9 @@ export const getExchangeRateForInvoiceDate = async (
 /**
  * Monedas comunes soportadas
  */
-// Monedas soportadas: Solo EUR, USD, GBP por ahora
+// Monedas soportadas: Solo EUR y USD por ahora
 export const SUPPORTED_CURRENCIES = [
   { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'USD', name: 'Dólar Estadounidense', symbol: '$' },
-  { code: 'GBP', name: 'Libra Esterlina', symbol: '£' }
+  { code: 'USD', name: 'Dólar Estadounidense', symbol: '$' }
 ];
 
