@@ -119,9 +119,9 @@ export default async function handler(req, res) {
       console.error('Currency-api failed:', alt2Error.message);
     }
 
-    // Si todas las APIs fallaron, intentar con exchangerate-api.com como último recurso
+    // Si todas las APIs fallaron, intentar con fixer.io (gratuito, sin API key para EUR base)
     try {
-      const lastResortUrl = `https://api.exchangerate-api.com/v4/latest/EUR`;
+      const lastResortUrl = `https://api.fixer.io/latest?base=EUR&symbols=${normalizedCurrency}`;
       const response = await fetch(lastResortUrl);
       
       if (response.ok) {
@@ -130,17 +130,17 @@ export default async function handler(req, res) {
           const rateFromEur = data.rates[normalizedCurrency];
           const rateToEur = 1 / rateFromEur;
           
-          console.log(`Exchangerate-api.com (last resort): Found ${normalizedCurrency} rate: ${rateToEur}`);
+          console.log(`Fixer.io (last resort): Found ${normalizedCurrency} rate: ${rateToEur}`);
           return res.status(200).json({
             currency: normalizedCurrency,
             rateToEur: Math.round(rateToEur * 10000) / 10000,
             rateDate: targetDate,
-            source: 'EXCHANGERATE_API_COM'
+            source: 'FIXER_IO'
           });
         }
       }
     } catch (lastResortError) {
-      console.error('Last resort API also failed:', lastResortError.message);
+      console.error('Last resort API (fixer.io) also failed:', lastResortError.message);
     }
 
     console.error(`All exchange rate APIs failed for ${normalizedCurrency}`);
