@@ -44,6 +44,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const [paymentReceivedEur, setPaymentReceivedEur] = useState<number | null>(null);
   const [exchangeDifference, setExchangeDifference] = useState<number | null>(null);
   const [isCalculatingPayment, setIsCalculatingPayment] = useState(false);
+  const [selectedPaymentIndex, setSelectedPaymentIndex] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'TARJETA' | 'BANCO' | 'EFECTIVO' | 'OTRO'>('BANCO');
 
   // Reset payment modal state when it opens
   useEffect(() => {
@@ -117,18 +119,6 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     };
   }, [invoice.resendEmailId, invoice.timeline, onUpdateInvoice]);
 
-  // Reset payment modal state when it opens
-  useEffect(() => {
-    if (isPaymentModalOpen) {
-      setPaymentCurrency(invoice.invoiceCurrency || invoice.currency || 'EUR');
-      setPaymentDate(new Date().toISOString().split('T')[0]);
-      setPaymentAmount('');
-      setPaymentReceivedEur(null);
-      setPaymentExchangeRate(null);
-      setExchangeDifference(null);
-    }
-  }, [isPaymentModalOpen, invoice.invoiceCurrency, invoice.currency]);
-
   // --- CALCULATION LOGIC ---
   const subtotal = invoice.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const discountRate = invoice.discountRate || 0;
@@ -198,27 +188,71 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) return;
 
-    const newTotalPaid = amountPaid + amount;
-    const newRemaining = invoice.total - newTotalPaid;
-    
-    // Auto-update status based on balance
-    // Allow a tiny margin for float precision
-    const newStatus: InvoiceStatus = newRemaining <= 0.01 ? 'Pagada' : 'Abonada';
+    let updatedInvoice: Invoice = { ...invoice };
+    let updatedPaymentPlan = invoice.paymentPlan ? { ...invoice.paymentPlan } : undefined;
 
-    const paymentEvent: TimelineEvent = {
+    // Si hay plan de pagos y se seleccionó un pago específico
+    if (updatedPaymentPlan && selectedPaymentIndex !== null && updatedPaymentPlan.payments[selectedPaymentIndex]) {
+      const selectedPayment = updatedPaymentPlan.payments[selectedPaymentIndex];
+      
+      // Marcar el pago como pagado
+      updatedPaymentPlan.payments[selectedPaymentIndex] = {
+        ...selectedPayment,
+        paid: true,
+        paidDate: paymentDate
+      };
+      
+      updatedInvoice.paymentPlan = updatedPaymentPlan;
+      
+      // Calcular total pagado sumando todos los pagos marcados como pagados
+      const totalPaid = updatedPaymentPlan.payments
+        .filter(p => p.paid)
+        .reduce((sum, p) => sum + p.amount, 0);
+      
+      updatedInvoice.amountPaid = totalPaid;
+      
+      // Verificar si todos los pagos están completos
+      const allPaid = updatedPaymentPlan.payments.every(p => p.paid);
+      updatedInvoice.status = allPaid ? 'Pagada' : 'Abonada';
+      
+      const paymentEvent: TimelineEvent = {
+        id: Date.now().toString(),
+        type: 'PAID',
+        title: `Pago ${selectedPaymentIndex + 1} registrado: ${invoice.currency} ${amount.toFixed(2)}`,
+        description: `Método: ${paymentMethod} | Fecha: ${new Date(paymentDate).toLocaleDateString()}`,
+        timestamp: new Date().toISOString()
+      };
+      
+      updatedInvoice.timeline = [...(invoice.timeline || []), paymentEvent];
+    } else {
+      // Pago normal sin plan de pagos
+      const newTotalPaid = (invoice.amountPaid || 0) + amount;
+      const newRemaining = invoice.total - newTotalPaid;
+      
+      updatedInvoice.amountPaid = newTotalPaid;
+      updatedInvoice.status = newRemaining <= 0.01 ? 'Pagada' : 'Abonada';
+      
+      const paymentEvent: TimelineEvent = {
         id: Date.now().toString(),
         type: 'PAID',
         title: `Pago registrado: ${invoice.currency} ${amount.toFixed(2)}`,
-        description: newRemaining > 0.01 ? `Resta: ${invoice.currency} ${newRemaining.toFixed(2)}` : 'Deuda saldada',
+        description: `Método: ${paymentMethod} | Resta: ${invoice.currency} ${Math.max(0, newRemaining).toFixed(2)}`,
         timestamp: new Date().toISOString()
-    };
+      };
+      
+      updatedInvoice.timeline = [...(invoice.timeline || []), paymentEvent];
+    }
 
-    const updatedInvoice: Invoice = {
-        ...invoice,
-        amountPaid: newTotalPaid,
-        status: newStatus,
-        timeline: [...(invoice.timeline || []), paymentEvent]
-    };
+    // Agregar información de pago multicurrency si aplica
+    if (paymentReceivedEur !== null) {
+      updatedInvoice.paymentReceivedEur = paymentReceivedEur;
+      updatedInvoice.paymentReceivedOriginal = amount;
+      updatedInvoice.paymentExchangeRate = paymentExchangeRate || undefined;
+      updatedInvoice.paymentDate = paymentDate;
+      if (exchangeDifference !== null) {
+        updatedInvoice.exchangeDifference = exchangeDifference;
+      }
+    }
 
     if (onUpdateInvoice) {
         onUpdateInvoice(updatedInvoice);
@@ -226,7 +260,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     
     setIsPaymentModalOpen(false);
     setPaymentAmount('');
-    alert.addToast('success', 'Pago Registrado', `Se ha abonado ${invoice.currency} ${amount.toFixed(2)}`);
+    setSelectedPaymentIndex(null);
+    alert.addToast('success', 'Pago Registrado', `Se ha registrado el pago de ${invoice.currency} ${amount.toFixed(2)}`);
   };
 
   const handleSend = async () => {
@@ -967,12 +1002,22 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                   {isSending ? 'Enviando...' : 'Enviar Email'}
                </button>
                
+               {/* PDF and Edit buttons side by side */}
                <button 
                  onClick={handleDownloadPdf}
                  className="bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"
                >
                   <Download className="w-4 h-4" /> PDF
                </button>
+               
+               {onEdit && (
+                  <button 
+                    onClick={() => onEdit(invoice)}
+                    className="bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"
+                  >
+                      <Edit2 className="w-4 h-4" /> Editar
+                  </button>
+               )}
                
                {/* Convert Quote Button - Only show for accepted quotes */}
                {invoice.type === 'Quote' && invoice.status === 'Aceptada' && onConvertQuote && (
@@ -982,15 +1027,6 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                   >
                     <FileText className="w-5 h-5" />
                     Convertir a Factura
-                  </button>
-               )}
-               
-               {onEdit && (
-                  <button 
-                    onClick={() => onEdit(invoice)}
-                    className="bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors"
-                  >
-                      <Edit2 className="w-4 h-4" /> Editar
                   </button>
                )}
             </div>
@@ -1028,11 +1064,11 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
       {/* PAYMENT MODAL */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-[#1c2938]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 relative">
+        <div className="fixed inset-0 bg-[#1c2938]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
+            <div className="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 relative my-8 max-h-[90vh] overflow-y-auto">
                 <button 
                     onClick={() => setIsPaymentModalOpen(false)}
-                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
+                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-10"
                 >
                     <X className="w-5 h-5" />
                 </button>
@@ -1055,6 +1091,79 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 </div>
 
                 <div className="space-y-4">
+                    {/* Selector de pago del plan si existe */}
+                    {invoice.paymentPlan && invoice.paymentPlan.payments && invoice.paymentPlan.payments.length > 0 && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <label className="text-xs font-bold text-amber-800 uppercase tracking-widest mb-2 block">
+                          Seleccionar Pago del Plan
+                        </label>
+                        <div className="space-y-2">
+                          {invoice.paymentPlan.payments.map((payment, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setSelectedPaymentIndex(idx);
+                                setPaymentAmount(payment.amount.toFixed(2));
+                                setPaymentDate(payment.dueDate);
+                              }}
+                              className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
+                                selectedPaymentIndex === idx
+                                  ? 'border-amber-500 bg-amber-100'
+                                  : payment.paid
+                                  ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
+                                  : 'border-amber-200 bg-white hover:border-amber-300'
+                              }`}
+                              disabled={payment.paid}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-bold text-sm text-amber-900">
+                                    Pago {idx + 1} {payment.paid && '(Pagado ✓)'}
+                                  </span>
+                                  <p className="text-xs text-amber-700 mt-1">
+                                    Vence: {new Date(payment.dueDate).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <span className="font-bold text-amber-900">
+                                  {invoice.currency} {payment.amount.toFixed(2)}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-amber-600 mt-2 italic">
+                          O puedes registrar un pago parcial manualmente
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Método de pago */}
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                          Método de Pago
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(['BANCO', 'TARJETA', 'EFECTIVO', 'OTRO'] as const).map((method) => (
+                            <button
+                              key={method}
+                              type="button"
+                              onClick={() => setPaymentMethod(method)}
+                              className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                                paymentMethod === method
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                              }`}
+                            >
+                              {method === 'TARJETA' && '💳 '}
+                              {method === 'BANCO' && '🏦 '}
+                              {method === 'EFECTIVO' && '💵 '}
+                              {method === 'OTRO' && '📝 '}
+                              {method}
+                            </button>
+                          ))}
+                        </div>
+                    </div>
                     <div>
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Monto Recibido</label>
                         <div className="relative">
