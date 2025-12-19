@@ -76,11 +76,16 @@ export const getExchangeRate = async (
     if (dbResult.rows.length > 0) {
       const row = dbResult.rows[0];
       await client.end();
+      // Asegurar que rate_date sea siempre un string
+      const rateDateString = row.rate_date instanceof Date 
+        ? row.rate_date.toISOString().split('T')[0] 
+        : (typeof row.rate_date === 'string' ? row.rate_date : new Date().toISOString().split('T')[0]);
+      
       return {
         id: row.id,
         currency: row.currency,
         rateToEur: parseFloat(row.rate_to_eur),
-        rateDate: row.rate_date,
+        rateDate: rateDateString,
         source: row.source || 'BCE',
         createdAt: row.created_at
       };
