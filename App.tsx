@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppView, Invoice, UserProfile, CatalogItem, InvoiceStatus, TimelineEvent, DbClient } from './types';
+import { AppView, Invoice, UserProfile, CatalogItem, InvoiceStatus, TimelineEvent, DbClient, PaymentPlan } from './types';
 import LoginScreen from './components/LoginScreen';
 import OnboardingWizard from './components/OnboardingWizard';
 import Layout from './components/Layout';
@@ -223,6 +223,108 @@ const AppContent: React.FC = () => {
     alert.addToast('success', 'Documento Guardado');
   };
 
+  const handleConvertQuote = async (
+    quote: Invoice,
+    invoiceData: {
+      mode: 'SINGLE' | 'MULTIPLE';
+      paymentPlan?: PaymentPlan;
+      invoices?: Array<{ amount: number; dueDate: string }>;
+    }
+  ) => {
+    if (!currentUser) {
+      alert.addToast('error', 'Error', 'No hay sesión activa.');
+      return;
+    }
+
+    try {
+      if (invoiceData.mode === 'SINGLE') {
+        // Crear una factura con plan de pagos
+        const prefix = 'FAC';
+        const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
+        const invoiceId = `${prefix}-${Date.now()}-${randomSuffix}`;
+
+        const newInvoice: Invoice = {
+          ...quote,
+          id: invoiceId,
+          type: 'Invoice',
+          status: 'Enviada',
+          parentQuoteId: quote.id,
+          paymentPlan: invoiceData.paymentPlan,
+          date: new Date().toISOString(),
+          timeline: [
+            ...(quote.timeline || []),
+            {
+              id: Date.now().toString(),
+              type: 'CREATED',
+              title: 'Factura creada desde cotización',
+              description: `Convertida desde Cotización #${quote.id}`,
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+
+        await handleSaveInvoice(newInvoice);
+        setSelectedInvoice(newInvoice);
+        setActiveView(AppView.INVOICE_DETAIL);
+        alert.addToast('success', 'Factura Creada', 'La factura se ha creado con plan de pagos.');
+      } else {
+        // Crear múltiples facturas
+        const createdInvoices: Invoice[] = [];
+        const parentInvoiceId = `FAC-${Date.now()}-${Math.floor(Math.random() * 9000) + 1000}`;
+
+        for (let i = 0; i < (invoiceData.invoices?.length || 0); i++) {
+          const invoiceConfig = invoiceData.invoices![i];
+          const prefix = 'FAC';
+          const timestamp = Date.now() + i; // Asegurar IDs únicos
+          const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
+          const invoiceId = `${prefix}-${timestamp}-${randomSuffix}-${i}`;
+
+          const newInvoice: Invoice = {
+            ...quote,
+            id: invoiceId,
+            type: 'Invoice',
+            status: 'Enviada',
+            parentQuoteId: quote.id,
+            parentInvoiceId: parentInvoiceId,
+            total: invoiceConfig.amount,
+            date: invoiceConfig.dueDate,
+            timeline: [
+              ...(quote.timeline || []),
+              {
+                id: Date.now().toString() + i,
+                type: 'CREATED',
+                title: `Factura ${i + 1} de ${invoiceData.invoices!.length} creada`,
+                description: `Parte de factura dividida desde Cotización #${quote.id}`,
+                timestamp: new Date().toISOString()
+              }
+            ]
+          };
+
+          // Ajustar items proporcionalmente si hay múltiples
+          if (quote.items.length > 0) {
+            const ratio = invoiceConfig.amount / quote.total;
+            newInvoice.items = quote.items.map(item => ({
+              ...item,
+              price: item.price * ratio
+            }));
+          }
+
+          createdInvoices.push(newInvoice);
+          await handleSaveInvoice(newInvoice);
+        }
+
+        if (createdInvoices.length > 0) {
+          setSelectedInvoice(createdInvoices[0]);
+          setActiveView(AppView.INVOICE_DETAIL);
+          alert.addToast('success', 'Facturas Creadas', `Se han creado ${createdInvoices.length} facturas.`);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error converting quote:', error);
+      alert.addToast('error', 'Error', 'No se pudo convertir la cotización. Por favor intenta de nuevo.');
+    }
+  };
+
   const handleUpdateStatus = async (id: string, newStatus: InvoiceStatus) => {
     if (!currentUser) return;
     const targetInvoice = invoices.find(i => i.id === id);
@@ -300,7 +402,7 @@ const AppContent: React.FC = () => {
       {activeView === AppView.DASHBOARD && <Dashboard recentInvoices={invoices} isOffline={isOffline} pendingCount={invoices.filter(i => i.status === 'PendingSync').length} onNewAction={() => { setDocumentToEdit(null); setActiveView(AppView.WIZARD); }} onSelectInvoice={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }} onNavigate={setActiveView} currentUser={currentUser} />}
       {activeView === AppView.WIZARD && <InvoiceWizard currentUser={currentUser} isOffline={isOffline} onSave={handleSaveInvoice} onCancel={() => setActiveView(AppView.DASHBOARD)} initialData={documentToEdit} dbClients={dbClients} invoices={invoices} catalogItems={catalogItems} onSelectInvoiceForDetail={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }} />}
       {activeView === AppView.INVOICES && <DocumentList invoices={invoices} onSelectInvoice={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }} onCreateNew={() => setActiveView(AppView.WIZARD)} onDeleteInvoice={handleDeleteInvoice} onEditInvoice={(inv) => { setDocumentToEdit(inv); setActiveView(AppView.WIZARD); }} onUpdateStatus={handleUpdateStatus} currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} currentUser={currentUser} />}
-      {activeView === AppView.INVOICE_DETAIL && selectedInvoice && <InvoiceDetail invoice={selectedInvoice} issuer={currentUser} onBack={() => setActiveView(AppView.INVOICES)} onUpdateInvoice={(updated) => { setInvoices(invoices.map(i => i.id === updated.id ? updated : i)); setSelectedInvoice(updated); saveInvoiceToDb({ ...updated, userId: currentUser.id }); }} onUpdateStatus={handleUpdateStatus} onEdit={(inv) => { setDocumentToEdit(inv); setActiveView(AppView.WIZARD); }} onDelete={handleDeleteInvoice} />}
+      {activeView === AppView.INVOICE_DETAIL && selectedInvoice && <InvoiceDetail invoice={selectedInvoice} issuer={currentUser} onBack={() => setActiveView(AppView.INVOICES)} onUpdateInvoice={(updated) => { setInvoices(invoices.map(i => i.id === updated.id ? updated : i)); setSelectedInvoice(updated); saveInvoiceToDb({ ...updated, userId: currentUser.id }); }} onUpdateStatus={handleUpdateStatus} onEdit={(inv) => { setDocumentToEdit(inv); setActiveView(AppView.WIZARD); }} onDelete={handleDeleteInvoice} onConvertQuote={handleConvertQuote} />}
       {activeView === AppView.CLIENTS && <ClientList invoices={invoices} dbClients={dbClients} onCreateDocument={(c) => { setDocumentToEdit(c ? { id: '', clientName: c.name, clientTaxId: c.taxId, type: 'Invoice', status: 'Borrador', date: new Date().toISOString(), total: 0, currency: currentUser.defaultCurrency || 'EUR', items: [] } : null); setActiveView(AppView.WIZARD); }} onCreateClient={() => setActiveView(AppView.CLIENT_WIZARD)} currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} currentUser={currentUser} onSelectClient={(name) => { setSelectedClientName(name); setActiveView(AppView.CLIENT_DETAIL); }} />}
       {activeView === AppView.CLIENT_WIZARD && <ClientWizard onSave={async (clientData) => { 
         await saveClientToDb({ 

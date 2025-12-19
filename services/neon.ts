@@ -560,7 +560,11 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
         paymentReceivedOriginal: row.payment_received_original ? parseFloat(row.payment_received_original) : (row.data?.paymentReceivedOriginal ? parseFloat(row.data.paymentReceivedOriginal) : undefined),
         paymentExchangeRate: row.payment_exchange_rate ? parseFloat(row.payment_exchange_rate) : (row.data?.paymentExchangeRate ? parseFloat(row.data.paymentExchangeRate) : undefined),
         paymentDate: row.payment_date || row.data?.paymentDate,
-        exchangeDifference: row.exchange_difference ? parseFloat(row.exchange_difference) : (row.data?.exchangeDifference ? parseFloat(row.data.exchangeDifference) : undefined)
+        exchangeDifference: row.exchange_difference ? parseFloat(row.exchange_difference) : (row.data?.exchangeDifference ? parseFloat(row.data.exchangeDifference) : undefined),
+        // Quote-Invoice Relationship & Payment Plan
+        parentQuoteId: row.parent_quote_id || row.data?.parentQuoteId,
+        parentInvoiceId: row.parent_invoice_id || row.data?.parentInvoiceId,
+        paymentPlan: row.payment_plan && Object.keys(row.payment_plan).length > 0 ? row.payment_plan : (row.data?.paymentPlan || undefined)
       }));
       allDocs = [...allDocs, ...mappedInvoices];
     }
@@ -832,6 +836,10 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
         await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_exchange_rate NUMERIC;');
         await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_date DATE;');
         await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS exchange_difference NUMERIC;');
+        // Quote-Invoice Relationship & Payment Plan
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS parent_quote_id TEXT;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS parent_invoice_id TEXT;');
+        await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_plan JSONB DEFAULT \'{}\';');
       } catch (e) {
         // Columns might already exist, ignore
       }
@@ -843,9 +851,10 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
           total, status, date, type, currency, 
           invoice_currency, base_amount_eur, exchange_rate_bce, exchange_rate_date,
           payment_received_eur, payment_received_original, payment_exchange_rate, payment_date, exchange_difference,
-          iva_amount, iva_repercutido, irpf_retention, irpf_amount, discount_rate, amount_paid, data
+          iva_amount, iva_repercutido, irpf_retention, irpf_amount, discount_rate, amount_paid, 
+          parent_quote_id, parent_invoice_id, payment_plan, data
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
         ON CONFLICT (id) DO UPDATE SET 
           user_id = EXCLUDED.user_id, client_name = EXCLUDED.client_name, client_tax_id = EXCLUDED.client_tax_id,
           client_email = EXCLUDED.client_email, client_address = EXCLUDED.client_address,
@@ -864,7 +873,11 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
           exchange_difference = EXCLUDED.exchange_difference,
           iva_amount = EXCLUDED.iva_amount, iva_repercutido = EXCLUDED.iva_repercutido,
           irpf_retention = EXCLUDED.irpf_retention, irpf_amount = EXCLUDED.irpf_amount,
-          discount_rate = EXCLUDED.discount_rate, amount_paid = EXCLUDED.amount_paid, data = EXCLUDED.data, updated_at = NOW();
+          discount_rate = EXCLUDED.discount_rate, amount_paid = EXCLUDED.amount_paid,
+          parent_quote_id = EXCLUDED.parent_quote_id,
+          parent_invoice_id = EXCLUDED.parent_invoice_id,
+          payment_plan = EXCLUDED.payment_plan,
+          data = EXCLUDED.data, updated_at = NOW();
       `;
       await client.query(query, [
         invoice.id, invoice.userId, invoice.clientName, invoice.clientTaxId, 
@@ -883,6 +896,9 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
         invoice.ivaAmount || 0, invoice.ivaRepercutido || 0,
         invoice.irpfRetention || 0, invoice.irpfAmount || 0,
         invoice.discountRate || 0, invoice.amountPaid || 0,
+        invoice.parentQuoteId || null,
+        invoice.parentInvoiceId || null,
+        invoice.paymentPlan ? JSON.stringify(invoice.paymentPlan) : '{}',
         JSON.stringify(invoice)
       ]);
     }

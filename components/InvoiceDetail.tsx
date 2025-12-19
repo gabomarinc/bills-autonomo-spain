@@ -3,15 +3,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Printer, Share2, Download, Building2, 
   CheckCircle2, Loader2, Send, MessageCircle, Smartphone, Mail, Check, AlertTriangle, Edit2, 
-  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link, FileText
+  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link, FileText, Receipt
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { Invoice, UserProfile, TimelineEvent, InvoiceStatus } from '../types';
+import { Invoice, UserProfile, TimelineEvent, InvoiceStatus, PaymentPlan } from '../types';
 import DocumentTimeline from './DocumentTimeline';
 import { sendEmail, generateDocumentHtml, getEmailStatus } from '../services/resendService';
 import { useAlert } from './AlertSystem';
 import { convertToEur, SUPPORTED_CURRENCIES } from '../services/exchangeRateService';
+import ConvertQuoteModal from './ConvertQuoteModal';
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -21,12 +22,18 @@ interface InvoiceDetailProps {
   onUpdateInvoice?: (invoice: Invoice) => void;
   onUpdateStatus?: (id: string, status: InvoiceStatus) => void;
   onDelete?: (id: string) => void;
+  onConvertQuote?: (quote: Invoice, invoiceData: {
+    mode: 'SINGLE' | 'MULTIPLE';
+    paymentPlan?: PaymentPlan;
+    invoices?: Array<{ amount: number; dueDate: string }>;
+  }) => void;
 }
 
-const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, onEdit, onUpdateInvoice, onUpdateStatus, onDelete }) => {
+const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, onEdit, onUpdateInvoice, onUpdateStatus, onDelete, onConvertQuote }) => {
   const [isSending, setIsSending] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
   
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -879,6 +886,19 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
          </div>
       </div>
 
+      {/* Convert Quote Modal */}
+      {showConvertModal && onConvertQuote && (
+        <ConvertQuoteModal
+          quote={invoice}
+          isOpen={showConvertModal}
+          onClose={() => setShowConvertModal(false)}
+          onConvert={(invoiceData) => {
+            onConvertQuote(invoice, invoiceData);
+            setShowConvertModal(false);
+          }}
+        />
+      )}
+
       {/* RIGHT: CONTROLS */}
       <div className="w-full md:w-[350px] flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar pr-2 pb-20">
          
@@ -896,7 +916,46 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             </div>
             
             <h3 className="font-bold text-[#1c2938] text-2xl mb-1">{invoice.clientName}</h3>
-            <p className="text-sm text-slate-500 mb-6">{invoice.type === 'Quote' ? 'Cotización' : 'Factura'} #{invoice.id}</p>
+            <p className="text-sm text-slate-500 mb-2">{invoice.type === 'Quote' ? 'Cotización' : 'Factura'} #{invoice.id}</p>
+            
+            {/* Show parent quote relationship */}
+            {invoice.parentQuoteId && (
+              <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-700 font-medium">
+                  <Link className="w-3 h-3 inline mr-1" />
+                  Convertida desde Cotización #{invoice.parentQuoteId}
+                </p>
+              </div>
+            )}
+            
+            {/* Show payment plan info */}
+            {invoice.paymentPlan && invoice.paymentPlan.payments && invoice.paymentPlan.payments.length > 0 && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Plan de Pagos</p>
+                <div className="space-y-1">
+                  {invoice.paymentPlan.payments.map((payment, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs">
+                      <span className="text-amber-700">
+                        Pago {idx + 1}: {new Date(payment.dueDate).toLocaleDateString()}
+                      </span>
+                      <span className={`font-bold ${payment.paid ? 'text-green-600' : 'text-amber-800'}`}>
+                        {payment.paid ? '✓' : '○'} {invoice.currency} {payment.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Show parent invoice relationship (for split invoices) */}
+            {invoice.parentInvoiceId && (
+              <div className="mb-4 p-2 bg-purple-50 border border-purple-200 rounded-lg">
+                <p className="text-xs text-purple-700 font-medium">
+                  <Receipt className="w-3 h-3 inline mr-1" />
+                  Parte de factura dividida (Padre: #{invoice.parentInvoiceId})
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
                <button 
@@ -914,6 +973,17 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                >
                   <Download className="w-4 h-4" /> PDF
                </button>
+               
+               {/* Convert Quote Button - Only show for accepted quotes */}
+               {invoice.type === 'Quote' && invoice.status === 'Aceptada' && onConvertQuote && (
+                  <button 
+                    onClick={() => setShowConvertModal(true)}
+                    className="col-span-2 bg-[#27bea5] text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#22a892] transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Convertir a Factura
+                  </button>
+               )}
                
                {onEdit && (
                   <button 

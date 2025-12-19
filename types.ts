@@ -260,6 +260,25 @@ export interface Invoice {
   paymentExchangeRate?: number; // Tipo de cambio que aplicó el banco
   paymentDate?: string; // Fecha en que se recibió el pago
   exchangeDifference?: number; // Diferencia entre factura y pago (base_amount_eur - payment_received_eur) - gasto financiero deducible
+
+  // Quote-Invoice Relationship & Payment Plan (NEW)
+  parentQuoteId?: string; // ID de la cotización desde la cual se generó esta factura
+  parentInvoiceId?: string; // ID de la factura padre cuando esta factura es parte de una división de pagos
+  paymentPlan?: PaymentPlan; // Plan de pagos para facturas con múltiples pagos
+}
+
+// Plan de pagos para facturas con múltiples pagos
+export interface PaymentPlan {
+  totalPayments: number; // Número total de pagos
+  payments: PaymentPlanItem[]; // Array de pagos individuales
+}
+
+export interface PaymentPlanItem {
+  amount: number; // Monto del pago
+  dueDate: string; // Fecha de vencimiento (ISO string)
+  paid: boolean; // Si el pago ya fue realizado
+  paidDate?: string; // Fecha en que se realizó el pago (ISO string)
+  paymentId?: string; // ID único del pago (para tracking)
 }
 
 export interface ParsedInvoiceData {
