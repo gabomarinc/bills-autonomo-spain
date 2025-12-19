@@ -66,35 +66,6 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const [selectedPaymentIndex, setSelectedPaymentIndex] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'TARJETA' | 'BANCO' | 'EFECTIVO' | 'OTRO'>('BANCO');
 
-  // Reset payment modal state when it opens
-  useEffect(() => {
-    if (isPaymentModalOpen) {
-      setPaymentCurrency(invoice.invoiceCurrency || invoice.currency || 'EUR');
-      setPaymentDate(new Date().toISOString().split('T')[0]);
-      setPaymentAmount('');
-      setPaymentReceivedEur(null);
-      setPaymentExchangeRate(null);
-      setExchangeDifference(null);
-      setPaymentMethod('BANCO');
-      
-      // Si hay plan de pagos, seleccionar el primer pago pendiente
-      if (normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0) {
-        const firstUnpaidIndex = normalizedPaymentPlan.payments.findIndex(p => !p.paid);
-        if (firstUnpaidIndex >= 0) {
-          setSelectedPaymentIndex(firstUnpaidIndex);
-          const selectedPayment = normalizedPaymentPlan.payments[firstUnpaidIndex];
-          setPaymentAmount(selectedPayment.amount.toFixed(2));
-          // dueDate ya está normalizado como string
-          setPaymentDate(selectedPayment.dueDate);
-        } else {
-          setSelectedPaymentIndex(null);
-        }
-      } else {
-        setSelectedPaymentIndex(null);
-      }
-    }
-  }, [isPaymentModalOpen, invoice.invoiceCurrency, invoice.currency, invoice.paymentPlan]);
-
   // Ref for PDF Generation
   const documentRef = useRef<HTMLDivElement>(null);
   
@@ -173,6 +144,54 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     return new Date().toISOString().split('T')[0];
   };
 
+  // Normalize paymentPlan to ensure all dates are strings
+  const normalizePaymentPlan = (plan: any): PaymentPlan | undefined => {
+    if (!plan || !plan.payments || !Array.isArray(plan.payments)) return undefined;
+    
+    return {
+      totalPayments: plan.totalPayments || plan.payments.length,
+      payments: plan.payments.map((p: any) => ({
+        amount: typeof p.amount === 'number' ? p.amount : parseFloat(p.amount) || 0,
+        dueDate: dateToISOString(p.dueDate), // Asegurar que siempre sea string
+        paid: Boolean(p.paid),
+        paidDate: p.paidDate ? dateToISOString(p.paidDate) : undefined,
+        paymentId: p.paymentId || `payment_${Date.now()}_${Math.random()}`
+      }))
+    };
+  };
+
+  // Normalized payment plan
+  const normalizedPaymentPlan = invoice.paymentPlan ? normalizePaymentPlan(invoice.paymentPlan) : undefined;
+
+  // Reset payment modal state when it opens
+  useEffect(() => {
+    if (isPaymentModalOpen) {
+      setPaymentCurrency(invoice.invoiceCurrency || invoice.currency || 'EUR');
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentAmount('');
+      setPaymentReceivedEur(null);
+      setPaymentExchangeRate(null);
+      setExchangeDifference(null);
+      setPaymentMethod('BANCO');
+      
+      // Si hay plan de pagos, seleccionar el primer pago pendiente
+      if (normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0) {
+        const firstUnpaidIndex = normalizedPaymentPlan.payments.findIndex(p => !p.paid);
+        if (firstUnpaidIndex >= 0) {
+          setSelectedPaymentIndex(firstUnpaidIndex);
+          const selectedPayment = normalizedPaymentPlan.payments[firstUnpaidIndex];
+          setPaymentAmount(selectedPayment.amount.toFixed(2));
+          // dueDate ya está normalizado como string
+          setPaymentDate(selectedPayment.dueDate);
+        } else {
+          setSelectedPaymentIndex(null);
+        }
+      } else {
+        setSelectedPaymentIndex(null);
+      }
+    }
+  }, [isPaymentModalOpen, invoice.invoiceCurrency, invoice.currency, normalizedPaymentPlan]);
+
   // --- CALCULATION LOGIC ---
   const subtotal = invoice.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const discountRate = invoice.discountRate || 0;
@@ -243,7 +262,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     if (isNaN(amount) || amount <= 0) return;
 
     let updatedInvoice: Invoice = { ...invoice };
-    let updatedPaymentPlan = invoice.paymentPlan ? { ...invoice.paymentPlan } : undefined;
+    let updatedPaymentPlan = normalizedPaymentPlan ? { ...normalizedPaymentPlan } : undefined;
 
     // Si hay plan de pagos y se seleccionó un pago específico
     if (updatedPaymentPlan && selectedPaymentIndex !== null && updatedPaymentPlan.payments[selectedPaymentIndex]) {
