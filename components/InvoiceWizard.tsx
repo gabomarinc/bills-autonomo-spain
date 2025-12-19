@@ -213,9 +213,12 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
         if (rateData) {
           const converted = await convertToEur(total, invoiceCurrency, invoiceDate);
           
+          // Asegurar que rateDate sea siempre un string (ya viene como string de la interfaz)
+          const rateDateString = rateData.rateDate || new Date().toISOString().split('T')[0];
+          
           setExchangeRate({
             rate: rateData.rateToEur,
-            date: typeof rateData.rateDate === 'string' ? rateData.rateDate : (rateData.rateDate instanceof Date ? rateData.rateDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+            date: rateDateString,
             source: rateData.source || 'BCE'
           });
           setBaseAmountEur(converted.amountEur);
@@ -963,7 +966,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                        <div className="mt-1 text-[10px] text-blue-600">
                          Tipo de cambio: 1 {draft.invoiceCurrency || draft.currency} = {exchangeRate.rate.toFixed(4)} EUR
                          <br />
-                         <span className="text-blue-500">Fuente: {exchangeRate.source} ({typeof exchangeRate.date === 'string' ? exchangeRate.date : (exchangeRate.date instanceof Date ? exchangeRate.date.toISOString().split('T')[0] : 'N/A')})</span>
+                         <span className="text-blue-500">Fuente: {exchangeRate.source} ({exchangeRate.date || 'N/A'})</span>
                        </div>
                        {isLoadingExchangeRate && (
                          <div className="mt-1 flex items-center gap-1 text-[10px] text-blue-600">
