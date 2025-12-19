@@ -570,8 +570,9 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                         return `${symbol} ${invoice.total.toFixed(2)}`;
                       })()}
                     </span>
+                    {/* Información interna de conversión - NO visible en PDF para cliente */}
                     {invoice.baseAmountEur && invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && (
-                      <p className="text-sm text-slate-500 mt-1">
+                      <p className="text-sm text-slate-500 mt-1 print:hidden">
                         (€{invoice.baseAmountEur.toFixed(2)} para declaración)
                       </p>
                     )}
@@ -588,7 +589,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                               <span className="font-bold text-slate-600 block">
                                 {invoice.invoiceCurrency} {amountPaid.toFixed(2)}
                               </span>
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-slate-500 print:hidden">
                                 (€{paidEur.toFixed(2)} para declaración)
                               </span>
                             </>
@@ -614,7 +615,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                             return `${symbol} ${(invoice.total - amountPaid).toFixed(2)}`;
                           })()}
                           {invoice.baseAmountEur && (
-                            <span className="block text-[10px]">(€{remainingBalance.toFixed(2)} para declaración)</span>
+                            <span className="block text-[10px] print:hidden">(€{remainingBalance.toFixed(2)} para declaración)</span>
                           )}
                         </span>
                     </div>
@@ -972,7 +973,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                         return `${symbol} ${remainingBalance.toFixed(2)}`;
                       })()}
                       {invoice.baseAmountEur && (
-                        <span className="block mt-1 text-xs">(€{invoice.baseAmountEur.toFixed(2)} para declaración)</span>
+                        <span className="block mt-1 text-xs print:hidden">(€{invoice.baseAmountEur.toFixed(2)} para declaración)</span>
                       )}
                     </p>
                 </div>
@@ -1087,9 +1088,9 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                       </div>
                     )}
 
-                    {/* Mostrar info si la factura es en otra moneda */}
+                    {/* Mostrar info si la factura es en otra moneda - NO visible en PDF para cliente */}
                     {invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && invoice.baseAmountEur && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 print:hidden">
                         <p className="font-medium mb-1">⚠️ Factura en {invoice.invoiceCurrency}</p>
                         <p>Facturado: {invoice.invoiceCurrency} {invoice.total.toFixed(2)}</p>
                         <p>Para declaración: €{invoice.baseAmountEur.toFixed(2)}</p>

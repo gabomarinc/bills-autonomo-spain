@@ -300,9 +300,9 @@ const DocumentList: React.FC<DocumentListProps> = ({
     } 
     
     if (docTypeFilter === 'QUOTE') {
-        if (currentStage === 'DRAFT') return doc.status === 'Borrador' || doc.status === 'PendingSync';
+        if (currentStage === 'DRAFT') return doc.status === 'Borrador' || doc.status === 'PendingSync' || doc.status === 'Creada';
         if (currentStage === 'SENT_QUOTES') return (doc.status === 'Enviada' || doc.status === 'Seguimiento');
-        if (currentStage === 'NEGOTIATION') return doc.status === 'Negociacion';
+        if (currentStage === 'NEGOTIATION') return doc.status === 'Negociacion' || doc.status === 'Negociación';
         if (currentStage === 'DONE') return doc.status === 'Aceptada' || doc.status === 'Rechazada';
     }
 
