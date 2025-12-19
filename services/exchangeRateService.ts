@@ -60,7 +60,8 @@ export const getExchangeRate = async (
   const client = getDbClient();
   if (!client) {
     console.error('No database client available');
-    return null;
+    // Si no hay BD, intentar obtener directamente vía API route
+    return await fetchExchangeRateFromAPI(normalizedCurrency, date);
   }
 
   try {
@@ -85,8 +86,8 @@ export const getExchangeRate = async (
       };
     }
 
-    // 2. Si no existe, obtener del BCE
-    const rate = await fetchFromBCE(normalizedCurrency, date);
+    // 2. Si no existe, obtener vía API route (server-side, sin problemas de CORS)
+    const rate = await fetchExchangeRateFromAPI(normalizedCurrency, date);
     
     if (rate) {
       // Guardar en base de datos para futuras consultas
@@ -107,6 +108,43 @@ export const getExchangeRate = async (
     } catch (e) {
       // Ignorar errores al cerrar
     }
+    // Fallback: intentar obtener vía API route
+    return await fetchExchangeRateFromAPI(normalizedCurrency, date);
+  }
+};
+
+/**
+ * Obtener tipo de cambio vía API route (server-side, sin problemas de CORS)
+ * Esta función se llama desde el cliente y hace una petición a nuestra API route
+ */
+const fetchExchangeRateFromAPI = async (
+  currency: string,
+  date: string
+): Promise<ExchangeRate | null> => {
+  try {
+    const response = await fetch('/api/get-exchange-rate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ currency, date }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Exchange rate API error:', errorData);
+      return null;
+    }
+
+    const data = await response.json();
+    return {
+      currency: data.currency,
+      rateToEur: data.rateToEur,
+      rateDate: data.rateDate,
+      source: data.source || 'BCE'
+    };
+  } catch (error) {
+    console.error('Error fetching exchange rate from API route:', error);
     return null;
   }
 };
@@ -343,8 +381,8 @@ export const getExchangeRateForInvoiceDate = async (
       };
     }
 
-    // Si no hay en BD, intentar obtener del BCE
-    const rate = await fetchFromBCE(normalizedCurrency, invoiceDate);
+    // Si no hay en BD, intentar obtener vía API route
+    const rate = await fetchExchangeRateFromAPI(normalizedCurrency, invoiceDate);
     
     if (rate) {
       // Guardar en BD
