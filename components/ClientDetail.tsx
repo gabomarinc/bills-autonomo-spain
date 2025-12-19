@@ -269,6 +269,28 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
               </div>
            </div>
 
+           {/* QUICK ACTIONS - Moved to header bar */}
+           <div className="flex items-center gap-3 relative z-10">
+              <button 
+                onClick={() => onCreateDocument && onCreateDocument('Quote', clientData as DbClient)} 
+                className="bg-white p-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-slate-100 group"
+                title="Nueva Cotización"
+              >
+                 <div className="p-2 bg-purple-50 text-purple-600 rounded-lg w-fit group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                   <FileBadge className="w-4 h-4" />
+                 </div>
+              </button>
+              <button 
+                onClick={() => onCreateDocument && onCreateDocument('Invoice', clientData as DbClient)} 
+                className="bg-white p-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-slate-100 group"
+                title="Nueva Factura"
+              >
+                 <div className="p-2 bg-blue-50 text-blue-600 rounded-lg w-fit group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                   <FileText className="w-4 h-4" />
+                 </div>
+              </button>
+           </div>
+
            <div className="text-right relative z-10">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
                   {stats.isProspect ? 'Proyección (Pipeline)' : 'Valor de Vida (LTV)'}
@@ -490,27 +512,6 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
                         {clientData.notes || <span className="italic text-amber-700/50">Escribe aquí notas privadas sobre el cliente...</span>}
                     </p>
                 )}
-            </div>
-
-            {/* QUICK ACTIONS CARD */}
-            <div className="bg-[#27bea5]/5 p-6 rounded-[2rem] border border-[#27bea5]/20">
-               <h3 className="font-bold text-[#1c2938] mb-4 text-sm uppercase tracking-wider">Acciones Rápidas</h3>
-               <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => onCreateDocument && onCreateDocument('Quote', clientData as DbClient)} 
-                    className="bg-white p-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
-                  >
-                     <div className="p-2 bg-purple-50 text-purple-600 rounded-lg w-fit mb-2 group-hover:bg-purple-600 group-hover:text-white transition-colors"><FileBadge className="w-4 h-4" /></div>
-                     <span className="text-xs font-bold text-slate-600 block">Nueva Cotización</span>
-                  </button>
-                  <button 
-                    onClick={() => onCreateDocument && onCreateDocument('Invoice', clientData as DbClient)} 
-                    className="bg-white p-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
-                  >
-                     <div className="p-2 bg-blue-50 text-blue-600 rounded-lg w-fit mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors"><FileText className="w-4 h-4" /></div>
-                     <span className="text-xs font-bold text-slate-600 block">Nueva Factura</span>
-                  </button>
-               </div>
             </div>
          </div>
 
