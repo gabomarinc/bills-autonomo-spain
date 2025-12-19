@@ -845,7 +845,7 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
           payment_received_eur, payment_received_original, payment_exchange_rate, payment_date, exchange_difference,
           iva_amount, iva_repercutido, irpf_retention, irpf_amount, discount_rate, amount_paid, data
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
         ON CONFLICT (id) DO UPDATE SET 
           user_id = EXCLUDED.user_id, client_name = EXCLUDED.client_name, client_tax_id = EXCLUDED.client_tax_id,
           client_email = EXCLUDED.client_email, client_address = EXCLUDED.client_address,
