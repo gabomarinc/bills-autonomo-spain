@@ -277,21 +277,23 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
            <div className="flex items-center gap-3 relative z-10">
               <button 
                 onClick={() => onCreateDocument && onCreateDocument('Quote', clientData as DbClient)} 
-                className="bg-white p-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-slate-100 group"
+                className="bg-white px-4 py-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-purple-200 group flex items-center gap-2"
                 title="Nueva Cotización"
               >
                  <div className="p-2 bg-purple-50 text-purple-600 rounded-lg w-fit group-hover:bg-purple-600 group-hover:text-white transition-colors">
                    <FileBadge className="w-4 h-4" />
                  </div>
+                 <span className="text-xs font-bold text-slate-700 group-hover:text-purple-600 transition-colors">Cotización</span>
               </button>
               <button 
                 onClick={() => onCreateDocument && onCreateDocument('Invoice', clientData as DbClient)} 
-                className="bg-white p-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-slate-100 group"
+                className="bg-white px-4 py-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-blue-200 group flex items-center gap-2"
                 title="Nueva Factura"
               >
                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg w-fit group-hover:bg-blue-600 group-hover:text-white transition-colors">
                    <FileText className="w-4 h-4" />
                  </div>
+                 <span className="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Factura</span>
               </button>
            </div>
 

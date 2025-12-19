@@ -295,7 +295,33 @@ const AppContent: React.FC = () => {
         alert.addToast('success', 'Cliente Creado', 'El cliente se ha guardado correctamente.');
         setActiveView(AppView.CLIENTS);
       }} onCancel={() => setActiveView(AppView.CLIENTS)} />}
-      {activeView === AppView.CLIENT_DETAIL && selectedClientName && <ClientDetail clientName={selectedClientName} invoices={invoices} dbClientData={dbClients.find(c => c.name.trim().toLowerCase() === selectedClientName.trim().toLowerCase())} onBack={() => setActiveView(AppView.CLIENTS)} onSelectInvoice={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }} currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} onUpdateClientContact={async (old, upd) => { await saveClientToDb(upd, currentUser.id, 'CLIENT'); setDbClients(await fetchClientsFromDb(currentUser.id)); }} />}
+      {activeView === AppView.CLIENT_DETAIL && selectedClientName && <ClientDetail 
+        clientName={selectedClientName} 
+        invoices={invoices} 
+        dbClientData={dbClients.find(c => c.name.trim().toLowerCase() === selectedClientName.trim().toLowerCase())} 
+        onBack={() => setActiveView(AppView.CLIENTS)} 
+        onSelectInvoice={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }} 
+        currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} 
+        onUpdateClientContact={async (old, upd) => { await saveClientToDb(upd, currentUser.id, 'CLIENT'); setDbClients(await fetchClientsFromDb(currentUser.id)); }}
+        onCreateDocument={(type, clientData) => {
+          // Crear documento inicial con información del cliente prellenada
+          const initialInvoice: Invoice = {
+            id: '',
+            clientName: clientData.name,
+            clientTaxId: clientData.taxId || '',
+            clientEmail: clientData.email || '',
+            clientCountry: clientData.country || 'España',
+            type: type,
+            status: 'Borrador',
+            date: new Date().toISOString(),
+            total: 0,
+            currency: currentUser.defaultCurrency || 'EUR',
+            items: []
+          };
+          setDocumentToEdit(initialInvoice);
+          setActiveView(AppView.WIZARD);
+        }}
+      />}
       {activeView === AppView.EXPENSES && <ExpenseTracker invoices={invoices} currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} onCreateExpense={() => { setDocumentToEdit(null); setActiveView(AppView.EXPENSE_WIZARD); }} onEditExpense={(e) => { setDocumentToEdit(e); setActiveView(AppView.EXPENSE_WIZARD); }} currentProfile={currentUser} onUpdateProfile={handleUpdateProfile} />}
       {activeView === AppView.EXPENSE_WIZARD && <ExpenseWizard currentUser={currentUser} onSave={(inv) => { handleSaveInvoice(inv); setActiveView(AppView.EXPENSES); }} onCancel={() => setActiveView(AppView.EXPENSES)} initialData={documentToEdit} />}
       {activeView === AppView.CATALOG && <CatalogDashboard items={catalogItems} userCountry={currentUser.country || 'España'} apiKey={currentUser.apiKeys} onSaveItem={handleSaveCatalogItem} onDeleteItem={handleDeleteCatalogItem} referenceHourlyRate={currentUser.hourlyRateConfig?.calculatedRate} currentUser={currentUser} />}
