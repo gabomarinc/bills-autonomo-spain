@@ -226,29 +226,37 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
         const invoiceDate = draft.validityDate || new Date().toISOString().split('T')[0];
         const rateData = await getExchangeRateForInvoiceDate(invoiceCurrency, invoiceDate);
         
-        if (rateData) {
+        if (rateData && rateData.rateToEur) {
           const converted = await convertToEur(total, invoiceCurrency, invoiceDate);
           
           // Asegurar que rateDate sea siempre un string (ya viene como string de la interfaz)
           const rateDateString = rateData.rateDate || new Date().toISOString().split('T')[0];
           
-          setExchangeRate({
-            rate: rateData.rateToEur,
-            date: rateDateString,
-            source: rateData.source || 'BCE'
-          });
-          
-          // Debug: verificar que la conversión se está aplicando
-          console.log('Currency conversion:', {
-            originalTotal: total,
-            currency: invoiceCurrency,
-            rate: rateData.rateToEur,
-            convertedEur: converted.amountEur
-          });
-          
-          setBaseAmountEur(converted.amountEur);
+          // Verificar que la conversión se aplicó correctamente
+          if (converted && converted.amountEur && !isNaN(converted.amountEur)) {
+            setExchangeRate({
+              rate: rateData.rateToEur,
+              date: rateDateString,
+              source: rateData.source || 'BCE'
+            });
+            
+            // Debug: verificar que la conversión se está aplicando
+            console.log('Currency conversion:', {
+              originalTotal: total,
+              currency: invoiceCurrency,
+              rate: rateData.rateToEur,
+              convertedEur: converted.amountEur,
+              calculation: `${total} * ${rateData.rateToEur} = ${converted.amountEur}`
+            });
+            
+            setBaseAmountEur(converted.amountEur);
+          } else {
+            console.error('Invalid conversion result:', converted);
+            setExchangeRate(null);
+            setBaseAmountEur(null);
+          }
         } else {
-          console.warn('No rate data available for currency:', invoiceCurrency);
+          console.warn('No rate data available for currency:', invoiceCurrency, rateData);
           setExchangeRate(null);
           setBaseAmountEur(null);
         }
