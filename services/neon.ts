@@ -887,8 +887,28 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
       ]);
     }
     await client.end();
+    console.log('✅ Invoice/Quote saved successfully to DB:', {
+      id: invoice.id,
+      type: invoice.type,
+      clientName: invoice.clientName,
+      total: invoice.total,
+      status: invoice.status,
+      userId: invoice.userId
+    });
     return true;
-  } catch (error) {
+  } catch (error: any) {
+    console.error('❌ Error saving invoice/quote to DB:', {
+      error: error.message,
+      stack: error.stack,
+      invoiceId: invoice.id,
+      invoiceType: invoice.type,
+      userId: invoice.userId
+    });
+    try {
+      await client.end();
+    } catch (closeError) {
+      // Ignorar errores al cerrar
+    }
     return false;
   }
 };
