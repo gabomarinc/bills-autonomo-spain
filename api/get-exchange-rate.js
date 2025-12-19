@@ -76,15 +76,17 @@ export default async function handler(req, res) {
       console.warn('Exchangerate.host failed, trying currency-api:', alt1Error);
     }
 
-    // Fallback 2: Currency-api
+    // Fallback 2: Currency-api (usa minúsculas para las claves)
     try {
       const altUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/eur.json`;
       const response = await fetch(altUrl);
       
       if (response.ok) {
         const data = await response.json();
-        if (data.eur && data.eur[normalizedCurrency.toLowerCase()]) {
-          const rateFromEur = data.eur[normalizedCurrency.toLowerCase()];
+        // Esta API usa minúsculas para las claves (gbp, usd, etc.)
+        const currencyKey = normalizedCurrency.toLowerCase();
+        if (data.eur && data.eur[currencyKey]) {
+          const rateFromEur = data.eur[currencyKey];
           const rateToEur = 1 / rateFromEur;
           
           return res.status(200).json({
