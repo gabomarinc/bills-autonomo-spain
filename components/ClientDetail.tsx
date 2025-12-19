@@ -4,7 +4,7 @@ import {
   ArrowLeft, Mail, MapPin, Building2, Crown, 
   Clock, CheckCircle2, FileText, FileBadge, 
   TrendingUp, Edit2, Calendar, Save, X, Phone,
-  ExternalLink, Send, Wallet, Trash2, Tag, StickyNote, Plus, Check, Sparkles, User
+  ExternalLink, Send, Wallet, Trash2, Tag, StickyNote, Plus, Check, Sparkles, User, Globe
 } from 'lucide-react';
 import { Invoice, InvoiceStatus, DbClient } from '../types';
 
@@ -47,6 +47,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
       address?: string;
       taxId?: string;
       contactName?: string;
+      country?: string;
   }>({});
 
   // Reset optimistic state when dbClientData actually updates from parent
@@ -95,6 +96,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
         taxId: optimisticOverrides.taxId ?? (dbClientData?.taxId || latestDoc.clientTaxId || ''),
         address: optimisticOverrides.address ?? (dbClientData?.address || latestDoc.clientAddress || ''),
         phone: optimisticOverrides.phone ?? (dbClientData?.phone || ''),
+        country: optimisticOverrides.country ?? (dbClientData?.country || 'España'),
         tags: optimisticOverrides.tags ?? (dbClientData?.tags || ''),
         notes: optimisticOverrides.notes ?? (dbClientData?.notes || ''),
       },
@@ -137,6 +139,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
       address: editForm.address,
       taxId: editForm.taxId,
       phone: editForm.phone,
+      country: editForm.country || 'España',
       tags: clientData.tags,
       notes: clientData.notes
     };
@@ -148,7 +151,8 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
         email: editForm.email,
         address: editForm.address,
         taxId: editForm.taxId,
-        phone: editForm.phone
+        phone: editForm.phone,
+        country: editForm.country
     }));
 
     onUpdateClientContact(clientName, updatedProfile);
@@ -406,6 +410,47 @@ const ClientDetail: React.FC<ClientDetailProps> = ({
                         />
                      ) : (
                         <p className="text-sm text-slate-500 leading-relaxed">{clientData.address || 'No registrada'}</p>
+                     )}
+                  </div>
+
+                  {/* Country */}
+                  <div>
+                     <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1 mb-1">
+                        <Globe className="w-3 h-3" /> País
+                     </label>
+                     {isEditingProfile ? (
+                        <select 
+                          value={editForm.country || 'España'}
+                          onChange={(e) => setEditForm({...editForm, country: e.target.value})}
+                          className="w-full p-2 bg-slate-50 border rounded-lg text-sm outline-none focus:border-[#27bea5]"
+                        >
+                          <option value="España">España</option>
+                          <optgroup label="Unión Europea">
+                            {['Alemania', 'Austria', 'Bélgica', 'Bulgaria', 'Chipre', 'Croacia', 'Dinamarca',
+                              'Eslovaquia', 'Eslovenia', 'Estonia', 'Finlandia', 'Francia', 'Grecia',
+                              'Hungría', 'Irlanda', 'Italia', 'Letonia', 'Lituania', 'Luxemburgo', 'Malta',
+                              'Países Bajos', 'Polonia', 'Portugal', 'República Checa', 'Rumanía', 'Suecia']
+                              .filter(c => c !== 'España')
+                              .map(country => (
+                                <option key={country} value={country}>{country}</option>
+                              ))}
+                          </optgroup>
+                          <optgroup label="Otros Países">
+                            <option value="Estados Unidos">Estados Unidos</option>
+                            <option value="México">México</option>
+                            <option value="Colombia">Colombia</option>
+                            <option value="Argentina">Argentina</option>
+                            <option value="Chile">Chile</option>
+                            <option value="Perú">Perú</option>
+                            <option value="Panamá">Panamá</option>
+                            <option value="Reino Unido">Reino Unido</option>
+                            <option value="Canadá">Canadá</option>
+                            <option value="Brasil">Brasil</option>
+                            <option value="Otro">Otro</option>
+                          </optgroup>
+                        </select>
+                     ) : (
+                        <p className="text-sm font-medium text-[#1c2938]">{clientData.country || 'España'}</p>
                      )}
                   </div>
 
