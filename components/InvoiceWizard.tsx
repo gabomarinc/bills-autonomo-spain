@@ -963,7 +963,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                        <div className="mt-1 text-[10px] text-blue-600">
                          Tipo de cambio: 1 {draft.invoiceCurrency || draft.currency} = {exchangeRate.rate.toFixed(4)} EUR
                          <br />
-                         <span className="text-blue-500">Fuente: {exchangeRate.source} ({exchangeRate.date})</span>
+                         <span className="text-blue-500">Fuente: {exchangeRate.source} ({typeof exchangeRate.date === 'string' ? exchangeRate.date : (exchangeRate.date instanceof Date ? exchangeRate.date.toISOString().split('T')[0] : 'N/A')})</span>
                        </div>
                        {isLoadingExchangeRate && (
                          <div className="mt-1 flex items-center gap-1 text-[10px] text-blue-600">

@@ -137,10 +137,17 @@ const fetchExchangeRateFromAPI = async (
     }
 
     const data = await response.json();
+    // Asegurar que rateDate sea siempre un string
+    const rateDateString = typeof data.rateDate === 'string' 
+      ? data.rateDate 
+      : (data.rateDate instanceof Date 
+          ? data.rateDate.toISOString().split('T')[0] 
+          : new Date().toISOString().split('T')[0]);
+    
     return {
       currency: data.currency,
       rateToEur: data.rateToEur,
-      rateDate: data.rateDate,
+      rateDate: rateDateString,
       source: data.source || 'BCE'
     };
   } catch (error) {
@@ -182,11 +189,16 @@ export const getLatestExchangeRate = async (
     if (dbResult.rows.length > 0) {
       const row = dbResult.rows[0];
       await client.end();
+      // Asegurar que rate_date sea siempre un string
+      const rateDateString = row.rate_date instanceof Date 
+        ? row.rate_date.toISOString().split('T')[0] 
+        : (typeof row.rate_date === 'string' ? row.rate_date : new Date().toISOString().split('T')[0]);
+      
       return {
         id: row.id,
         currency: row.currency,
         rateToEur: parseFloat(row.rate_to_eur),
-        rateDate: row.rate_date,
+        rateDate: rateDateString,
         source: row.source || 'BCE',
         createdAt: row.created_at
       };
@@ -371,11 +383,16 @@ export const getExchangeRateForInvoiceDate = async (
     if (dbResult.rows.length > 0) {
       const row = dbResult.rows[0];
       await client.end();
+      // Asegurar que rate_date sea siempre un string
+      const rateDateString = row.rate_date instanceof Date 
+        ? row.rate_date.toISOString().split('T')[0] 
+        : (typeof row.rate_date === 'string' ? row.rate_date : new Date().toISOString().split('T')[0]);
+      
       return {
         id: row.id,
         currency: row.currency,
         rateToEur: parseFloat(row.rate_to_eur),
-        rateDate: row.rate_date,
+        rateDate: rateDateString,
         source: row.source || 'BCE',
         createdAt: row.created_at
       };
