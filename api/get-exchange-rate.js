@@ -41,16 +41,21 @@ export default async function handler(req, res) {
           const rateFromEur = parseFloat(currencyMatch[1]);
           const rateToEur = 1 / rateFromEur;
           
+          console.log(`BCE: Found ${normalizedCurrency} rate: ${rateToEur}`);
           return res.status(200).json({
             currency: normalizedCurrency,
             rateToEur: Math.round(rateToEur * 10000) / 10000,
             rateDate: targetDate,
             source: 'BCE'
           });
+        } else {
+          console.warn(`BCE: Currency ${normalizedCurrency} not found in XML`);
         }
+      } else {
+        console.warn(`BCE: Response not OK, status: ${response.status}`);
       }
     } catch (bceError) {
-      console.warn('BCE fetch failed, trying alternatives:', bceError);
+      console.warn('BCE fetch failed, trying alternatives:', bceError.message);
     }
 
     // Fallback 1: Exchangerate.host
@@ -60,20 +65,26 @@ export default async function handler(req, res) {
       
       if (response.ok) {
         const data = await response.json();
+        console.log(`Exchangerate.host: Available currencies:`, Object.keys(data.rates || {}).slice(0, 10));
         if (data.rates && data.rates[normalizedCurrency]) {
           const rateFromEur = data.rates[normalizedCurrency];
           const rateToEur = 1 / rateFromEur;
           
+          console.log(`Exchangerate.host: Found ${normalizedCurrency} rate: ${rateToEur}`);
           return res.status(200).json({
             currency: normalizedCurrency,
             rateToEur: Math.round(rateToEur * 10000) / 10000,
             rateDate: targetDate,
             source: 'EXCHANGERATE_HOST'
           });
+        } else {
+          console.warn(`Exchangerate.host: Currency ${normalizedCurrency} not found in rates`);
         }
+      } else {
+        console.warn(`Exchangerate.host: Response not OK, status: ${response.status}`);
       }
     } catch (alt1Error) {
-      console.warn('Exchangerate.host failed, trying currency-api:', alt1Error);
+      console.warn('Exchangerate.host failed, trying currency-api:', alt1Error.message);
     }
 
     // Fallback 2: Currency-api (usa minúsculas para las claves)
@@ -85,26 +96,59 @@ export default async function handler(req, res) {
         const data = await response.json();
         // Esta API usa minúsculas para las claves (gbp, usd, etc.)
         const currencyKey = normalizedCurrency.toLowerCase();
+        console.log(`Currency-api: Looking for ${currencyKey} in data.eur`);
+        console.log(`Currency-api: Available currencies:`, Object.keys(data.eur || {}).slice(0, 10));
         if (data.eur && data.eur[currencyKey]) {
           const rateFromEur = data.eur[currencyKey];
           const rateToEur = 1 / rateFromEur;
           
+          console.log(`Currency-api: Found ${normalizedCurrency} rate: ${rateToEur}`);
           return res.status(200).json({
             currency: normalizedCurrency,
             rateToEur: Math.round(rateToEur * 10000) / 10000,
             rateDate: targetDate,
             source: 'CURRENCY_API'
           });
+        } else {
+          console.warn(`Currency-api: Currency ${currencyKey} not found in data.eur`);
         }
+      } else {
+        console.warn(`Currency-api: Response not OK, status: ${response.status}`);
       }
     } catch (alt2Error) {
-      console.error('All exchange rate APIs failed:', alt2Error);
+      console.error('Currency-api failed:', alt2Error.message);
     }
 
+    // Si todas las APIs fallaron, intentar con exchangerate-api.com como último recurso
+    try {
+      const lastResortUrl = `https://api.exchangerate-api.com/v4/latest/EUR`;
+      const response = await fetch(lastResortUrl);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.rates && data.rates[normalizedCurrency]) {
+          const rateFromEur = data.rates[normalizedCurrency];
+          const rateToEur = 1 / rateFromEur;
+          
+          console.log(`Exchangerate-api.com (last resort): Found ${normalizedCurrency} rate: ${rateToEur}`);
+          return res.status(200).json({
+            currency: normalizedCurrency,
+            rateToEur: Math.round(rateToEur * 10000) / 10000,
+            rateDate: targetDate,
+            source: 'EXCHANGERATE_API_COM'
+          });
+        }
+      }
+    } catch (lastResortError) {
+      console.error('Last resort API also failed:', lastResortError.message);
+    }
+
+    console.error(`All exchange rate APIs failed for ${normalizedCurrency}`);
     return res.status(503).json({ 
       error: 'No se pudo obtener el tipo de cambio',
       currency: normalizedCurrency,
-      date: targetDate
+      date: targetDate,
+      message: `No se encontró tipo de cambio para ${normalizedCurrency} en ninguna API disponible`
     });
 
   } catch (error) {
