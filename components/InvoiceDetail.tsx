@@ -66,16 +66,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
           const selectedPayment = invoice.paymentPlan.payments[firstUnpaidIndex];
           setPaymentAmount(selectedPayment.amount.toFixed(2));
           // Asegurar que dueDate sea un string (ISO format)
-          try {
-            const dueDateStr = selectedPayment.dueDate instanceof Date 
-              ? selectedPayment.dueDate.toISOString().split('T')[0]
-              : typeof selectedPayment.dueDate === 'string'
-              ? selectedPayment.dueDate.split('T')[0] // Si es string ISO, tomar solo la fecha
-              : new Date().toISOString().split('T')[0]; // Fallback
-            setPaymentDate(dueDateStr);
-          } catch (e) {
-            setPaymentDate(new Date().toISOString().split('T')[0]);
-          }
+          const dueDateStr = dateToISOString(selectedPayment.dueDate);
+          setPaymentDate(dueDateStr);
         } else {
           setSelectedPaymentIndex(null);
         }
@@ -144,6 +136,24 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         clearInterval(interval);
     };
   }, [invoice.resendEmailId, invoice.timeline, onUpdateInvoice]);
+
+  // Helper function to safely convert date to ISO string
+  const dateToISOString = (dateValue: any): string => {
+    if (!dateValue) return new Date().toISOString().split('T')[0];
+    if (typeof dateValue === 'string') {
+      return dateValue.split('T')[0]; // Si es string ISO, tomar solo la fecha
+    }
+    // Si es un objeto Date o cualquier otro objeto, intentar convertirlo
+    try {
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    } catch (e) {
+      // Si falla, usar fecha actual como fallback
+    }
+    return new Date().toISOString().split('T')[0];
+  };
 
   // --- CALCULATION LOGIC ---
   const subtotal = invoice.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -1006,11 +1016,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                       <span className="text-amber-700">
                         Pago {idx + 1}: {(() => {
                           try {
-                            const dateStr = payment.dueDate instanceof Date 
-                              ? payment.dueDate.toISOString().split('T')[0]
-                              : typeof payment.dueDate === 'string'
-                              ? payment.dueDate.split('T')[0]
-                              : new Date().toISOString().split('T')[0];
+                            const dateStr = dateToISOString(payment.dueDate);
                             return new Date(dateStr).toLocaleDateString();
                           } catch (e) {
                             return 'Fecha inválida';
@@ -1180,12 +1186,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                                     Vence: {(() => {
                                       try {
                                         if (!payment.dueDate) return 'Fecha no definida';
-                                        const dateStr = payment.dueDate instanceof Date 
-                                          ? payment.dueDate.toISOString().split('T')[0]
-                                          : typeof payment.dueDate === 'string'
-                                          ? payment.dueDate.split('T')[0]
-                                          : null;
-                                        if (!dateStr) return 'Fecha inválida';
+                                        const dateStr = dateToISOString(payment.dueDate);
                                         return new Date(dateStr).toLocaleDateString();
                                       } catch (e) {
                                         return 'Fecha inválida';
