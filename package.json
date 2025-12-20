@@ -1,6 +1,5 @@
-
 {
-  "name": "facturazen-app",
+  "name": "bills-app",
   "private": true,
   "version": "1.0.0",
   "type": "module",
