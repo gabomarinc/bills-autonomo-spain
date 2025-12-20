@@ -285,6 +285,21 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+      // --- ADD CLICKABLE LINK OVER STRIPE BUTTON ---
+      const stripeBtn = documentRef.current.querySelector('#stripe-pay-button');
+      if (stripeBtn) {
+        const rect = stripeBtn.getBoundingClientRect();
+        const containerRect = documentRef.current.getBoundingClientRect();
+        const relativeX = rect.left - containerRect.left;
+        const relativeY = rect.top - containerRect.top;
+        const xMm = (relativeX * pdfWidth) / containerRect.width;
+        const yMm = (relativeY * pdfHeight) / containerRect.height;
+        const wMm = (rect.width * pdfWidth) / containerRect.width;
+        const hMm = (rect.height * pdfHeight) / containerRect.height;
+        const payUrl = `${window.location.origin}/api/pay?invoiceId=${invoice.id}&userId=${invoice.userId}`;
+        pdf.link(xMm, yMm, wMm, hMm, { url: payUrl });
+      }
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
       const htmlContent = generateDocumentHtml(invoice, issuer);
@@ -362,8 +377,29 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+    // --- ADD CLICKABLE LINK OVER STRIPE BUTTON ---
+    const stripeBtn = documentRef.current.querySelector('#stripe-pay-button');
+    if (stripeBtn) {
+      const rect = stripeBtn.getBoundingClientRect();
+      const containerRect = documentRef.current.getBoundingClientRect();
+
+      // Calculate position relative to the container
+      const relativeX = rect.left - containerRect.left;
+      const relativeY = rect.top - containerRect.top;
+
+      // Convert from pixels to mm (A4 is 210mm wide)
+      const xMm = (relativeX * pdfWidth) / containerRect.width;
+      const yMm = (relativeY * pdfHeight) / containerRect.height;
+      const wMm = (rect.width * pdfWidth) / containerRect.width;
+      const hMm = (rect.height * pdfHeight) / containerRect.height;
+
+      const payUrl = `${window.location.origin}/api/pay?invoiceId=${invoice.id}&userId=${invoice.userId}`;
+      pdf.link(xMm, yMm, wMm, hMm, { url: payUrl });
+    }
+
     pdf.save(`${isQuote ? 'Cotizacion' : 'Factura'}_${invoice.id}.pdf`);
-    alert.addToast('success', 'PDF Descargado');
+    alert.addToast('success', 'PDF Descargado', 'El botón de Stripe es clickable en el PDF.');
   };
 
   const getStatusStyle = (status: string) => {
@@ -421,10 +457,12 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         <div className="flex flex-wrap gap-3">
           {hasStripe && (
             <button
+              id="stripe-pay-button"
               onClick={handleStripePayment}
-              className="flex-1 bg-[#635bff] text-white py-2.5 px-4 rounded-xl font-bold hover:bg-[#5548cc] transition-colors shadow-sm flex items-center justify-center gap-2"
+              className="flex-1 bg-[#635bff] text-white py-2.5 px-4 rounded-xl font-bold hover:bg-[#5548cc] transition-colors shadow-sm flex items-center justify-center gap-x-2"
             >
-              <Lock className="w-4 h-4" /> Stripe
+              <Lock className="w-4 h-4 shrink-0" />
+              <span className="leading-none">Stripe</span>
             </button>
           )}
           {hasPayPal && (
