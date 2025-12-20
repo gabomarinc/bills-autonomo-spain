@@ -1,12 +1,12 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { 
-  Building2, MapPin, CreditCard, Palette, UploadCloud, 
+import {
+  Building2, MapPin, CreditCard, Palette, UploadCloud,
   Save, Crown, Calendar, Globe,
   Coins, Sparkles, Key, Eye, EyeOff, ShieldCheck,
   Check, Zap, Loader2, CheckCircle2, XCircle, AlertTriangle, Lock, ArrowRight,
   ChevronRight, FileText, Scale, TrendingUp, HelpCircle, Calculator, ExternalLink, RefreshCw,
-  Search, AlertCircle, X, ArrowLeft, Plus
+  Search, AlertCircle, X, ArrowLeft, Plus, Percent, Trash2
 } from 'lucide-react';
 import { UserProfile, PaymentIntegration, ProfileType, SpanishFiscalConfig } from '../types';
 import { testAiConnection } from '../services/geminiService';
@@ -27,7 +27,8 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   const [showKeys, setShowKeys] = useState<{ [key: string]: boolean }>({});
   const [testStatus, setTestStatus] = useState<{ [key: string]: 'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR' }>({});
   const [activePaymentTab, setActivePaymentTab] = useState<'STRIPE' | 'PAYPAL' | 'BIZUM'>('STRIPE');
-  
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'GENERAL' | 'INTEGRATIONS'>('GENERAL');
+
   // Password Change State
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -42,7 +43,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [selectedSector, setSelectedSector] = useState<string>(profile.fiscalConfig?.activitySector || '');
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(
-    profile.fiscalConfig?.activitySubcategories || 
+    profile.fiscalConfig?.activitySubcategories ||
     (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
   );
   const [searchSector, setSearchSector] = useState('');
@@ -52,16 +53,16 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   // Helper to safely format dates stored as text in the DB
   const formatRenewalDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
-    
+
     // Si ya parece ser una fecha legible (contiene nombres de mes o espacios sin T de ISO)
     if (dateStr.length > 5 && !dateStr.includes('T') && isNaN(Number(dateStr))) {
-        return dateStr;
+      return dateStr;
     }
 
     try {
       const d = new Date(dateStr);
       if (!isNaN(d.getTime())) {
-          return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+        return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
       }
       return dateStr;
     } catch (e) {
@@ -110,7 +111,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
       branding: { ...prev.branding, [field]: value } as any
     }));
   };
-  
+
   const handleApiKeyChange = (provider: 'gemini' | 'openai', value: string) => {
     setProfile(prev => ({
       ...prev,
@@ -135,30 +136,37 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
           stripeSecretKey: prev.paymentIntegration?.stripeSecretKey || '',
           paypalClientId: prev.paymentIntegration?.paypalClientId || '',
           paypalSecret: prev.paymentIntegration?.paypalSecret || '',
-          bizumPhone: prev.paymentIntegration?.bizumPhone || ''
+          bizumPhone: prev.paymentIntegration?.bizumPhone || '',
+          feeRules: prev.paymentIntegration?.feeRules || []
         }
       };
     });
   };
 
-  const handlePaymentConfigChange = (field: keyof PaymentIntegration, value: string) => {
+  const handlePaymentInputChange = (field: keyof PaymentIntegration, value: any) => {
     setProfile(prev => {
       const currentInt = prev.paymentIntegration || { provider: 'STRIPE', enabled: true };
       const updatedInt = { ...currentInt, [field]: value };
-      
-      // Determinar provider basado en qué campos están configurados
+
+      // Determine provider based on which fields are configured
       const hasStripe = !!(updatedInt.stripePublicKey && updatedInt.stripeSecretKey);
       const hasPayPal = !!(updatedInt.paypalClientId && updatedInt.paypalSecret);
       const hasBizum = !!updatedInt.bizumPhone;
-      
-      let newProvider: 'STRIPE' | 'PAYPAL' | 'BIZUM' | 'BOTH' = 'STRIPE';
+
+      let newProvider: 'STRIPE' | 'PAYPAL' | 'BIZUM' | 'BOTH' = updatedInt.provider || 'STRIPE';
       if (hasStripe && (hasPayPal || hasBizum)) newProvider = 'BOTH';
       else if (hasPayPal && hasBizum) newProvider = 'BOTH';
       else if (hasPayPal) newProvider = 'PAYPAL';
       else if (hasBizum) newProvider = 'BIZUM';
       else if (hasStripe) newProvider = 'STRIPE';
 
-      return { ...prev, paymentIntegration: { ...updatedInt, provider: newProvider } };
+      return {
+        ...prev,
+        paymentIntegration: {
+          ...updatedInt,
+          provider: newProvider
+        }
+      };
     });
   };
 
@@ -196,76 +204,76 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   };
 
   const handleUpdatePassword = async () => {
-      if (newPassword.length < 6) {
-          alert.addToast('error', 'Contraseña corta', 'La contraseña debe tener al menos 6 caracteres.');
-          return;
-      }
-      if (newPassword !== confirmPassword) {
-          alert.addToast('error', 'Error', 'Las contraseñas no coinciden.');
-          return;
-      }
+    if (newPassword.length < 6) {
+      alert.addToast('error', 'Contraseña corta', 'La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert.addToast('error', 'Error', 'Las contraseñas no coinciden.');
+      return;
+    }
 
-      setIsUpdatingPassword(true);
-      try {
-          const success = await updateUserPasswordInDb(currentUser.id, newPassword);
-          if (success) {
-              if (currentUser.email) {
-                  await sendPasswordChangedEmail(currentUser.email, currentUser.name);
-              }
-              alert.addToast('success', 'Contraseña Actualizada', 'Se ha enviado un correo de confirmación.');
-              setNewPassword('');
-              setConfirmPassword('');
-              setShowPasswordChange(false);
-          } else {
-              alert.addToast('error', 'Error', 'No se pudo actualizar la contraseña en el servidor.');
-          }
-      } catch (err) {
-          alert.addToast('error', 'Error Crítico', 'Hubo un problema al conectar con la base de datos.');
-      } finally {
-          setIsUpdatingPassword(false);
+    setIsUpdatingPassword(true);
+    try {
+      const success = await updateUserPasswordInDb(currentUser.id, newPassword);
+      if (success) {
+        if (currentUser.email) {
+          await sendPasswordChangedEmail(currentUser.email, currentUser.name);
+        }
+        alert.addToast('success', 'Contraseña Actualizada', 'Se ha enviado un correo de confirmación.');
+        setNewPassword('');
+        setConfirmPassword('');
+        setShowPasswordChange(false);
+      } else {
+        alert.addToast('error', 'Error', 'No se pudo actualizar la contraseña en el servidor.');
       }
+    } catch (err) {
+      alert.addToast('error', 'Error Crítico', 'Hubo un problema al conectar con la base de datos.');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   const handleManageSubscription = async () => {
     if (!profile.stripeCustomerId) {
-        if (profile.plan === 'Free') {
-            alert.addToast('info', 'Plan Gratis', "Actualmente estás en el plan Gratis. Contacta a soporte para actualizar.");
-        } else {
-            alert.addToast('error', 'Error', "No se encontró el ID de cliente de Stripe. Contacta a soporte.");
-        }
-        return;
+      if (profile.plan === 'Free') {
+        alert.addToast('info', 'Plan Gratis', "Actualmente estás en el plan Gratis. Contacta a soporte para actualizar.");
+      } else {
+        alert.addToast('error', 'Error', "No se encontró el ID de cliente de Stripe. Contacta a soporte.");
+      }
+      return;
     }
 
     setIsRedirectingToPortal(true);
     try {
-        const response = await fetch('/api/create-portal-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customerId: profile.stripeCustomerId })
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            if (response.status === 503) {
-                alert.addToast('info', 'Servicio no disponible', "El sistema de pagos no está configurado. Contacta a soporte.");
-            } else {
-                throw new Error(data.error || 'No se pudo generar el enlace');
-            }
-            setIsRedirectingToPortal(false);
-            return;
-        }
-        
+      const response = await fetch('/api/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: profile.stripeCustomerId })
+      });
+
+      if (!response.ok) {
         const data = await response.json();
-        
-        if (data.url) {
-            window.location.href = data.url;
+        if (response.status === 503) {
+          alert.addToast('info', 'Servicio no disponible', "El sistema de pagos no está configurado. Contacta a soporte.");
         } else {
-            throw new Error(data.error || 'No se pudo generar el enlace');
+          throw new Error(data.error || 'No se pudo generar el enlace');
         }
-    } catch (error) {
-        console.error("Portal Error", error);
-        alert.addToast('error', 'Error Stripe', "Error conectando con Stripe.");
         setIsRedirectingToPortal(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'No se pudo generar el enlace');
+      }
+    } catch (error) {
+      console.error("Portal Error", error);
+      alert.addToast('error', 'Error Stripe', "Error conectando con Stripe.");
+      setIsRedirectingToPortal(false);
     }
   };
 
@@ -277,7 +285,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
 
     const sectorData = ACTIVITY_SECTORS.find(s => s.id === selectedSector);
     const selectedSubs = sectorData?.subcategories.filter(sub => selectedSubcategories.includes(sub.id)) || [];
-    
+
     // Calcular ivaArticle: si hay múltiples artículos diferentes, usar MIXTO
     const articles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
     const uniqueArticles = [...new Set(articles)];
@@ -310,7 +318,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
           actividadPrincipal: selectedSubs.map(s => s.name).join(', ') || profile.fiscalConfig?.actividadPrincipal || ''
         } as SpanishFiscalConfig
       };
-      
+
       await onUpdate(updatedProfile);
       setShowActivityModal(false);
       alert.addToast('success', 'Actividad Actualizada', 'La actividad económica se ha actualizado correctamente. Esto afectará las menciones legales en facturas futuras.');
@@ -325,7 +333,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   const fiscalPreview = useMemo(() => {
     const config = profile.fiscalConfig || {} as SpanishFiscalConfig;
     const isFisica = config.entityType === 'FISICA';
-    
+
     // IVA según régimen
     let ivaInfo = "21% (General)";
     if (config.ivaRegimen === 'SIMPLIFICADO') {
@@ -341,8 +349,8 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
     if (isFisica && config.fechaAltaAutonomo) {
       const fechaAlta = new Date(config.fechaAltaAutonomo);
       const hoy = new Date();
-      const mesesTranscurridos = (hoy.getFullYear() - fechaAlta.getFullYear()) * 12 + 
-                                (hoy.getMonth() - fechaAlta.getMonth());
+      const mesesTranscurridos = (hoy.getFullYear() - fechaAlta.getFullYear()) * 12 +
+        (hoy.getMonth() - fechaAlta.getMonth());
       if (mesesTranscurridos < 24) {
         irpfInfo = "7% (Primeros 2 años)";
       }
@@ -358,9 +366,9 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
       'FORESTAL': 'Forestal'
     };
 
-    return { 
-      ivaInfo, 
-      irpfInfo, 
+    return {
+      ivaInfo,
+      irpfInfo,
       regimenInfo: regimenLabels[regimenInfo] || regimenInfo,
       prorrateoIVA: config.prorrateoIVA || false,
       porcentajeProrrateo: config.porcentajeProrrateo || 100
@@ -382,433 +390,454 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
 
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 border-b border-slate-100 pb-6">
         <div>
-           <h1 className="text-3xl font-bold text-[#1c2938] tracking-tight">Tu Espacio de Trabajo</h1>
-           <p className="text-slate-500 mt-1 text-lg font-light">Personaliza cómo te verán tus clientes y cómo trabaja tu IA.</p>
+          <h1 className="text-3xl font-bold text-[#1c2938] tracking-tight">{activeSettingsTab === 'GENERAL' ? 'Tu Espacio de Trabajo' : 'Integraciones y Comisiones'}</h1>
+          <p className="text-slate-500 mt-1 text-lg font-light">
+            {activeSettingsTab === 'GENERAL'
+              ? 'Personaliza cómo te verán tus clientes y cómo trabaja tu IA.'
+              : 'Conecta tus herramientas favoritas y automatiza el cálculo de comisiones.'}
+          </p>
         </div>
-        <button 
-          onClick={saveChanges}
-          disabled={isSaving}
-          className={`px-8 py-3 rounded-2xl font-bold transition-all duration-300 flex items-center gap-3 shadow-lg hover:shadow-xl hover:-translate-y-1 active:translate-y-0 active:scale-95 disabled:opacity-70 ${
-             saveStatus === 'SUCCESS' ? 'bg-green-500 text-white' : 'bg-[#1c2938] text-white hover:bg-[#27bea5]'
-          }`}
-        >
-          {isSaving ? <><Loader2 className="w-5 h-5 animate-spin" /> Guardando...</> : saveStatus === 'SUCCESS' ? <><Check className="w-5 h-5" /> Guardado</> : <><Save className="w-5 h-5" /> Guardar Cambios</>}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex p-1 bg-slate-100 rounded-2xl mr-4">
+            <button
+              onClick={() => setActiveSettingsTab('GENERAL')}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeSettingsTab === 'GENERAL' ? 'bg-white text-[#1c2938] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              General
+            </button>
+            <button
+              onClick={() => setActiveSettingsTab('INTEGRATIONS')}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeSettingsTab === 'INTEGRATIONS' ? 'bg-white text-[#1c2938] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Integraciones
+            </button>
+          </div>
+          <button
+            onClick={saveChanges}
+            disabled={isSaving}
+            className={`px-8 py-3 rounded-2xl font-bold transition-all duration-300 flex items-center gap-3 shadow-lg hover:shadow-xl hover:-translate-y-1 active:translate-y-0 active:scale-95 disabled:opacity-70 ${saveStatus === 'SUCCESS' ? 'bg-green-500 text-white' : 'bg-[#1c2938] text-white hover:bg-[#27bea5]'
+              }`}
+          >
+            {isSaving ? <><Loader2 className="w-5 h-5 animate-spin" /> Guardando...</> : saveStatus === 'SUCCESS' ? <><Check className="w-5 h-5" /> Guardado</> : <><Save className="w-5 h-5" /> Guardar Cambios</>}
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="space-y-8 xl:col-span-2">
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative group">
-             <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-3">
-               <div className="p-2 bg-slate-50 rounded-xl text-[#27bea5]"><Building2 className="w-6 h-6" /></div>
-               Identidad del Negocio
-             </h3>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="space-y-2">
-                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre Comercial</label>
-                 <input value={profile.name} onChange={(e) => handleInputChange('name', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all font-medium text-[#1c2938] focus:ring-2 focus:ring-[#27bea5]" />
-               </div>
-               <div className="space-y-2">
-                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Razón Social</label>
-                 <input value={profile.legalName || ''} onChange={(e) => handleInputChange('legalName', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all text-slate-700 focus:ring-2 focus:ring-[#27bea5]" />
-               </div>
-               <div className="space-y-2">
-                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">NIF / CIF</label>
-                 <input value={profile.taxId} onChange={(e) => handleInputChange('taxId', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-mono text-slate-600" />
-               </div>
-               <div className="space-y-2">
-                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">País</label>
-                 <select value={profile.country} onChange={(e) => handleInputChange('country', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none">
+      {activeSettingsTab === 'GENERAL' ? (
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="space-y-8 xl:col-span-2">
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative group">
+              <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-3">
+                <div className="p-2 bg-slate-50 rounded-xl text-[#27bea5]"><Building2 className="w-6 h-6" /></div>
+                Identidad del Negocio
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre Comercial</label>
+                  <input value={profile.name} onChange={(e) => handleInputChange('name', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all font-medium text-[#1c2938] focus:ring-2 focus:ring-[#27bea5]" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Razón Social</label>
+                  <input value={profile.legalName || ''} onChange={(e) => handleInputChange('legalName', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none transition-all text-slate-700 focus:ring-2 focus:ring-[#27bea5]" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">NIF / CIF</label>
+                  <input value={profile.taxId} onChange={(e) => handleInputChange('taxId', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-mono text-slate-600" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">País</label>
+                  <select value={profile.country} onChange={(e) => handleInputChange('country', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none">
                     <option value="España">España</option>
-                 </select>
-               </div>
-               <div className="md:col-span-2 space-y-2">
-                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dirección Fiscal</label>
-                 <input value={profile.address} onChange={(e) => handleInputChange('address', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none" />
-               </div>
-             </div>
-          </div>
+                  </select>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dirección Fiscal</label>
+                  <input value={profile.address} onChange={(e) => handleInputChange('address', e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none" />
+                </div>
+              </div>
+            </div>
 
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative group">
-             <div className="flex justify-between items-center mb-6">
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative group">
+              <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-[#1c2938] flex items-center gap-3">
-                   <div className="p-2 bg-rose-50 rounded-xl text-rose-500"><Lock className="w-6 h-6" /></div>
-                   Seguridad de la Cuenta
+                  <div className="p-2 bg-rose-50 rounded-xl text-rose-500"><Lock className="w-6 h-6" /></div>
+                  Seguridad de la Cuenta
                 </h3>
-             </div>
+              </div>
 
-             {!showPasswordChange ? (
+              {!showPasswordChange ? (
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                   <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white rounded-lg shadow-sm text-slate-400"><Key size={20}/></div>
-                      <div>
-                         <p className="text-sm font-bold text-[#1c2938]">Contraseña</p>
-                         <p className="text-xs text-slate-500">Actualizada periódicamente para mayor seguridad</p>
-                      </div>
-                   </div>
-                   <button onClick={() => setShowPasswordChange(true)} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-[#1c2938] hover:bg-slate-100 transition-colors shadow-sm">Cambiar Contraseña</button>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-400"><Key size={20} /></div>
+                    <div>
+                      <p className="text-sm font-bold text-[#1c2938]">Contraseña</p>
+                      <p className="text-xs text-slate-500">Actualizada periódicamente para mayor seguridad</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowPasswordChange(true)} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-[#1c2938] hover:bg-slate-100 transition-colors shadow-sm">Cambiar Contraseña</button>
                 </div>
-             ) : (
+              ) : (
                 <div className="space-y-6 animate-in slide-in-from-top-2">
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Nueva Contraseña</label>
-                         <div className="relative">
-                            <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
-                            <input type={showNewPass ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full pl-12 pr-12 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-[#27bea5] outline-none" placeholder="Mínimo 6 caracteres" />
-                            <button onClick={() => setShowNewPass(!showNewPass)} className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600">{showNewPass ? <EyeOff size={18}/> : <Eye size={18}/>}</button>
-                         </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Nueva Contraseña</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
+                        <input type={showNewPass ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full pl-12 pr-12 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-[#27bea5] outline-none" placeholder="Mínimo 6 caracteres" />
+                        <button onClick={() => setShowNewPass(!showNewPass)} className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600">{showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                       </div>
-                      <div className="space-y-2">
-                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Confirmar Contraseña</label>
-                         <div className="relative">
-                            <ShieldCheck className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
-                            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full pl-12 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-[#27bea5] outline-none" placeholder="Repite la contraseña" />
-                         </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Confirmar Contraseña</label>
+                      <div className="relative">
+                        <ShieldCheck className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
+                        <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full pl-12 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-[#27bea5] outline-none" placeholder="Repite la contraseña" />
                       </div>
-                   </div>
-                   <div className="flex gap-3">
-                      <button onClick={handleUpdatePassword} disabled={isUpdatingPassword || !newPassword} className="px-6 py-3 bg-[#1c2938] text-white rounded-2xl font-bold text-sm hover:bg-rose-500 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50">
-                         {isUpdatingPassword ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16}/>} Actualizar y Notificar
-                      </button>
-                      <button onClick={() => { setShowPasswordChange(false); setNewPassword(''); setConfirmPassword(''); }} className="px-6 py-3 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-2xl transition-colors">Cancelar</button>
-                   </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={handleUpdatePassword} disabled={isUpdatingPassword || !newPassword} className="px-6 py-3 bg-[#1c2938] text-white rounded-2xl font-bold text-sm hover:bg-rose-500 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50">
+                      {isUpdatingPassword ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Actualizar y Notificar
+                    </button>
+                    <button onClick={() => { setShowPasswordChange(false); setNewPassword(''); setConfirmPassword(''); }} className="px-6 py-3 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-2xl transition-colors">Cancelar</button>
+                  </div>
                 </div>
-             )}
-          </div>
+              )}
+            </div>
 
-          {/* BÓVEDA FINANCIERA */}
-          <div className="relative rounded-[2rem] shadow-xl overflow-hidden group bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-8 text-white">
-             <div className="flex justify-between items-center mb-6">
+            {/* BÓVEDA FINANCIERA */}
+            <div className="relative rounded-[2rem] shadow-xl overflow-hidden group bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-8 text-white">
+              <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-white flex items-center gap-3">
-                   <div className="p-2 bg-white/20 rounded-xl text-white"><Coins className="w-6 h-6" /></div>
-                   Bóveda Financiera
+                  <div className="p-2 bg-white/20 rounded-xl text-white"><Coins className="w-6 h-6" /></div>
+                  Bóveda Financiera
                 </h3>
                 <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold text-white transition-colors flex items-center gap-2">
-                   <ShieldCheck className="w-4 h-4" /> Seguridad Bancaria
+                  <ShieldCheck className="w-4 h-4" /> Seguridad Bancaria
                 </button>
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Nombre del Banco</label>
-                   <input 
-                      value={profile.bankName || ''} 
-                      onChange={(e) => handleInputChange('bankName', e.target.value)} 
-                      placeholder="Ej. Banco Santander"
-                      className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-medium text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50" 
-                   />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Cuenta Bancaria (IBAN)</label>
-                   <input 
-                      value={profile.bankAccount || ''} 
-                      onChange={(e) => handleInputChange('bankAccount', e.target.value)} 
-                      placeholder="ES71 1583 0001 1790 6660 097"
-                      className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-mono text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50" 
-                   />
+                  <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Nombre del Banco</label>
+                  <input
+                    value={profile.bankName || ''}
+                    onChange={(e) => handleInputChange('bankName', e.target.value)}
+                    placeholder="Ej. Banco Santander"
+                    className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-medium text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50"
+                  />
                 </div>
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Tipo de Cuenta</label>
-                   <select 
-                      value={profile.bankAccountType || 'Ahorro'} 
-                      onChange={(e) => handleInputChange('bankAccountType', e.target.value)} 
-                      className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all text-white focus:ring-2 focus:ring-white/50"
-                   >
-                      <option value="Ahorro" className="bg-[#1e9984]">Ahorro</option>
-                      <option value="Corriente" className="bg-[#1e9984]">Corriente</option>
-                   </select>
+                  <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Cuenta Bancaria (IBAN)</label>
+                  <input
+                    value={profile.bankAccount || ''}
+                    onChange={(e) => handleInputChange('bankAccount', e.target.value)}
+                    placeholder="ES71 1583 0001 1790 6660 097"
+                    className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-mono text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50"
+                  />
                 </div>
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Moneda Base</label>
-                   <div className="relative">
-                      <input 
-                         value="EUR" 
-                         readOnly
-                         className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none font-bold text-white cursor-not-allowed" 
-                      />
-                      <Globe className="absolute right-4 top-4 w-5 h-5 text-white/70" />
-                   </div>
+                  <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Tipo de Cuenta</label>
+                  <select
+                    value={profile.bankAccountType || 'Ahorro'}
+                    onChange={(e) => handleInputChange('bankAccountType', e.target.value)}
+                    className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all text-white focus:ring-2 focus:ring-white/50"
+                  >
+                    <option value="Ahorro" className="bg-[#1e9984]">Ahorro</option>
+                    <option value="Corriente" className="bg-[#1e9984]">Corriente</option>
+                  </select>
                 </div>
-             </div>
-             
-             {/* Pagos Digitales */}
-             <div className="mt-6 pt-6 border-t border-white/20">
-                <div className="flex items-center justify-between">
-                   <div>
-                      <p className="text-sm font-bold text-white mb-1">Pagos Digitales</p>
-                      <p className="text-xs text-white/80">Stripe / PayPal / Bizum</p>
-                   </div>
-                   <button
-                      onClick={togglePaymentIntegration}
-                      className={`relative w-14 h-8 rounded-full transition-colors ${profile.paymentIntegration?.enabled ? 'bg-white' : 'bg-white/30'}`}
-                   >
-                      <div className={`absolute top-1 w-6 h-6 bg-[#27bea5] rounded-full transition-transform shadow-sm ${profile.paymentIntegration?.enabled ? 'left-7' : 'left-1'}`}></div>
-                   </button>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-white/80 uppercase tracking-wider">Moneda Base</label>
+                  <div className="relative">
+                    <input
+                      value="EUR"
+                      readOnly
+                      className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl outline-none font-bold text-white cursor-not-allowed"
+                    />
+                    <Globe className="absolute right-4 top-4 w-5 h-5 text-white/70" />
+                  </div>
                 </div>
-             </div>
-          </div>
+              </div>
 
-          {/* TU CEREBRO DIGITAL - API KEYS */}
-          <div className="relative rounded-[2rem] shadow-xl overflow-hidden group bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-8 text-white">
-             <div className="flex items-center gap-3 mb-4">
+              {/* Pagos Digitales */}
+              <div className="mt-6 pt-6 border-t border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-white mb-1">Pagos Digitales</p>
+                    <p className="text-xs text-white/80">Stripe / PayPal / Bizum</p>
+                  </div>
+                  <button
+                    onClick={togglePaymentIntegration}
+                    className={`relative w-14 h-8 rounded-full transition-colors ${profile.paymentIntegration?.enabled ? 'bg-white' : 'bg-white/30'}`}
+                  >
+                    <div className={`absolute top-1 w-6 h-6 bg-[#27bea5] rounded-full transition-transform shadow-sm ${profile.paymentIntegration?.enabled ? 'left-7' : 'left-1'}`}></div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* TU CEREBRO DIGITAL - API KEYS */}
+            <div className="relative rounded-[2rem] shadow-xl overflow-hidden group bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-8 text-white">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-white/20 rounded-xl text-white"><Zap className="w-6 h-6" /></div>
                 <div>
-                   <h3 className="text-xl font-bold text-white">Tu Cerebro Digital</h3>
-                   <p className="text-xs text-white/80">Conecta tus llaves de IA para darle superpoderes ilimitados a tu asistente.</p>
+                  <h3 className="text-xl font-bold text-white">Tu Cerebro Digital</h3>
+                  <p className="text-xs text-white/80">Conecta tus llaves de IA para darle superpoderes ilimitados a tu asistente.</p>
                 </div>
-             </div>
-             
-             <div className="space-y-6 mt-6">
+              </div>
+
+              <div className="space-y-6 mt-6">
                 {/* Google Gemini API Key */}
                 <div className="space-y-2">
-                   <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
-                         Google Gemini API Key
-                         <span className="px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-bold">RECOMENDADO</span>
-                      </label>
-                      <div className="flex items-center gap-2">
-                         <button
-                            onClick={() => toggleKeyVisibility('gemini')}
-                            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                         >
-                            {showKeys['gemini'] ? <EyeOff className="w-4 h-4 text-white" /> : <Eye className="w-4 h-4 text-white" />}
-                         </button>
-                         <button
-                            onClick={() => runConnectionTest('gemini')}
-                            disabled={testStatus['gemini'] === 'LOADING' || !profile.apiKeys?.gemini}
-                            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
-                         >
-                            {testStatus['gemini'] === 'LOADING' && <Loader2 className="w-4 h-4 text-white animate-spin" />}
-                            {testStatus['gemini'] === 'SUCCESS' && <CheckCircle2 className="w-4 h-4 text-white" />}
-                            {testStatus['gemini'] === 'ERROR' && <XCircle className="w-4 h-4 text-white" />}
-                            {testStatus['gemini'] === 'IDLE' && <Zap className="w-4 h-4 text-white" />}
-                         </button>
-                      </div>
-                   </div>
-                   <div className="relative">
-                      <input
-                         type={showKeys['gemini'] ? 'text' : 'password'}
-                         value={profile.apiKeys?.gemini || ''}
-                         onChange={(e) => handleApiKeyChange('gemini', e.target.value)}
-                         placeholder="Pega tu llave aquí..."
-                         className="w-full p-4 pr-24 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-mono text-sm text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50"
-                      />
-                      <Key className="absolute right-4 top-4 w-5 h-5 text-white/70" />
-                   </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
+                      Google Gemini API Key
+                      <span className="px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-bold">RECOMENDADO</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleKeyVisibility('gemini')}
+                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        {showKeys['gemini'] ? <EyeOff className="w-4 h-4 text-white" /> : <Eye className="w-4 h-4 text-white" />}
+                      </button>
+                      <button
+                        onClick={() => runConnectionTest('gemini')}
+                        disabled={testStatus['gemini'] === 'LOADING' || !profile.apiKeys?.gemini}
+                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {testStatus['gemini'] === 'LOADING' && <Loader2 className="w-4 h-4 text-white animate-spin" />}
+                        {testStatus['gemini'] === 'SUCCESS' && <CheckCircle2 className="w-4 h-4 text-white" />}
+                        {testStatus['gemini'] === 'ERROR' && <XCircle className="w-4 h-4 text-white" />}
+                        {testStatus['gemini'] === 'IDLE' && <Zap className="w-4 h-4 text-white" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showKeys['gemini'] ? 'text' : 'password'}
+                      value={profile.apiKeys?.gemini || ''}
+                      onChange={(e) => handleApiKeyChange('gemini', e.target.value)}
+                      placeholder="Pega tu llave aquí..."
+                      className="w-full p-4 pr-24 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-mono text-sm text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50"
+                    />
+                    <Key className="absolute right-4 top-4 w-5 h-5 text-white/70" />
+                  </div>
                 </div>
 
                 {/* OpenAI API Key (Backup) */}
                 <div className="space-y-2">
-                   <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
-                         OpenAI API Key (Backup)
-                      </label>
-                      <div className="flex items-center gap-2">
-                         <button
-                            onClick={() => toggleKeyVisibility('openai')}
-                            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                         >
-                            {showKeys['openai'] ? <EyeOff className="w-4 h-4 text-white" /> : <Eye className="w-4 h-4 text-white" />}
-                         </button>
-                         <button
-                            onClick={() => runConnectionTest('openai')}
-                            disabled={testStatus['openai'] === 'LOADING' || !profile.apiKeys?.openai}
-                            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
-                         >
-                            {testStatus['openai'] === 'LOADING' && <Loader2 className="w-4 h-4 text-white animate-spin" />}
-                            {testStatus['openai'] === 'SUCCESS' && <CheckCircle2 className="w-4 h-4 text-white" />}
-                            {testStatus['openai'] === 'ERROR' && <XCircle className="w-4 h-4 text-white" />}
-                            {testStatus['openai'] === 'IDLE' && <Zap className="w-4 h-4 text-white" />}
-                         </button>
-                      </div>
-                   </div>
-                   <div className="relative">
-                      <input
-                         type={showKeys['openai'] ? 'text' : 'password'}
-                         value={profile.apiKeys?.openai || ''}
-                         onChange={(e) => handleApiKeyChange('openai', e.target.value)}
-                         placeholder="Pega tu llave aquí..."
-                         className="w-full p-4 pr-24 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-mono text-sm text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50"
-                      />
-                      <Key className="absolute right-4 top-4 w-5 h-5 text-white/70" />
-                   </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
+                      OpenAI API Key (Backup)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleKeyVisibility('openai')}
+                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        {showKeys['openai'] ? <EyeOff className="w-4 h-4 text-white" /> : <Eye className="w-4 h-4 text-white" />}
+                      </button>
+                      <button
+                        onClick={() => runConnectionTest('openai')}
+                        disabled={testStatus['openai'] === 'LOADING' || !profile.apiKeys?.openai}
+                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {testStatus['openai'] === 'LOADING' && <Loader2 className="w-4 h-4 text-white animate-spin" />}
+                        {testStatus['openai'] === 'SUCCESS' && <CheckCircle2 className="w-4 h-4 text-white" />}
+                        {testStatus['openai'] === 'ERROR' && <XCircle className="w-4 h-4 text-white" />}
+                        {testStatus['openai'] === 'IDLE' && <Zap className="w-4 h-4 text-white" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showKeys['openai'] ? 'text' : 'password'}
+                      value={profile.apiKeys?.openai || ''}
+                      onChange={(e) => handleApiKeyChange('openai', e.target.value)}
+                      placeholder="Pega tu llave aquí..."
+                      className="w-full p-4 pr-24 bg-white/10 border border-white/20 rounded-2xl outline-none transition-all font-mono text-sm text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/50"
+                    />
+                    <Key className="absolute right-4 top-4 w-5 h-5 text-white/70" />
+                  </div>
                 </div>
-             </div>
-          </div>
+              </div>
+            </div>
 
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative overflow-hidden">
-             <div className="flex items-center gap-3 mb-6">
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 relative overflow-hidden">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500"><Scale className="w-6 h-6" /></div>
                 <div>
-                   <h3 className="text-xl font-bold text-[#1c2938]">Perfil Fiscal (España)</h3>
-                   <p className="text-xs text-slate-400">Configuración fiscal y obligaciones</p>
+                  <h3 className="text-xl font-bold text-[#1c2938]">Perfil Fiscal (España)</h3>
+                  <p className="text-xs text-slate-400">Configuración fiscal y obligaciones</p>
                 </div>
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo de Entidad</label>
-                   <div className="grid grid-cols-2 gap-2 bg-slate-50 p-1 rounded-xl">
-                      <button onClick={() => handleFiscalChange('entityType', 'FISICA')} className={`py-2 px-3 rounded-lg text-xs font-bold ${profile.fiscalConfig?.entityType === 'FISICA' ? 'bg-white shadow-sm text-[#1c2938]' : 'text-slate-400'}`}>Persona Física</button>
-                      <button onClick={() => handleFiscalChange('entityType', 'JURIDICA')} className={`py-2 px-3 rounded-lg text-xs font-bold ${profile.fiscalConfig?.entityType === 'JURIDICA' ? 'bg-white shadow-sm text-[#1c2938]' : 'text-slate-400'}`}>Persona Jurídica</button>
-                   </div>
-                   <div className="space-y-4">
-                      <div>
-                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Régimen Fiscal</label>
-                         <select value={profile.fiscalConfig?.regimenFiscal || 'GENERAL'} onChange={(e) => handleFiscalChange('regimenFiscal', e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500">
-                            <option value="GENERAL">Estimación Directa (General)</option>
-                            <option value="SIMPLIFICADO">Estimación Objetiva (Simplificado)</option>
-                            <option value="AGRICOLA">Agricultura</option>
-                            <option value="GANADERO">Ganadería</option>
-                            <option value="FORESTAL">Forestal</option>
-                         </select>
-                      </div>
-                      <div>
-                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Actividad Económica</label>
-                         <div className="space-y-2">
-                            {profile.fiscalConfig?.activitySector && profile.fiscalConfig?.activitySubcategory ? (
-                              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <p className="text-sm font-bold text-[#1c2938]">
-                                      {ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector)?.name || 'Rubro no encontrado'}
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                      {(() => {
-                                        const sector = ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector);
-                                        const subcategories = profile.fiscalConfig?.activitySubcategories || 
-                                          (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : []);
-                                        if (subcategories.length === 0) return 'Sin subcategorías';
-                                        if (subcategories.length === 1) {
-                                          return sector?.subcategories.find(sub => sub.id === subcategories[0])?.name || 'Subcategoría no encontrada';
-                                        }
-                                        return `${subcategories.length} actividades seleccionadas`;
-                                      })()}
-                                    </p>
-                                    {profile.fiscalConfig?.ivaArticle && (
-                                      <p className="text-xs text-indigo-600 mt-1 font-medium">
-                                        Art. {profile.fiscalConfig.ivaArticle === 'ART_21' ? '21' : profile.fiscalConfig.ivaArticle === 'ART_69_70' ? '69-70' : profile.fiscalConfig.ivaArticle === 'ART_69' ? '69' : profile.fiscalConfig.ivaArticle === 'ART_70' ? '70' : '69-70 (Mixto)'}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedSector(profile.fiscalConfig?.activitySector || '');
-                                      setSelectedSubcategories(
-                                        profile.fiscalConfig?.activitySubcategories || 
-                                        (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
-                                      );
-                                      setShowActivityModal(true);
-                                    }}
-                                    className="ml-3 px-4 py-2 bg-indigo-500 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-colors"
-                                  >
-                                    Cambiar
-                                  </button>
-                                </div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo de Entidad</label>
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-1 rounded-xl">
+                    <button onClick={() => handleFiscalChange('entityType', 'FISICA')} className={`py-2 px-3 rounded-lg text-xs font-bold ${profile.fiscalConfig?.entityType === 'FISICA' ? 'bg-white shadow-sm text-[#1c2938]' : 'text-slate-400'}`}>Persona Física</button>
+                    <button onClick={() => handleFiscalChange('entityType', 'JURIDICA')} className={`py-2 px-3 rounded-lg text-xs font-bold ${profile.fiscalConfig?.entityType === 'JURIDICA' ? 'bg-white shadow-sm text-[#1c2938]' : 'text-slate-400'}`}>Persona Jurídica</button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Régimen Fiscal</label>
+                      <select value={profile.fiscalConfig?.regimenFiscal || 'GENERAL'} onChange={(e) => handleFiscalChange('regimenFiscal', e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500">
+                        <option value="GENERAL">Estimación Directa (General)</option>
+                        <option value="SIMPLIFICADO">Estimación Objetiva (Simplificado)</option>
+                        <option value="AGRICOLA">Agricultura</option>
+                        <option value="GANADERO">Ganadería</option>
+                        <option value="FORESTAL">Forestal</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Actividad Económica</label>
+                      <div className="space-y-2">
+                        {profile.fiscalConfig?.activitySector && profile.fiscalConfig?.activitySubcategory ? (
+                          <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="text-sm font-bold text-[#1c2938]">
+                                  {ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector)?.name || 'Rubro no encontrado'}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  {(() => {
+                                    const sector = ACTIVITY_SECTORS.find(s => s.id === profile.fiscalConfig?.activitySector);
+                                    const subcategories = profile.fiscalConfig?.activitySubcategories ||
+                                      (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : []);
+                                    if (subcategories.length === 0) return 'Sin subcategorías';
+                                    if (subcategories.length === 1) {
+                                      return sector?.subcategories.find(sub => sub.id === subcategories[0])?.name || 'Subcategoría no encontrada';
+                                    }
+                                    return `${subcategories.length} actividades seleccionadas`;
+                                  })()}
+                                </p>
+                                {profile.fiscalConfig?.ivaArticle && (
+                                  <p className="text-xs text-indigo-600 mt-1 font-medium">
+                                    Art. {profile.fiscalConfig.ivaArticle === 'ART_21' ? '21' : profile.fiscalConfig.ivaArticle === 'ART_69_70' ? '69-70' : profile.fiscalConfig.ivaArticle === 'ART_69' ? '69' : profile.fiscalConfig.ivaArticle === 'ART_70' ? '70' : '69-70 (Mixto)'}
+                                  </p>
+                                )}
                               </div>
-                            ) : (
                               <button
-                                onClick={() => setShowActivityModal(true)}
-                                className="w-full p-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-sm font-bold text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors flex items-center justify-center gap-2"
+                                onClick={() => {
+                                  setSelectedSector(profile.fiscalConfig?.activitySector || '');
+                                  setSelectedSubcategories(
+                                    profile.fiscalConfig?.activitySubcategories ||
+                                    (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
+                                  );
+                                  setShowActivityModal(true);
+                                }}
+                                className="ml-3 px-4 py-2 bg-indigo-500 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-colors"
                               >
-                                <Plus className="w-4 h-4" />
-                                Seleccionar actividad económica
+                                Cambiar
                               </button>
-                            )}
-                            {profile.fiscalConfig?.actividadPrincipal && (
-                              <input 
-                                type="text" 
-                                value={profile.fiscalConfig.actividadPrincipal} 
-                                onChange={(e) => handleFiscalChange('actividadPrincipal', e.target.value)} 
-                                placeholder="Descripción adicional (opcional)" 
-                                className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-medium outline-none focus:border-indigo-500" 
-                              />
-                            )}
-                         </div>
-                         <p className="text-xs text-slate-400 mt-1">
-                            Esto afectará las menciones legales en facturas futuras. Las facturas ya emitidas no cambiarán.
-                         </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowActivityModal(true)}
+                            className="w-full p-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-sm font-bold text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Seleccionar actividad económica
+                          </button>
+                        )}
+                        {profile.fiscalConfig?.actividadPrincipal && (
+                          <input
+                            type="text"
+                            value={profile.fiscalConfig.actividadPrincipal}
+                            onChange={(e) => handleFiscalChange('actividadPrincipal', e.target.value)}
+                            placeholder="Descripción adicional (opcional)"
+                            className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                          />
+                        )}
                       </div>
-                      <div>
-                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Código CNAE (Opcional)</label>
-                         <input type="text" value={profile.fiscalConfig?.codigoCnae || ''} onChange={(e) => handleFiscalChange('codigoCnae', e.target.value)} placeholder="Ej: 6201" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500" />
-                      </div>
-                   </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Esto afectará las menciones legales en facturas futuras. Las facturas ya emitidas no cambiarán.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Código CNAE (Opcional)</label>
+                      <input type="text" value={profile.fiscalConfig?.codigoCnae || ''} onChange={(e) => handleFiscalChange('codigoCnae', e.target.value)} placeholder="Ej: 6201" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500" />
+                    </div>
+                  </div>
                 </div>
                 <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                   <h4 className="text-sm font-bold text-[#1c2938] mb-4">Configuración IVA</h4>
-                   <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-[#1c2938] mb-4">Configuración IVA</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Régimen IVA</label>
+                      <select value={profile.fiscalConfig?.ivaRegimen || 'GENERAL'} onChange={(e) => handleFiscalChange('ivaRegimen', e.target.value)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-500">
+                        <option value="GENERAL">General (21%, 10%, 4%)</option>
+                        <option value="SIMPLIFICADO">Simplificado</option>
+                        <option value="AGRICULTURA">Agricultura</option>
+                        <option value="EXENTO">Exento</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <input type="checkbox" checked={profile.fiscalConfig?.prorrateoIVA || false} onChange={(e) => handleFiscalChange('prorrateoIVA', e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" />
+                      <label className="text-xs font-bold text-slate-600">Aplicar prorrateo de IVA</label>
+                    </div>
+                    {profile.fiscalConfig?.prorrateoIVA && (
                       <div>
-                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Régimen IVA</label>
-                         <select value={profile.fiscalConfig?.ivaRegimen || 'GENERAL'} onChange={(e) => handleFiscalChange('ivaRegimen', e.target.value)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-500">
-                            <option value="GENERAL">General (21%, 10%, 4%)</option>
-                            <option value="SIMPLIFICADO">Simplificado</option>
-                            <option value="AGRICULTURA">Agricultura</option>
-                            <option value="EXENTO">Exento</option>
-                         </select>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">% Actividad Sujeta a IVA</label>
+                        <input type="number" min="0" max="100" value={profile.fiscalConfig?.porcentajeProrrateo || 100} onChange={(e) => handleFiscalChange('porcentajeProrrateo', parseFloat(e.target.value) || 100)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-500" />
                       </div>
-                      <div className="flex items-center gap-2 pt-2 border-t">
-                         <input type="checkbox" checked={profile.fiscalConfig?.prorrateoIVA || false} onChange={(e) => handleFiscalChange('prorrateoIVA', e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" />
-                         <label className="text-xs font-bold text-slate-600">Aplicar prorrateo de IVA</label>
-                      </div>
-                      {profile.fiscalConfig?.prorrateoIVA && (
-                         <div>
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">% Actividad Sujeta a IVA</label>
-                            <input type="number" min="0" max="100" value={profile.fiscalConfig?.porcentajeProrrateo || 100} onChange={(e) => handleFiscalChange('porcentajeProrrateo', parseFloat(e.target.value) || 100)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-indigo-500" />
-                         </div>
-                      )}
-                   </div>
-                   <div className="mt-4 pt-4 border-t space-y-2">
-                      <div className="flex justify-between items-center">
-                         <span className="text-xs font-bold text-slate-500 uppercase">IVA</span>
-                         <span className="text-sm font-bold text-[#1c2938]">{fiscalPreview.ivaInfo}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                         <span className="text-xs font-bold text-slate-500 uppercase">IRPF</span>
-                         <span className="text-sm font-bold text-[#1c2938]">{fiscalPreview.irpfInfo}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                         <span className="text-xs font-bold text-slate-500 uppercase">Régimen</span>
-                         <span className="text-sm font-bold text-[#1c2938]">{fiscalPreview.regimenInfo}</span>
-                      </div>
-                   </div>
+                    )}
+                  </div>
+                  <div className="mt-4 pt-4 border-t space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase">IVA</span>
+                      <span className="text-sm font-bold text-[#1c2938]">{fiscalPreview.ivaInfo}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase">IRPF</span>
+                      <span className="text-sm font-bold text-[#1c2938]">{fiscalPreview.irpfInfo}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase">Régimen</span>
+                      <span className="text-sm font-bold text-[#1c2938]">{fiscalPreview.regimenInfo}</span>
+                    </div>
+                  </div>
                 </div>
-             </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-8">
-           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
+          <div className="space-y-8">
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
               <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-3">
                 <div className="p-2 bg-purple-50 rounded-xl text-purple-500"><Palette className="w-6 h-6" /></div>
                 Marca
               </h3>
               <div className="mb-8 text-center" onClick={() => fileInputRef.current?.click()}>
-                 <div className="w-32 h-32 rounded-full border-4 border-slate-50 bg-white shadow-inner flex items-center justify-center overflow-hidden hover:border-[#27bea5] transition-all cursor-pointer mx-auto">
-                    {profile.branding?.logoUrl ? <img src={profile.branding.logoUrl} className="w-full h-full object-contain p-4" /> : <UploadCloud className="text-slate-300" size={40} />}
-                 </div>
-                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                <div className="w-32 h-32 rounded-full border-4 border-slate-50 bg-white shadow-inner flex items-center justify-center overflow-hidden hover:border-[#27bea5] transition-all cursor-pointer mx-auto">
+                  {profile.branding?.logoUrl ? <img src={profile.branding.logoUrl} className="w-full h-full object-contain p-4" /> : <UploadCloud className="text-slate-300" size={40} />}
+                </div>
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
               </div>
               <div className="space-y-6">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Color de Marca</label>
                 <input type="color" value={profile.branding?.primaryColor || '#27bea5'} onChange={(e) => handleBrandingChange('primaryColor', e.target.value)} className="w-full h-10 rounded-xl cursor-pointer bg-slate-50 p-1 border border-slate-100" />
               </div>
-           </div>
+            </div>
 
-           <div className="relative rounded-[2rem] shadow-xl overflow-hidden group bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-8 text-white">
+            <div className="relative rounded-[2rem] shadow-xl overflow-hidden group bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-8 text-white">
               <p className="text-xs font-bold uppercase mb-1">Membresía</p>
               <h3 className="text-2xl font-bold flex items-center gap-2 mb-1">{profile.plan || 'Free'} <Crown size={20} className="text-yellow-300" /></h3>
               {profile.renewalDate && (
-                 <div className="flex items-center gap-2 text-[10px] font-bold text-white/80 uppercase tracking-widest mb-6">
-                    <Calendar size={12} />
-                    <span>Renueva: {formatRenewalDate(profile.renewalDate)}</span>
-                 </div>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-white/80 uppercase tracking-widest mb-6">
+                  <Calendar size={12} />
+                  <span>Renueva: {formatRenewalDate(profile.renewalDate)}</span>
+                </div>
               )}
               <button onClick={handleManageSubscription} disabled={isRedirectingToPortal} className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 mt-2">
-                 {isRedirectingToPortal ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />} Gestionar Suscripción
+                {isRedirectingToPortal ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />} Gestionar Suscripción
               </button>
-           </div>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Activity Selection Modal */}
       {showActivityModal && (
@@ -825,7 +854,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                   setShowActivityModal(false);
                   setSelectedSector(profile.fiscalConfig?.activitySector || '');
                   setSelectedSubcategories(
-                    profile.fiscalConfig?.activitySubcategories || 
+                    profile.fiscalConfig?.activitySubcategories ||
                     (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
                   );
                   setSearchSector('');
@@ -840,7 +869,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
             <div className="flex-1 overflow-y-auto p-6">
               {(() => {
                 const selectedSectorData = ACTIVITY_SECTORS.find(s => s.id === selectedSector);
-                const filteredSectors = searchSector 
+                const filteredSectors = searchSector
                   ? ACTIVITY_SECTORS.filter(s => s.name.toLowerCase().includes(searchSector.toLowerCase()))
                   : ACTIVITY_SECTORS;
 
@@ -921,19 +950,17 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                                 setSelectedSubcategories(prev => [...prev, sub.id]);
                               }
                             }}
-                            className={`p-4 bg-white border-2 rounded-xl text-left transition-all ${
-                              isSelected
-                                ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                                : 'border-slate-100 hover:border-indigo-300'
-                            }`}
+                            className={`p-4 bg-white border-2 rounded-xl text-left transition-all ${isSelected
+                              ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                              : 'border-slate-100 hover:border-indigo-300'
+                              }`}
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-start gap-3 flex-1">
-                                <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                                  isSelected 
-                                    ? 'bg-indigo-500 border-indigo-500' 
-                                    : 'border-slate-300 bg-white'
-                                }`}>
+                                <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${isSelected
+                                  ? 'bg-indigo-500 border-indigo-500'
+                                  : 'border-slate-300 bg-white'
+                                  }`}>
                                   {isSelected && <Check className="w-3 h-3 text-white" />}
                                 </div>
                                 <div className="flex-1">
@@ -956,15 +983,15 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                       const uniqueArticles = [...new Set(ivaArticles)];
                       const isMixed = uniqueArticles.length > 1;
                       const mainArticle = uniqueArticles[0] || 'ART_69_70';
-                      
-                      const articleText = isMixed 
+
+                      const articleText = isMixed
                         ? '69-70 (Mixto según actividad)'
-                        : mainArticle === 'ART_21' ? '21' 
-                        : mainArticle === 'ART_69_70' ? '69 y 70' 
-                        : mainArticle === 'ART_69' ? '69' 
-                        : mainArticle === 'ART_70' ? '70' 
-                        : '69 o 70';
-                      
+                        : mainArticle === 'ART_21' ? '21'
+                          : mainArticle === 'ART_69_70' ? '69 y 70'
+                            : mainArticle === 'ART_69' ? '69'
+                              : mainArticle === 'ART_70' ? '70'
+                                : '69 o 70';
+
                       return (
                         <div className="bg-blue-50 border-2 border-blue-200 p-5 rounded-xl">
                           <div className="flex items-start gap-3">
@@ -972,7 +999,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                             <div>
                               <h4 className="font-bold text-blue-900 mb-2">Información Fiscal</h4>
                               <p className="text-sm text-blue-800 mb-2">
-                                Has seleccionado <strong>{selectedSubcategories.length}</strong> {selectedSubcategories.length === 1 ? 'actividad' : 'actividades'}: 
+                                Has seleccionado <strong>{selectedSubcategories.length}</strong> {selectedSubcategories.length === 1 ? 'actividad' : 'actividades'}:
                               </p>
                               <ul className="text-xs text-blue-700 mb-3 list-disc list-inside space-y-1">
                                 {selectedSubs.map(sub => (
@@ -983,7 +1010,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                                 Aplicarán los artículos <strong>{articleText}</strong> de la Ley del IVA.
                               </p>
                               <p className="text-xs text-blue-700">
-                                {isMixed 
+                                {isMixed
                                   ? 'Tienes actividades mixtas. El artículo aplicable dependerá del tipo específico de servicio en cada factura.'
                                   : 'Cuando factures servicios a clientes fuera de España, el IVA se aplicará según la normativa del país del cliente (regla de localización).'}
                               </p>
@@ -1004,7 +1031,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                   setShowActivityModal(false);
                   setSelectedSector(profile.fiscalConfig?.activitySector || '');
                   setSelectedSubcategories(
-                    profile.fiscalConfig?.activitySubcategories || 
+                    profile.fiscalConfig?.activitySubcategories ||
                     (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
                   );
                   setSearchSector('');
@@ -1034,8 +1061,205 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
           </div>
         </div>
       )}
-    </div>
-  );
+
+      {/* Conditionally Render Tabs Content */}
+      {activeSettingsTab === 'INTEGRATIONS' && (
+        <div className="space-y-8 animate-in slide-in-from-right-4">
+          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-bold text-[#1c2938] flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500"><Zap className="w-6 h-6" /></div>
+                Pasarela de Pagos Digitales
+              </h3>
+              <button
+                onClick={togglePaymentIntegration}
+                className={`relative w-14 h-8 rounded-full transition-colors ${profile.paymentIntegration?.enabled ? 'bg-[#27bea5]' : 'bg-slate-200'}`}
+              >
+                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform shadow-sm ${profile.paymentIntegration?.enabled ? 'left-7' : 'left-1'}`}></div>
+              </button>
+            </div>
+
+            {profile.paymentIntegration?.enabled && (
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <h4 className="font-bold text-[#1c2938] flex items-center gap-2 text-sm uppercase tracking-wider text-slate-400">Configuración de Stripe</h4>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Stripe Public Key</label>
+                        <div className="relative">
+                          <Key className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
+                          <input
+                            type={showKeys['stripePublic'] ? 'text' : 'password'}
+                            value={profile.paymentIntegration?.stripePublicKey || ''}
+                            onChange={(e) => handlePaymentInputChange('stripePublicKey', e.target.value)}
+                            placeholder="pk_live_..."
+                            className="w-full pl-12 pr-12 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none"
+                          />
+                          <button onClick={() => toggleKeyVisibility('stripePublic')} className="absolute right-4 top-3.5 text-slate-400">{showKeys['stripePublic'] ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Stripe Secret Key</label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
+                          <input
+                            type={showKeys['stripeSecret'] ? 'text' : 'password'}
+                            value={profile.paymentIntegration?.stripeSecretKey || ''}
+                            onChange={(e) => handlePaymentInputChange('stripeSecretKey', e.target.value)}
+                            placeholder="sk_live_..."
+                            className="w-full pl-12 pr-12 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none"
+                          />
+                          <button onClick={() => toggleKeyVisibility('stripeSecret')} className="absolute right-4 top-3.5 text-slate-400">{showKeys['stripeSecret'] ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-[2rem] p-8 border border-slate-100">
+                    <h4 className="font-bold text-[#1c2938] mb-4 flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-[#27bea5]" /> Webhook URL
+                    </h4>
+                    <p className="text-sm text-slate-500 mb-4">Configura esta URL en tu dashboard de Stripe para sincronizar cobros automáticamente.</p>
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl font-mono text-xs text-[#1c2938] break-all">
+                      {window.location.origin}/api/webhooks/stripe?uid={profile.id}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-8 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-[#1c2938] flex items-center gap-3">
+                      <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500"><Percent className="w-6 h-6" /></div>
+                      Motor de Comisiones Personalizadas
+                    </h3>
+                    <button
+                      onClick={() => {
+                        const newRules = [...(profile.paymentIntegration?.feeRules || [])];
+                        newRules.push({
+                          id: crypto.randomUUID(),
+                          paymentMethod: 'BANCO',
+                          feeType: 'PERCENTAGE',
+                          value: 0,
+                          description: 'Nueva regla'
+                        });
+                        handlePaymentInputChange('feeRules', newRules);
+                      }}
+                      className="px-6 py-2 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" /> Añadir Regla
+                    </button>
+                  </div>
+                  <p className="text-slate-500 mb-6 font-light">Define reglas automáticas para registrar gastos por comisiones según el método de pago seleccionado al cobrar una factura.</p>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {(profile.paymentIntegration?.feeRules || []).map((rule, idx) => (
+                      <div key={rule.id} className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative group">
+                        <button
+                          onClick={() => {
+                            const newRules = profile.paymentIntegration?.feeRules?.filter(r => r.id !== rule.id) || [];
+                            handlePaymentInputChange('feeRules', newRules);
+                          }}
+                          className="absolute top-4 right-4 p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">Método de Pago</label>
+                            <select
+                              value={rule.paymentMethod}
+                              onChange={(e) => {
+                                const newRules = [...(profile.paymentIntegration?.feeRules || [])];
+                                newRules[idx] = { ...rule, paymentMethod: e.target.value as any };
+                                handlePaymentInputChange('feeRules', newRules);
+                              }}
+                              className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold"
+                            >
+                              <option value="BANCO">Banco / Transferencia</option>
+                              <option value="BIZUM">Bizum / Teléfono</option>
+                              <option value="TARJETA">Tarjeta (Manual)</option>
+                              <option value="PAYPAL">PayPal</option>
+                              <option value="OTRO">Otro</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">Tipo de Comisión</label>
+                            <select
+                              value={rule.feeType}
+                              onChange={(e) => {
+                                const newRules = [...(profile.paymentIntegration?.feeRules || [])];
+                                newRules[idx] = { ...rule, feeType: e.target.value as any };
+                                handlePaymentInputChange('feeRules', newRules);
+                              }}
+                              className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold"
+                            >
+                              <option value="PERCENTAGE">Porcentaje (%)</option>
+                              <option value="FIXED">Monto Fijo (€)</option>
+                              <option value="HYBRID">Híbrido (% + €)</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">
+                              {rule.feeType === 'PERCENTAGE' ? 'Porcentaje' : rule.feeType === 'FIXED' ? 'Monto Fijo' : 'Base (%)'}
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={rule.value}
+                                onChange={(e) => {
+                                  const newRules = [...(profile.paymentIntegration?.feeRules || [])];
+                                  newRules[idx] = { ...rule, value: parseFloat(e.target.value) || 0 };
+                                  handlePaymentInputChange('feeRules', newRules);
+                                }}
+                                className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold pr-8"
+                              />
+                              <span className="absolute right-3 top-2 text-slate-400 text-xs font-bold">{rule.feeType === 'FIXED' ? '€' : '%'}</span>
+                            </div>
+                          </div>
+                          {rule.feeType === 'HYBRID' && (
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase">Extra Fijo (€)</label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  value={rule.fixedValue || 0}
+                                  onChange={(e) => {
+                                    const newRules = [...(profile.paymentIntegration?.feeRules || [])];
+                                    newRules[idx] = { ...rule, fixedValue: parseFloat(e.target.value) || 0 };
+                                    handlePaymentInputChange('feeRules', newRules);
+                                  }}
+                                  className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold pr-8"
+                                />
+                                <span className="absolute right-3 top-2 text-slate-400 text-xs font-bold">€</span>
+                              </div>
+                            </div>
+                          )}
+                          <div className="col-span-2 space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">Descripción / Proveedor de Gasto</label>
+                            <input
+                              type="text"
+                              value={rule.description}
+                              onChange={(e) => {
+                                const newRules = [...(profile.paymentIntegration?.feeRules || [])];
+                                newRules[idx] = { ...rule, description: e.target.value };
+                                handlePaymentInputChange('feeRules', newRules);
+                              }}
+                              placeholder="Ej: Comisión PayPal"
+                              className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-medium"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+            )}
+              </div>
+        </div>
+      )}
+        </div>
+      );
 };
 
-export default UserProfileSettings;
+      export default UserProfileSettings;

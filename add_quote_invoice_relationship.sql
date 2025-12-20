@@ -22,3 +22,4 @@ COMMENT ON COLUMN invoices.payment_plan IS 'Plan de pagos en formato JSON: { "to
 -- =====================================================
 -- FIN DEL SCRIPT
 -- =====================================================
+

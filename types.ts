@@ -84,6 +84,15 @@ export interface DocumentSequences {
   quoteNextNumber: number;
 }
 
+export interface CustomFeeRule {
+  id: string;
+  paymentMethod: 'BANCO' | 'BIZUM' | 'TARJETA' | 'PAYPAL' | 'OTRO';
+  type: 'PERCENTAGE' | 'FIXED' | 'HYBRID';
+  percentage?: number;
+  fixedAmount?: number;
+  description: string;
+}
+
 export interface PaymentIntegration {
   provider: 'STRIPE' | 'PAYPAL' | 'BIZUM' | 'BOTH';
   enabled: boolean;
@@ -95,6 +104,8 @@ export interface PaymentIntegration {
   paypalSecret?: string;
   // Bizum
   bizumPhone?: string;
+  // Fees
+  feeRules?: CustomFeeRule[];
 }
 
 // New: Configuration for the Hourly Rate Calculator
@@ -135,13 +146,13 @@ export interface UserProfile {
   address?: string;
   country?: string;
   fiscalRegime?: string; // Legacy string, kept for backward compat
-  
+
   // NEW: Structured Fiscal Profile (Spain)
   fiscalConfig?: SpanishFiscalConfig;
 
   // Branding
   branding?: BrandingConfig;
-  
+
   // Finance
   bankName?: string; // New: Bank Name
   bankAccount?: string; // IBAN / CBU / CLABE
@@ -202,7 +213,7 @@ export interface TimelineEvent {
   icon?: string; // Optional custom icon hint
 }
 
-export type InvoiceStatus = 
+export type InvoiceStatus =
   | 'Borrador'      // Draft
   | 'Creada'        // Created
   | 'Enviada'       // Sent
@@ -233,8 +244,8 @@ export interface Invoice {
   amountPaid?: number; // New: Track partial payments
   status: InvoiceStatus;
   currency: string;
-  type: 'Invoice' | 'Quote' | 'Expense'; 
-  
+  type: 'Invoice' | 'Quote' | 'Expense';
+
   // Fiscal Logic (Spain)
   ivaAmount?: number; // IVA total de la factura
   ivaRepercutido?: number; // IVA cobrado (para Modelo 303)
