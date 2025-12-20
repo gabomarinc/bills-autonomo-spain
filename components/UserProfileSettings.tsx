@@ -1348,18 +1348,31 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">3</div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-[#1c2938] mb-1">Pega la URL de Kônsul</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed mb-3">En el campo <strong>Endpoint URL</strong>, pega nuestra dirección:</p>
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-[10px] text-slate-600 break-all select-all flex justify-between items-center group mb-3">
-                      <span>{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
-                      <button onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
-                        alert.addToast('success', 'Copiado', '¡URL lista para pegar!');
-                      }} className="ml-2 p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors bg-white shadow-sm">
-                        <Save className="w-3.5 h-3.5" />
-                      </button>
+                    <h4 className="font-bold text-[#1c2938] mb-1">Configura el Destino</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">En la pantalla <strong>"Configure destination"</strong>, rellena los campos así:</p>
+                    <div className="space-y-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100 mb-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Destination name</label>
+                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-[#1c2938]">Kônsul Sync</div>
+                      </div>
+                      <div className="space-y-1 relative">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Endpoint URL</label>
+                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-600 break-all flex justify-between items-center pr-2">
+                          <span className="truncate mr-4">{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
+                          <button onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
+                            alert.addToast('success', 'Copiado', '¡URL lista para pegar!');
+                          }} className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all flex-shrink-0 shadow-sm" title="Copiar URL">
+                            <Save className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description (Opcional)</label>
+                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-500">Sincronización automática de cobros facturados.</div>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-400 font-medium italic">Finalmente pulsa en <strong>Add endpoint</strong> para activar la sincronización.</p>
+                    <p className="text-xs text-slate-400 font-medium italic">Finalmente pulsa en el botón azul <strong>Add endpoint</strong> al final de la página.</p>
                   </div>
                 </div>
 
