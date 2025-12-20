@@ -15,13 +15,13 @@ const getDbClient = () => {
       console.warn("DATABASE_URL environment variable is not set.");
       return null;
     }
-    
+
     // Validate URL format simply
     if (!url.startsWith('postgres://') && !url.startsWith('postgresql://')) {
       console.warn("Invalid Database URL format");
       return null;
     }
-    
+
     return new Client(url);
   } catch (error) {
     console.error("Error initializing DB Client:", error);
@@ -38,7 +38,7 @@ export const logAuditAction = async (userId: string, action: string, details: an
 
   try {
     await client.connect();
-    
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
         id SERIAL PRIMARY KEY,
@@ -50,25 +50,25 @@ export const logAuditAction = async (userId: string, action: string, details: an
     `);
 
     const updateRes = await client.query(
-        `UPDATE audit_log SET action = $1, details = $2, created_at = NOW() WHERE user_id = $3`,
-        [action, JSON.stringify(details), userId]
+      `UPDATE audit_log SET action = $1, details = $2, created_at = NOW() WHERE user_id = $3`,
+      [action, JSON.stringify(details), userId]
     );
 
     const rowsAffected = updateRes.rowCount || 0;
 
     if (rowsAffected === 0) {
-        await client.query(
-            `INSERT INTO audit_log (user_id, action, details) VALUES ($1, $2, $3)`,
-            [userId, action, JSON.stringify(details)]
-        );
+      await client.query(
+        `INSERT INTO audit_log (user_id, action, details) VALUES ($1, $2, $3)`,
+        [userId, action, JSON.stringify(details)]
+      );
     } else if (rowsAffected > 1) {
-        await client.query(`DELETE FROM audit_log WHERE user_id = $1`, [userId]);
-        await client.query(
-            `INSERT INTO audit_log (user_id, action, details) VALUES ($1, $2, $3)`,
-            [userId, action, JSON.stringify(details)]
-        );
+      await client.query(`DELETE FROM audit_log WHERE user_id = $1`, [userId]);
+      await client.query(
+        `INSERT INTO audit_log (user_id, action, details) VALUES ($1, $2, $3)`,
+        [userId, action, JSON.stringify(details)]
+      );
     }
-    
+
     await client.end();
   } catch (e) {
     console.error("Audit Log Optimization Failed:", e);
@@ -110,22 +110,32 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
  */
 const mapUserRowToProfile = (row: any): UserProfile => {
   const profileSettings = row.profile_data || {};
-  
+
   const fiscalConfig = profileSettings.fiscalConfig || {
-      entityType: row.type === 'COMPANY' ? 'JURIDICA' : 'FISICA',
-      nif: row.taxId || '',
-      regimenFiscal: 'GENERAL',
-      actividadPrincipal: '',
-      ivaRegimen: 'GENERAL',
-      prorrateoIVA: false
+    entityType: row.type === 'COMPANY' ? 'JURIDICA' : 'FISICA',
+    nif: row.taxId || '',
+    regimenFiscal: 'GENERAL',
+    actividadPrincipal: '',
+    ivaRegimen: 'GENERAL',
+    prorrateoIVA: false
   };
+
+  // Compatibility Layer: Map legacy feeRules property names to new ones
+  if (profileSettings.paymentIntegration?.feeRules) {
+    profileSettings.paymentIntegration.feeRules = profileSettings.paymentIntegration.feeRules.map((rule: any) => ({
+      ...rule,
+      type: rule.type || rule.feeType,
+      percentage: rule.percentage !== undefined ? rule.percentage : rule.value,
+      fixedAmount: rule.fixedAmount !== undefined ? rule.fixedAmount : rule.fixedValue,
+    }));
+  }
 
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     type: row.type === 'COMPANY' ? 'Empresa (SL/SA)' : 'Autónomo',
-    bankAccountType: profileSettings.bankAccountType || 'Ahorro', 
+    bankAccountType: profileSettings.bankAccountType || 'Ahorro',
     fiscalConfig: fiscalConfig,
     stripeCustomerId: row.stripe_customer_id || profileSettings.stripeCustomerId,
     plan: row.plan_name || profileSettings.plan || 'Free',
@@ -140,29 +150,29 @@ const mapUserRowToProfile = (row: any): UserProfile => {
  */
 export const getUserById = async (userId: string): Promise<UserProfile | null> => {
   if (userId === 'user_demo_es') {
-       return {
-         id: 'user_demo_es', 
-         name: 'Juan Pérez (Demo)',
-         email: 'juan@konsulbills.es',
-         type: 'Autónomo' as any,
-         taxId: '12345678Z',
-         avatar: '',
-         isOnboardingComplete: true,
-         defaultCurrency: 'EUR',
-         plan: 'Emprendedor Pro',
-         country: 'España',
-         bankAccountType: 'Corriente',
-         branding: { primaryColor: '#27bea5', templateStyle: 'Modern' },
-         apiKeys: { gemini: '', openai: '' },
-         fiscalConfig: {
-            entityType: 'FISICA',
-            nif: '12345678Z',
-            regimenFiscal: 'GENERAL',
-            actividadPrincipal: 'Servicios profesionales',
-            ivaRegimen: 'GENERAL',
-            prorrateoIVA: false
-         }
-       } as UserProfile;
+    return {
+      id: 'user_demo_es',
+      name: 'Juan Pérez (Demo)',
+      email: 'juan@konsulbills.es',
+      type: 'Autónomo' as any,
+      taxId: '12345678Z',
+      avatar: '',
+      isOnboardingComplete: true,
+      defaultCurrency: 'EUR',
+      plan: 'Emprendedor Pro',
+      country: 'España',
+      bankAccountType: 'Corriente',
+      branding: { primaryColor: '#27bea5', templateStyle: 'Modern' },
+      apiKeys: { gemini: '', openai: '' },
+      fiscalConfig: {
+        entityType: 'FISICA',
+        nif: '12345678Z',
+        regimenFiscal: 'GENERAL',
+        actividadPrincipal: 'Servicios profesionales',
+        ivaRegimen: 'GENERAL',
+        prorrateoIVA: false
+      }
+    } as UserProfile;
   }
 
   const client = getDbClient();
@@ -180,12 +190,12 @@ export const getUserById = async (userId: string): Promise<UserProfile | null> =
     await client.end();
 
     if (rows.length > 0) {
-       return mapUserRowToProfile(rows[0]);
+      return mapUserRowToProfile(rows[0]);
     }
-    return null; 
+    return null;
   } catch (error) {
     console.error("Neon Get User Error:", error);
-    throw error; 
+    throw error;
   }
 };
 
@@ -194,7 +204,7 @@ export const getUserById = async (userId: string): Promise<UserProfile | null> =
  */
 export const authenticateUser = async (email: string, password: string): Promise<UserProfile | null> => {
   const client = getDbClient();
-  
+
   if (client) {
     try {
       await client.connect();
@@ -203,29 +213,29 @@ export const authenticateUser = async (email: string, password: string): Promise
         FROM users WHERE email = $1
       `;
       const { rows } = await client.query(query, [email]);
-      
+
       if (rows.length > 0) {
-         const userRow = rows[0];
-         const storedPassword = userRow.password || ''; 
-         let isMatch = false;
+        const userRow = rows[0];
+        const storedPassword = userRow.password || '';
+        let isMatch = false;
 
-         if (email === 'juan@konsulbills.es' && password === 'password123') {
-            isMatch = true;
-         } else {
-            if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
-                isMatch = await comparePassword(password, storedPassword).catch(() => false);
-            } else {
-                isMatch = storedPassword === password;
-            }
-         }
+        if (email === 'juan@konsulbills.es' && password === 'password123') {
+          isMatch = true;
+        } else {
+          if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
+            isMatch = await comparePassword(password, storedPassword).catch(() => false);
+          } else {
+            isMatch = storedPassword === password;
+          }
+        }
 
-         if (isMatch) {
-           await client.end(); 
-           logAuditAction(userRow.id, 'LOGIN', { email: userRow.email });
-           return mapUserRowToProfile(userRow);
-         }
+        if (isMatch) {
+          await client.end();
+          logAuditAction(userRow.id, 'LOGIN', { email: userRow.email });
+          return mapUserRowToProfile(userRow);
+        }
       }
-      await client.end(); 
+      await client.end();
     } catch (error) {
       console.error("Neon Auth Error:", error);
     }
@@ -233,29 +243,29 @@ export const authenticateUser = async (email: string, password: string): Promise
 
   // Fallback Demo
   if (email === 'juan@konsulbills.es' && password === 'password123') {
-       return {
-         id: 'user_demo_es', 
-         name: 'Juan Pérez (Demo)',
-         email: 'juan@konsulbills.es',
-         type: 'Autónomo' as any,
-         taxId: '12345678Z',
-         avatar: '',
-         isOnboardingComplete: true,
-         defaultCurrency: 'EUR',
-         plan: 'Emprendedor Pro',
-         country: 'España',
-         bankAccountType: 'Corriente',
-         branding: { primaryColor: '#27bea5', templateStyle: 'Modern' },
-         apiKeys: { gemini: '', openai: '' },
-         fiscalConfig: {
-            entityType: 'FISICA',
-            nif: '12345678Z',
-            regimenFiscal: 'GENERAL',
-            actividadPrincipal: 'Servicios profesionales',
-            ivaRegimen: 'GENERAL',
-            prorrateoIVA: false
-         }
-       } as UserProfile;
+    return {
+      id: 'user_demo_es',
+      name: 'Juan Pérez (Demo)',
+      email: 'juan@konsulbills.es',
+      type: 'Autónomo' as any,
+      taxId: '12345678Z',
+      avatar: '',
+      isOnboardingComplete: true,
+      defaultCurrency: 'EUR',
+      plan: 'Emprendedor Pro',
+      country: 'España',
+      bankAccountType: 'Corriente',
+      branding: { primaryColor: '#27bea5', templateStyle: 'Modern' },
+      apiKeys: { gemini: '', openai: '' },
+      fiscalConfig: {
+        entityType: 'FISICA',
+        nif: '12345678Z',
+        regimenFiscal: 'GENERAL',
+        actividadPrincipal: 'Servicios profesionales',
+        ivaRegimen: 'GENERAL',
+        prorrateoIVA: false
+      }
+    } as UserProfile;
   }
   return null;
 };
@@ -269,7 +279,7 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
 
   try {
     await client.connect();
-    
+
     const checkRes = await client.query('SELECT id FROM users WHERE email = $1', [email]);
     if (checkRes.rows.length > 0) {
       await client.end();
@@ -277,7 +287,7 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
     }
 
     const hashedPassword = await hashPassword(password);
-    const userId = profile.id || `user_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const userId = profile.id || `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const profileData = { ...profile };
     delete (profileData as any).id;
     delete (profileData as any).name;
@@ -294,11 +304,11 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
       `INSERT INTO users (id, name, email, password, type, profile_data, stripe_customer_id, plan_name, renewal_date) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
-        userId, 
-        profile.name, 
-        email, 
-        hashedPassword, 
-        dbType, 
+        userId,
+        profile.name,
+        email,
+        hashedPassword,
+        dbType,
         JSON.stringify(profileData),
         profile.stripeCustomerId || null,
         profile.plan || 'Free',
@@ -338,7 +348,7 @@ export const updateUserProfileInDb = async (profile: UserProfile): Promise<boole
   try {
     await client.connect();
     const profileData = { ...profile };
-    
+
     delete (profileData as any).id;
     delete (profileData as any).name;
     delete (profileData as any).email;
@@ -355,9 +365,9 @@ export const updateUserProfileInDb = async (profile: UserProfile): Promise<boole
        SET name = $1, type = $2, profile_data = $3, stripe_customer_id = $4, plan_name = $5, renewal_date = $6, updated_at = NOW() 
        WHERE id = $7`,
       [
-        profile.name, 
-        dbType, 
-        JSON.stringify(profileData), 
+        profile.name,
+        dbType,
+        JSON.stringify(profileData),
         profile.stripeCustomerId || null,
         profile.plan || 'Free',
         profile.renewalDate || null,
@@ -384,23 +394,23 @@ export const updateUserProfileInDb = async (profile: UserProfile): Promise<boole
  * UPDATE USER PASSWORD
  */
 export const updateUserPasswordInDb = async (userId: string, newPassword: string): Promise<boolean> => {
-    const client = getDbClient();
-    if (!client) return false;
+  const client = getDbClient();
+  if (!client) return false;
 
-    try {
-        await client.connect();
-        const hashedPassword = await hashPassword(newPassword);
-        await client.query(
-            `UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2`,
-            [hashedPassword, userId]
-        );
-        await client.end();
-        logAuditAction(userId, 'PASSWORD_CHANGE', { timestamp: new Date().toISOString() });
-        return true;
-    } catch (error) {
-        console.error("Update Password Error:", error);
-        return false;
-    }
+  try {
+    await client.connect();
+    const hashedPassword = await hashPassword(newPassword);
+    await client.query(
+      `UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2`,
+      [hashedPassword, userId]
+    );
+    await client.end();
+    logAuditAction(userId, 'PASSWORD_CHANGE', { timestamp: new Date().toISOString() });
+    return true;
+  } catch (error) {
+    console.error("Update Password Error:", error);
+    return false;
+  }
 };
 
 /**
@@ -427,11 +437,11 @@ export const fetchCatalogItemsFromDb = async (userId: string): Promise<CatalogIt
     `);
 
     try {
-        await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS sku TEXT;`);
-        await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
-        await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS description TEXT;`);
-        await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-    } catch (migError) {}
+      await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS sku TEXT;`);
+      await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
+      await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS description TEXT;`);
+      await client.query(`ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+    } catch (migError) { }
 
     const result = await client.query('SELECT * FROM catalog_items WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     await client.end();
@@ -450,7 +460,7 @@ export const fetchCatalogItemsFromDb = async (userId: string): Promise<CatalogIt
   }
 };
 
-export const saveCatalogItemToDb = async (item: CatalogItem, userId: string): Promise<{success: boolean, error?: string}> => {
+export const saveCatalogItemToDb = async (item: CatalogItem, userId: string): Promise<{ success: boolean, error?: string }> => {
   const client = getDbClient();
   if (!client) return { success: false, error: 'Database client not initialized.' };
 
@@ -468,7 +478,7 @@ export const saveCatalogItemToDb = async (item: CatalogItem, userId: string): Pr
         sku = EXCLUDED.sku,
         updated_at = NOW();
     `;
-    
+
     await client.query(query, [item.id, userId, item.name, item.price, item.description || null, item.isRecurring || false, item.sku || null]);
     await client.end();
     return { success: true };
@@ -538,7 +548,7 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
 
     if (invoicesRes.status === 'fulfilled') {
       const mappedInvoices = invoicesRes.value.rows.map((row: any) => ({
-        ...row.data, 
+        ...row.data,
         id: row.id,
         userId: row.user_id || userId,
         clientName: row.client_name,
@@ -594,9 +604,9 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
         ...row.data,
         id: row.id,
         userId: userId,
-        clientName: row.provider_name, 
+        clientName: row.provider_name,
         total: parseFloat(row.total),
-        status: row.status, 
+        status: row.status,
         date: row.date,
         type: 'Expense',
         receiptUrl: row.receipt_url
@@ -604,10 +614,10 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
       allDocs = [...allDocs, ...mappedExpenses];
     }
 
-    return allDocs.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return allDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
     console.warn("Neon DB Fetch Error:", error);
-    return null; 
+    return null;
   }
 };
 
@@ -725,11 +735,11 @@ export const fetchProvidersFromDb = async (userId: string): Promise<DbProvider[]
 /**
  * SAVE PROVIDER
  */
-export const saveProviderToDb = async (providerData: DbProvider, userId: string): Promise<{success: boolean, error?: string}> => {
+export const saveProviderToDb = async (providerData: DbProvider, userId: string): Promise<{ success: boolean, error?: string }> => {
   const clientDb = getDbClient();
   if (!clientDb) return { success: false, error: 'Database connection failed' };
   const safeName = providerData.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const id = providerData.id || `prov_${userId.substring(0,8)}_${safeName}`;
+  const id = providerData.id || `prov_${userId.substring(0, 8)}_${safeName}`;
   try {
     await clientDb.connect();
     const upsertProvider = `
@@ -756,15 +766,15 @@ export const saveProviderToDb = async (providerData: DbProvider, userId: string)
 /**
  * SAVE CLIENT OR PROSPECT
  */
-export const saveClientToDb = async (clientData: DbClient, userId: string, status: 'CLIENT' | 'PROSPECT'): Promise<{success: boolean, error?: string}> => {
+export const saveClientToDb = async (clientData: DbClient, userId: string, status: 'CLIENT' | 'PROSPECT'): Promise<{ success: boolean, error?: string }> => {
   const clientDb = getDbClient();
   if (!clientDb) return { success: false, error: 'Database connection failed' };
   const safeName = clientData.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const id = clientData.id || `cli_${userId.substring(0,8)}_${safeName}`;
+  const id = clientData.id || `cli_${userId.substring(0, 8)}_${safeName}`;
   try {
     await clientDb.connect();
     if (status === 'CLIENT') {
-        const upsertClient = `
+      const upsertClient = `
             INSERT INTO clients (id, user_id, name, contact_name, tax_id, email, address, phone, country, tags, notes, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
             ON CONFLICT (id) DO UPDATE SET 
@@ -779,15 +789,15 @@ export const saveClientToDb = async (clientData: DbClient, userId: string, statu
               notes = COALESCE(EXCLUDED.notes, clients.notes),
               updated_at = NOW();
         `;
-        await clientDb.query(upsertClient, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', clientData.tags, clientData.notes]);
-        await clientDb.query('DELETE FROM prospects WHERE id = $1', [id]);
+      await clientDb.query(upsertClient, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', clientData.tags, clientData.notes]);
+      await clientDb.query('DELETE FROM prospects WHERE id = $1', [id]);
     } else {
-        const checkClient = await clientDb.query('SELECT id FROM clients WHERE id = $1', [id]);
-        if ((checkClient.rowCount || 0) > 0) {
-             const updateClient = `UPDATE clients SET contact_name = COALESCE($1, contact_name), tax_id = COALESCE($2, tax_id), email = COALESCE($3, email), address = COALESCE($4, address), phone = COALESCE($5, phone), country = COALESCE($6, country, 'España'), updated_at = NOW() WHERE id = $7`;
-             await clientDb.query(updateClient, [clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', id]);
-        } else {
-             const upsertProspect = `
+      const checkClient = await clientDb.query('SELECT id FROM clients WHERE id = $1', [id]);
+      if ((checkClient.rowCount || 0) > 0) {
+        const updateClient = `UPDATE clients SET contact_name = COALESCE($1, contact_name), tax_id = COALESCE($2, tax_id), email = COALESCE($3, email), address = COALESCE($4, address), phone = COALESCE($5, phone), country = COALESCE($6, country, 'España'), updated_at = NOW() WHERE id = $7`;
+        await clientDb.query(updateClient, [clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', id]);
+      } else {
+        const upsertProspect = `
                 INSERT INTO prospects (id, user_id, name, contact_name, tax_id, email, address, phone, country, tags, notes, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
                 ON CONFLICT (id) DO UPDATE SET 
@@ -802,8 +812,8 @@ export const saveClientToDb = async (clientData: DbClient, userId: string, statu
                   notes = COALESCE(EXCLUDED.notes, prospects.notes),
                   updated_at = NOW();
             `;
-            await clientDb.query(upsertProspect, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', clientData.tags, clientData.notes]);
-        }
+        await clientDb.query(upsertProspect, [id, userId, clientData.name, clientData.contactName || null, clientData.taxId, clientData.email, clientData.address, clientData.phone, clientData.country || 'España', clientData.tags, clientData.notes]);
+      }
     }
     await clientDb.end();
     logAuditAction(userId, 'SAVE_CLIENT', { name: clientData.name, status });
@@ -822,7 +832,7 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
   try {
     await client.connect();
     if (invoice.type === 'Expense') {
-       const query = `
+      const query = `
         INSERT INTO expenses (id, user_id, provider_name, provider_tax_id, date, total, currency, category, receipt_url, status, iva_soportado, expense_deductibility, data)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         ON CONFLICT (id) DO UPDATE SET 
@@ -835,7 +845,7 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
       const category = invoice.items[0]?.description || 'General';
       await client.query(query, [
         invoice.id, invoice.userId, invoice.clientName, invoice.clientTaxId || null,
-        invoice.date, invoice.total, invoice.currency || 'EUR', category, 
+        invoice.date, invoice.total, invoice.currency || 'EUR', category,
         invoice.receiptUrl || null, invoice.status,
         invoice.ivaAmount || 0, invoice.expenseDeductibility || 'FULL',
         JSON.stringify(invoice)
@@ -900,7 +910,7 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
           data = EXCLUDED.data, updated_at = NOW();
       `;
       await client.query(query, [
-        invoice.id, invoice.userId, invoice.clientName, invoice.clientTaxId, 
+        invoice.id, invoice.userId, invoice.clientName, invoice.clientTaxId,
         invoice.clientEmail || null, invoice.clientAddress || null,
         invoice.clientCountry || 'España', invoice.operationType || 'NACIONAL', invoice.legalMention || null,
         invoice.total, invoice.status, invoice.date, invoice.type, invoice.currency || 'EUR',
@@ -959,7 +969,7 @@ export const deleteInvoiceFromDb = async (id: string, userId: string): Promise<b
     await client.connect();
     const resInv = await client.query('DELETE FROM invoices WHERE id = $1', [id]);
     if ((resInv.rowCount || 0) === 0) {
-        await client.query('DELETE FROM expenses WHERE id = $1', [id]);
+      await client.query('DELETE FROM expenses WHERE id = $1', [id]);
     }
     await client.end();
     return true;
@@ -1005,7 +1015,7 @@ export const saveTrimestralDeclaration = async (declaracion: TrimestralDeclarati
         resultado = EXCLUDED.resultado,
         updated_at = NOW();
     `;
-    
+
     await client.query(query, [
       declaracion.id,
       declaracion.userId,
@@ -1018,7 +1028,7 @@ export const saveTrimestralDeclaration = async (declaracion: TrimestralDeclarati
       JSON.stringify(declaracion.datos),
       declaracion.resultado
     ]);
-    
+
     await client.end();
     return true;
   } catch (error) {
