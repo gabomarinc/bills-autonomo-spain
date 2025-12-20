@@ -73,7 +73,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   // Initialize fiscal config if missing
   useEffect(() => {
     if (!profile.fiscalConfig) {
-      setProfile(prev => ({
+      setProfile((prev: UserProfile) => ({
         ...prev,
         fiscalConfig: {
           entityType: prev.type === ProfileType.COMPANY ? 'JURIDICA' : 'FISICA',
@@ -92,11 +92,11 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   // --- HANDLERS ---
 
   const handleInputChange = (field: keyof UserProfile, value: any) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
+    setProfile((prev: UserProfile) => ({ ...prev, [field]: value }));
   };
 
   const handleFiscalChange = (field: keyof SpanishFiscalConfig, value: any) => {
-    setProfile(prev => ({
+    setProfile((prev: UserProfile) => ({
       ...prev,
       fiscalConfig: {
         ...(prev.fiscalConfig as SpanishFiscalConfig),
@@ -106,14 +106,14 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   };
 
   const handleBrandingChange = (field: keyof any, value: any) => {
-    setProfile(prev => ({
+    setProfile((prev: UserProfile) => ({
       ...prev,
       branding: { ...prev.branding, [field]: value } as any
     }));
   };
 
   const handleApiKeyChange = (provider: 'gemini' | 'openai', value: string) => {
-    setProfile(prev => ({
+    setProfile((prev: UserProfile) => ({
       ...prev,
       apiKeys: { ...prev.apiKeys, [provider]: value }
     }));
@@ -125,7 +125,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   };
 
   const togglePaymentIntegration = () => {
-    setProfile(prev => {
+    setProfile((prev: UserProfile) => {
       const isEnabled = !prev.paymentIntegration?.enabled;
       return {
         ...prev,
@@ -144,7 +144,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
   };
 
   const handlePaymentInputChange = (field: keyof PaymentIntegration, value: any) => {
-    setProfile(prev => {
+    setProfile((prev: UserProfile) => {
       const currentInt = prev.paymentIntegration || { provider: 'STRIPE', enabled: true };
       const updatedInt = { ...currentInt, [field]: value };
 
@@ -287,12 +287,12 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
     const selectedSubs = sectorData?.subcategories.filter(sub => selectedSubcategories.includes(sub.id)) || [];
 
     // Calcular ivaArticle: si hay múltiples artículos diferentes, usar MIXTO
-    const articles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
+    const articles = selectedSubcategories.map((subId: string) => getIvaArticleForActivity(selectedSector, subId));
     const uniqueArticles = [...new Set(articles)];
     const ivaArticle = uniqueArticles.length > 1 ? 'MIXTO' : uniqueArticles[0] as 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO';
 
     // Actualizar el perfil localmente
-    setProfile(prev => ({
+    setProfile((prev: UserProfile) => ({
       ...prev,
       fiscalConfig: {
         ...prev.fiscalConfig,
@@ -423,7 +423,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
         </div>
       </div>
 
-      {activeSettingsTab === 'GENERAL' ? (
+      {activeSettingsTab === 'GENERAL' && (
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="space-y-8 xl:col-span-2">
@@ -838,6 +838,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
             </div>
           </div>
         </div>
+      )}
 
       {/* Activity Selection Modal */}
       {showActivityModal && (
@@ -979,7 +980,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                     {/* Info Box about IVA Article - Show info for all selected */}
                     {selectedSubcategories.length > 0 && (() => {
                       const selectedSubs = selectedSectorData?.subcategories.filter(s => selectedSubcategories.includes(s.id)) || [];
-                      const ivaArticles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
+                      const ivaArticles = selectedSubcategories.map((subId: string) => getIvaArticleForActivity(selectedSector, subId));
                       const uniqueArticles = [...new Set(ivaArticles)];
                       const isMixed = uniqueArticles.length > 1;
                       const mainArticle = uniqueArticles[0] || 'ART_69_70';
@@ -1139,8 +1140,8 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                         newRules.push({
                           id: crypto.randomUUID(),
                           paymentMethod: 'BANCO',
-                          feeType: 'PERCENTAGE',
-                          value: 0,
+                          type: 'PERCENTAGE',
+                          percentage: 0,
                           description: 'Nueva regla'
                         });
                         handlePaymentInputChange('feeRules', newRules);
@@ -1186,10 +1187,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase">Tipo de Comisión</label>
                             <select
-                              value={rule.feeType}
+                              value={rule.type}
                               onChange={(e) => {
                                 const newRules = [...(profile.paymentIntegration?.feeRules || [])];
-                                newRules[idx] = { ...rule, feeType: e.target.value as any };
+                                newRules[idx] = { ...rule, type: e.target.value as any };
                                 handlePaymentInputChange('feeRules', newRules);
                               }}
                               className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold"
@@ -1201,32 +1202,37 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase">
-                              {rule.feeType === 'PERCENTAGE' ? 'Porcentaje' : rule.feeType === 'FIXED' ? 'Monto Fijo' : 'Base (%)'}
+                              {rule.type === 'PERCENTAGE' ? 'Porcentaje' : rule.type === 'FIXED' ? 'Monto Fijo' : 'Base (%)'}
                             </label>
                             <div className="relative">
                               <input
                                 type="number"
-                                value={rule.value}
+                                value={rule.type === 'FIXED' ? rule.fixedAmount : rule.percentage}
                                 onChange={(e) => {
                                   const newRules = [...(profile.paymentIntegration?.feeRules || [])];
-                                  newRules[idx] = { ...rule, value: parseFloat(e.target.value) || 0 };
+                                  const val = parseFloat(e.target.value) || 0;
+                                  if (rule.type === 'FIXED') {
+                                    newRules[idx] = { ...rule, fixedAmount: val };
+                                  } else {
+                                    newRules[idx] = { ...rule, percentage: val };
+                                  }
                                   handlePaymentInputChange('feeRules', newRules);
                                 }}
                                 className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold pr-8"
                               />
-                              <span className="absolute right-3 top-2 text-slate-400 text-xs font-bold">{rule.feeType === 'FIXED' ? '€' : '%'}</span>
+                              <span className="absolute right-3 top-2 text-slate-400 text-xs font-bold">{rule.type === 'FIXED' ? '€' : '%'}</span>
                             </div>
                           </div>
-                          {rule.feeType === 'HYBRID' && (
+                          {rule.type === 'HYBRID' && (
                             <div className="space-y-1">
                               <label className="text-[10px] font-bold text-slate-400 uppercase">Extra Fijo (€)</label>
                               <div className="relative">
                                 <input
                                   type="number"
-                                  value={rule.fixedValue || 0}
+                                  value={rule.fixedAmount || 0}
                                   onChange={(e) => {
                                     const newRules = [...(profile.paymentIntegration?.feeRules || [])];
-                                    newRules[idx] = { ...rule, fixedValue: parseFloat(e.target.value) || 0 };
+                                    newRules[idx] = { ...rule, fixedAmount: parseFloat(e.target.value) || 0 };
                                     handlePaymentInputChange('feeRules', newRules);
                                   }}
                                   className="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold pr-8"
@@ -1254,12 +1260,13 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                     ))}
                   </div>
                 </div>
-            )}
               </div>
+            )}
+          </div>
         </div>
       )}
-        </div>
-      );
+    </div>
+  );
 };
 
-      export default UserProfileSettings;
+export default UserProfileSettings;
