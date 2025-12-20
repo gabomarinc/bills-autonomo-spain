@@ -346,7 +346,12 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      ignoreElements: (element) => {
+        return element.classList.contains('no-pdf') ||
+          window.getComputedStyle(element).display === 'none' ||
+          element.closest('.no-pdf') !== null;
+      }
     });
 
     const imgData = canvas.toDataURL('image/png');
