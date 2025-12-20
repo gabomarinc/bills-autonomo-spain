@@ -1317,9 +1317,18 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
               <div className="space-y-6">
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">1</div>
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-bold text-[#1c2938] mb-1">Entra en Stripe Developers</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed">Accede a tu dashboard de Stripe y ve a la sección <strong>Developers {'>'} Webhooks</strong>.</p>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Accede directamente a la sección de Webhooks desde aquí:</p>
+                    <a
+                      href="https://dashboard.stripe.com/webhooks"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-[#1c2938] rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Abrir Webhooks de Stripe
+                    </a>
                   </div>
                 </div>
 
@@ -1327,13 +1336,13 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">2</div>
                   <div className="flex-1">
                     <h4 className="font-bold text-[#1c2938] mb-1">Añadir Endpoint</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Haz clic en <strong>Add endpoint</strong> y pega la URL que aparece en la configuración:</p>
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-[10px] text-slate-600 break-all select-all flex justify-between items-center">
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Haz clic en el botón azul <strong>+ Add destination</strong> (o <strong>Add endpoint</strong>) y pega esta URL:</p>
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-[10px] text-slate-600 break-all select-all flex justify-between items-center group">
                       <span>{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
                       <button onClick={() => {
                         navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
                         alert.addToast('info', 'URL Copiada', 'Pégala en el dashboard de Stripe.');
-                      }} className="ml-2 p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors">
+                      }} className="ml-2 p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors bg-white shadow-sm">
                         <Save className="w-3.5 h-3.5" />
                       </button>
                     </div>
