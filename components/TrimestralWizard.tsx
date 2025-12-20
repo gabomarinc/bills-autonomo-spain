@@ -196,9 +196,9 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
                 <Brain className="w-4 h-4" />
                 <span>CFO Virtual</span>
               </div>
-              <h2 className="text-3xl font-black">Tu Dinero Real</h2>
-              <p className="text-slate-400 text-sm max-w-md">
-                Análisis de rentabilidad neta descontando impuestos previstos, gastos operativos y comisiones de pasarela.
+              <h2 className="text-3xl font-black">Tu dinero limpio</h2>
+              <p className="text-slate-400 text-sm max-w-sm">
+                Esto es lo que realmente te queda en el bolsillo tras apartar lo que es para Hacienda y pagar tus gastos y comisiones.
               </p>
             </div>
 
@@ -282,6 +282,15 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
               </div>
             </div>
 
+            {/* Conversational Insight */}
+            {declaraciones.modelo130.resultado > 0 && (
+              <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                  ⚠️ <span className="font-bold">Hucha de impuestos</span>: Guarda estos <span className="font-bold">€{declaraciones.modelo130.resultado.toFixed(2)}</span>. Es un adelanto para tu declaración de la Renta.
+                </p>
+              </div>
+            )}
+
             <div className="pt-4 border-t space-y-2">
               <p className="text-xs text-slate-400">Vencimiento: {new Date(fechasVencimiento.modelo130).toLocaleDateString('es-ES')}</p>
               <button
@@ -329,6 +338,15 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
               </div>
             </div>
 
+            {/* Conversational Insight */}
+            {declaraciones.modelo131.resultado > 0 && (
+              <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                  ⚠️ <span className="font-bold">Aviso preventivo</span>: Debes reservar <span className="font-bold">€{declaraciones.modelo131.resultado.toFixed(2)}</span> para cumplir con el pago fraccionado de tu actividad.
+                </p>
+              </div>
+            )}
+
             <div className="pt-4 border-t space-y-2">
               <p className="text-xs text-slate-400">Vencimiento: {new Date(fechasVencimiento.modelo131).toLocaleDateString('es-ES')}</p>
               <button
@@ -371,6 +389,22 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
                 </div>
               </div>
             </div>
+
+            {/* Conversational Insight */}
+            {declaraciones.modelo303.resultadoLiquido > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-xs text-blue-800 leading-relaxed font-medium">
+                  💳 <span className="font-bold">El IVA no es tuyo</span>: Estos <span className="font-bold">€{declaraciones.modelo303.resultadoLiquido.toFixed(2)}</span> son el impuesto que has recaudado de tus clientes y que ahora debes devolver.
+                </p>
+              </div>
+            )}
+            {declaraciones.modelo303.resultadoLiquido < 0 && (
+              <div className="mt-4 p-3 bg-green-50 rounded-xl border border-green-100">
+                <p className="text-xs text-green-800 leading-relaxed font-medium">
+                  ✨ <span className="font-bold">Hacienda te debe</span>: Has pagado más IVA del que has cobrado. Estos <span className="font-bold">€{Math.abs(declaraciones.modelo303.resultadoLiquido).toFixed(2)}</span> se quedarán a tu favor.
+                </p>
+              </div>
+            )}
 
             <div className="pt-4 border-t space-y-2">
               <p className="text-xs text-slate-400">Vencimiento: {new Date(fechasVencimiento.modelo303).toLocaleDateString('es-ES')}</p>
