@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Building2, MapPin, CreditCard, Palette, UploadCloud,
   Save, Crown, Calendar, Globe,
@@ -1295,25 +1296,25 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
         </div>
       )}
       {/* Stripe Setup Wizard Modal */}
-      {showStripeWizard && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-[#1c2938]/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+      {showStripeWizard && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-[#1c2938]/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-white rounded-2xl shadow-sm text-indigo-500">
                   <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-5" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-[#1c2938]">Configurar Sincronización</h3>
-                  <p className="text-slate-500 text-sm">Sigue estos pasos para conectar Stripe con Kônsul.</p>
+                  <p className="text-slate-500 text-xs">Conecta Stripe con Kônsul en un minuto.</p>
                 </div>
               </div>
               <button onClick={() => setShowStripeWizard(false)} className="p-3 bg-white text-slate-400 hover:text-slate-600 rounded-2xl transition-all shadow-sm">
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
 
-            <div className="p-8 space-y-8">
+            <div className="p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="space-y-6">
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">1</div>
@@ -1384,18 +1385,19 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="pt-6 border-t border-slate-50 flex justify-end">
-                <button
-                  onClick={() => setShowStripeWizard(false)}
-                  className="px-8 py-3 bg-[#1c2938] text-white rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-lg shadow-[#1c2938]/10"
-                >
-                  Entendido
-                </button>
-              </div>
+            <div className="p-6 border-t border-slate-50 bg-slate-50/30 flex justify-end flex-shrink-0">
+              <button
+                onClick={() => setShowStripeWizard(false)}
+                className="px-8 py-3 bg-[#1c2938] text-white rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-lg shadow-[#1c2938]/10"
+              >
+                Entendido
+              </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
