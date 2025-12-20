@@ -342,7 +342,18 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const handleDownloadPdf = async () => {
     if (!documentRef.current) return;
 
-    const canvas = await html2canvas(documentRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const canvas = await html2canvas(documentRef.current, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      ignoreElements: (element) => {
+        return element.classList.contains('no-pdf') ||
+          window.getComputedStyle(element).display === 'none' ||
+          element.closest('.no-pdf') !== null;
+      }
+    });
+
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -404,7 +415,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     if (!hasStripe && !hasPayPal && !hasBizum) return null;
 
     return (
-      <div className="mt-6 pt-6 border-t border-slate-100">
+      <div className="mt-8 pt-6 border-t border-slate-100 pb-4">
         <p className="font-bold text-[#1c2938] mb-3 text-sm uppercase tracking-wide">Pagar Online</p>
         <div className="flex flex-wrap gap-3">
           {hasStripe && (
@@ -437,7 +448,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   };
 
   const renderModern = () => (
-    <div className="bg-white shadow-xl rounded-none md:rounded-lg overflow-hidden min-h-[800px] flex flex-col relative print:shadow-none">
+    <div className="bg-white shadow-xl rounded-none md:rounded-lg overflow-hidden min-h-[800px] flex flex-col relative print:shadow-none pb-12">
       <div className="h-4 w-full" style={{ backgroundColor: color }}></div>
       <div className="p-8 md:p-12 flex-1">
         <div className="flex justify-between items-start mb-12">
@@ -557,7 +568,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <p className="opacity-90 text-[#1c2938] leading-relaxed">Esta cotización incluye impuestos. Para aprobar, favor de firmar y enviar respuesta a este correo.</p>
               </div>
             ) : (
-              <div className="bg-slate-50 p-6 rounded-xl text-slate-700 text-sm">
+              <div className="bg-slate-50 p-6 pb-8 rounded-xl text-slate-700 text-sm">
                 <p className="font-bold mb-2 text-lg">Datos Bancarios</p>
                 <p className="font-bold text-[#1c2938]">{issuer.legalName || issuer.name}</p>
                 {issuer.bankName && <p className="font-medium text-slate-600">{issuer.bankName}</p>}
@@ -675,7 +686,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   );
 
   const renderClassic = () => (
-    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-12 md:p-16 border-t-[12px]" style={{ borderColor: color }}>
+    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-12 md:p-16 border-t-[12px] pb-20" style={{ borderColor: color }}>
       <div className="text-center border-b-4 border-slate-100 pb-8 mb-8">
         <h1 className="text-3xl font-serif font-bold text-slate-800 uppercase tracking-widest mb-1">{issuer.name}</h1>
         {issuer.legalName && <p className="text-slate-600 font-serif font-bold text-sm mb-1">{issuer.legalName}</p>}
@@ -781,7 +792,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   );
 
   const renderMinimal = () => (
-    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-12 font-sans">
+    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-12 font-sans pb-20">
       <div className="flex justify-between items-center mb-16">
         <div className="flex items-center gap-3">
           <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }}></div>
