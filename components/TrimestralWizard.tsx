@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   FileText, Calendar, Calculator, CheckCircle2, AlertTriangle,
   Download, Save, Loader2, ChevronRight, TrendingUp, TrendingDown,
-  Info, X, Eye
+  Info, X, Eye, Brain
 } from 'lucide-react';
 import { Invoice, UserProfile, TrimestralDeclaration } from '../types';
 import {
@@ -185,9 +185,49 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
         </div>
       </div>
 
+      {/* CFO Virtual - Beneficio Neto */}
+      {datosTrimestre && declaraciones && (
+        <div className="bg-[#1c2938] text-white p-8 rounded-3xl shadow-xl border border-slate-800 mb-8 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#27bea5]/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-[#27bea5]/20 transition-all duration-700"></div>
+
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-[#27bea5] font-bold tracking-wider uppercase text-xs">
+                <Brain className="w-4 h-4" />
+                <span>CFO Virtual</span>
+              </div>
+              <h2 className="text-3xl font-black">Tu Dinero Real</h2>
+              <p className="text-slate-400 text-sm max-w-md">
+                Análisis de rentabilidad neta descontando impuestos previstos, gastos operativos y comisiones de pasarela.
+              </p>
+            </div>
+
+            <div className="text-right">
+              <div className="flex items-end justify-end gap-2">
+                <span className="text-4xl md:text-5xl font-black text-[#27bea5] tracking-tighter">
+                  €{(
+                    datosTrimestre.ingresos -
+                    datosTrimestre.gastos -
+                    Math.max(0, declaraciones.modelo130.resultado) -
+                    Math.max(0, declaraciones.modelo303.resultadoLiquido) -
+                    datosTrimestre.comisiones
+                  ).toFixed(2)}
+                </span>
+              </div>
+              <p className="text-slate-400 text-[10px] md:text-xs mt-2 font-medium bg-white/5 py-1 px-3 rounded-full inline-block backdrop-blur-sm border border-white/10">
+                €{datosTrimestre.ingresos.toFixed(2)} Ingresos -
+                €{datosTrimestre.gastos.toFixed(2)} Gastos -
+                €{(Math.max(0, declaraciones.modelo130.resultado) + Math.max(0, declaraciones.modelo303.resultadoLiquido)).toFixed(2)} Impuestos -
+                €{datosTrimestre.comisiones.toFixed(2)} Comisiones
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Resumen del Trimestre */}
       {datosTrimestre && declaraciones && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Ingresos</p>
             <p className="text-2xl font-bold text-[#1c2938]">€{datosTrimestre.ingresos.toFixed(2)}</p>
@@ -199,32 +239,12 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
             <p className="text-xs text-slate-500 mt-1">{datosTrimestre.gastosTrimestre.length} gastos</p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Deducciones</p>
-            <p className="text-2xl font-bold text-amber-600">
-              €{(Math.max(0, declaraciones.modelo130.resultado) + Math.max(0, declaraciones.modelo303.resultadoLiquido) + datosTrimestre.comisiones).toFixed(2)}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1">Impuestos + Comisiones</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 bg-indigo-50/30">
-            <p className="text-xs font-bold text-indigo-400 uppercase mb-1 flex items-center gap-1">
-              Beneficio Neto <span title="Ingresos - Gastos - Impuestos - Comisiones"><Info className="w-3 h-3 cursor-help" /></span>
-            </p>
-            <p className="text-2xl font-black text-indigo-700">
-              €{(
-                datosTrimestre.ingresos -
-                datosTrimestre.gastos -
-                Math.max(0, declaraciones.modelo130.resultado) -
-                Math.max(0, declaraciones.modelo303.resultadoLiquido) -
-                datosTrimestre.comisiones
-              ).toFixed(2)}
-            </p>
-            <p className="text-xs text-indigo-500 mt-1 font-medium">Tu dinero real</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">IVA Repercutido</p>
+            <p className="text-2xl font-bold text-blue-600">€{datosTrimestre.ivaRepercutido.toFixed(2)}</p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">IVA (303)</p>
-            <p className={`text-2xl font-bold ${getResultadoColor(declaraciones.modelo303.resultadoLiquido)}`}>
-              €{declaraciones.modelo303.resultadoLiquido.toFixed(2)}
-            </p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">IVA Soportado</p>
+            <p className="text-2xl font-bold text-green-600">€{datosTrimestre.ivaSoportado.toFixed(2)}</p>
           </div>
         </div>
       )}
