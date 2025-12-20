@@ -1358,12 +1358,12 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                       </div>
                       <div className="space-y-1 relative">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Endpoint URL</label>
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-600 break-all flex justify-between items-center pr-2">
-                          <span className="truncate mr-4">{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
+                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-600 break-all flex justify-between items-start pr-2">
+                          <span className="mr-4 leading-relaxed">{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
                           <button onClick={() => {
                             navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
                             alert.addToast('success', 'Copiado', '¡URL lista para pegar!');
-                          }} className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all flex-shrink-0 shadow-sm" title="Copiar URL">
+                          }} className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all flex-shrink-0 shadow-sm mt-0.5" title="Copiar URL">
                             <Save className="w-3.5 h-3.5" />
                           </button>
                         </div>
