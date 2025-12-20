@@ -99,6 +99,7 @@ export interface PaymentIntegration {
   // Stripe
   stripePublicKey?: string;
   stripeSecretKey?: string;
+  stripeWebhookSecret?: string;
   // PayPal
   paypalClientId?: string;
   paypalSecret?: string;

@@ -136,6 +136,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
           enabled: isEnabled,
           stripePublicKey: prev.paymentIntegration?.stripePublicKey || '',
           stripeSecretKey: prev.paymentIntegration?.stripeSecretKey || '',
+          stripeWebhookSecret: prev.paymentIntegration?.stripeWebhookSecret || '',
           paypalClientId: prev.paymentIntegration?.paypalClientId || '',
           paypalSecret: prev.paymentIntegration?.paypalSecret || '',
           bizumPhone: prev.paymentIntegration?.bizumPhone || '',
@@ -1132,6 +1133,20 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                           <button onClick={() => toggleKeyVisibility('stripeSecret')} className="absolute right-4 top-3.5 text-slate-400">{showKeys['stripeSecret'] ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">STRIPE WEBHOOK SECRET</label>
+                        <div className="relative">
+                          <ShieldCheck className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
+                          <input
+                            type={showKeys['stripeWebhook'] ? 'text' : 'password'}
+                            value={profile.paymentIntegration?.stripeWebhookSecret || ''}
+                            onChange={(e) => handlePaymentInputChange('stripeWebhookSecret', e.target.value)}
+                            placeholder="whsec_..."
+                            className="w-full pl-12 pr-12 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none"
+                          />
+                          <button onClick={() => toggleKeyVisibility('stripeWebhook')} className="absolute right-4 top-3.5 text-slate-400">{showKeys['stripeWebhook'] ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1373,12 +1388,31 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                         <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-500">Sincronización automática de cobros facturados.</div>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 font-medium italic">Finalmente pulsa en el botón azul <strong>Add endpoint</strong> al final de la página.</p>
+                    <p className="text-xs text-slate-400 font-medium italic">Pulsa en el botón azul <strong>Add endpoint</strong> al final de la página.</p>
                   </div>
                 </div>
 
                 <div className="flex gap-6">
-                  <div className="flex-shrink-0 w-8 h-8 bg-green-50 text-green-500 rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-[#1c2938] mb-1">Copia el Signing Secret</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Tras crear el endpoint, verás una sección llamada <strong>Signing secret</strong>:</p>
+                    <ul className="text-xs text-slate-500 space-y-2 list-disc ml-4 font-medium mb-4">
+                      <li>Haz clic en <strong>Reveal</strong> para ver el código.</li>
+                      <li>Cópialo (empieza por <code className="bg-slate-100 px-1 rounded text-indigo-600">whsec_...</code>).</li>
+                      <li>Pégalo en el campo <strong>STRIPE WEBHOOK SECRET</strong> de Bills.</li>
+                    </ul>
+                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex gap-3 text-amber-700">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <p className="text-[10px] font-medium leading-relaxed">
+                        Este paso es CRUCIAL. Sin este código, Bills rechazará los avisos de Stripe por seguridad.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-8 h-8 bg-green-50 text-green-500 rounded-full flex items-center justify-center font-bold text-sm">5</div>
                   <div>
                     <h4 className="font-bold text-[#1c2938] mb-1">¡Todo Listo!</h4>
                     <p className="text-slate-500 text-sm leading-relaxed">Ahora, cada vez que cobres una factura por Stripe, Kônsul detectará el pago y la marcará como <strong>Pagada</strong> automáticamente.</p>

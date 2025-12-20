@@ -177,10 +177,35 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   const logo = branding.logoUrl;
 
   // --- PAYMENT HELPERS ---
-  // TODO: Implementar Stripe/PayPal/Bizum cuando estén configurados
-  const handleStripePayment = () => {
-    // Implementar cuando Stripe esté configurado
-    alert.addToast('info', 'Pago con Stripe', 'Funcionalidad de pago en desarrollo.');
+  const handleStripePayment = async () => {
+    const paymentInt = issuer.paymentIntegration;
+    if (!paymentInt?.stripePublicKey || !paymentInt?.stripeSecretKey) {
+      alert.addToast('error', 'Error de Configuración', 'El profesional no tiene Stripe configurado correctamente.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/create-invoice-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceId: invoice.id,
+          userId: invoice.userId,
+          amount: remainingBalance,
+          currency: invoice.currency || 'eur'
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Error al crear la sesión de pago');
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      console.error('Stripe Payment Error:', error);
+      alert.addToast('error', 'Error de Pago', error.message || 'No se pudo iniciar el pago con Stripe.');
+    }
   };
 
   const handlePayPalPayment = () => {
