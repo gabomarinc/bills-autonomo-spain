@@ -191,8 +191,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         body: JSON.stringify({
           invoiceId: invoice.id,
           userId: invoice.userId,
-          amount: remainingBalance,
-          currency: invoice.currency || 'eur'
+          amount: invoice.total - (invoice.amountPaid || 0),
+          currency: invoice.invoiceCurrency || invoice.currency || 'eur'
         })
       });
 
