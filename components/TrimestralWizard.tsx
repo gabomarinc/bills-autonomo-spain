@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
+import {
   FileText, Calendar, Calculator, CheckCircle2, AlertTriangle,
   Download, Save, Loader2, ChevronRight, TrendingUp, TrendingDown,
   Info, X, Eye
 } from 'lucide-react';
 import { Invoice, UserProfile, TrimestralDeclaration } from '../types';
-import { 
-  calcularModelo130, 
-  calcularModelo131, 
+import {
+  calcularModelo130,
+  calcularModelo131,
   calcularModelo303,
   calcularDeclaracionesDesdeFacturas,
   obtenerTrimestreActual,
@@ -24,7 +24,7 @@ interface TrimestralWizardProps {
 const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoices, onSave }) => {
   const alert = useAlert();
   const { trimestre: trimestreActual, año: añoActual } = obtenerTrimestreActual();
-  
+
   const [trimestre, setTrimestre] = useState<1 | 2 | 3 | 4>(trimestreActual);
   const [año, setAño] = useState(añoActual);
   const [modeloSeleccionado, setModeloSeleccionado] = useState<'MODELO_130' | 'MODELO_131' | 'MODELO_303' | null>(null);
@@ -35,36 +35,44 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
   const datosTrimestre = useMemo(() => {
     const inicioTrimestre = new Date(año, (trimestre - 1) * 3, 1);
     const finTrimestre = new Date(año, trimestre * 3, 0);
-    
+
     const facturasTrimestre = invoices.filter(inv => {
       const fecha = new Date(inv.date);
       return fecha >= inicioTrimestre && fecha <= finTrimestre && inv.type === 'Invoice';
     });
-    
+
     const gastosTrimestre = invoices.filter(inv => {
       const fecha = new Date(inv.date);
       return fecha >= inicioTrimestre && fecha <= finTrimestre && inv.type === 'Expense';
     });
 
-    const ingresos = facturasTrimestre.reduce((sum, f) => sum + f.total, 0);
-    const gastos = gastosTrimestre.reduce((sum, g) => sum + g.total, 0);
+    const ingresos = facturasTrimestre.reduce((sum, f) => sum + (f.baseAmountEur || f.total), 0);
+    const gastos = gastosTrimestre.reduce((sum, g) => sum + (g.baseAmountEur || g.total), 0);
     const ivaRepercutido = facturasTrimestre.reduce((sum, f) => sum + (f.ivaAmount || 0), 0);
     const ivaSoportado = gastosTrimestre.reduce((sum, g) => sum + (g.ivaAmount || 0), 0);
 
-    return { facturasTrimestre, gastosTrimestre, ingresos, gastos, ivaRepercutido, ivaSoportado };
+    // Calcular comisiones (diferencia entre lo facturado en EUR y lo recibido en EUR)
+    const comisiones = facturasTrimestre.reduce((sum, f) => {
+      if (f.status === 'Pagada' && f.paymentReceivedEur && f.baseAmountEur) {
+        return sum + Math.max(0, f.baseAmountEur - f.paymentReceivedEur);
+      }
+      return sum;
+    }, 0);
+
+    return { facturasTrimestre, gastosTrimestre, ingresos, gastos, ivaRepercutido, ivaSoportado, comisiones };
   }, [invoices, trimestre, año]);
 
   // Calcular declaraciones
   const declaraciones = useMemo(() => {
     if (!datosTrimestre) return null;
-    
+
     const facturas = datosTrimestre.facturasTrimestre.map(f => ({
       fecha: f.date,
       total: f.total,
       iva: f.ivaAmount || 0,
       tipo: f.type as 'Invoice' | 'Expense'
     }));
-    
+
     const gastos = datosTrimestre.gastosTrimestre.map(g => ({
       fecha: g.date,
       total: g.total,
@@ -97,11 +105,11 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
         fechaVencimiento: fechasVencimiento.modelo130,
         presentada: false,
         datos: tipo === 'MODELO_130' ? declaraciones.modelo130 :
-               tipo === 'MODELO_131' ? declaraciones.modelo131 :
-               declaraciones.modelo303,
+          tipo === 'MODELO_131' ? declaraciones.modelo131 :
+            declaraciones.modelo303,
         resultado: tipo === 'MODELO_130' ? declaraciones.modelo130.resultado :
-                   tipo === 'MODELO_131' ? declaraciones.modelo131.resultado :
-                   declaraciones.modelo303.resultadoLiquido
+          tipo === 'MODELO_131' ? declaraciones.modelo131.resultado :
+            declaraciones.modelo303.resultadoLiquido
       };
 
       await onSave(declaracion);
@@ -178,8 +186,8 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
       </div>
 
       {/* Resumen del Trimestre */}
-      {datosTrimestre && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {datosTrimestre && declaraciones && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Ingresos</p>
             <p className="text-2xl font-bold text-[#1c2938]">€{datosTrimestre.ingresos.toFixed(2)}</p>
@@ -191,12 +199,32 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
             <p className="text-xs text-slate-500 mt-1">{datosTrimestre.gastosTrimestre.length} gastos</p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">IVA Repercutido</p>
-            <p className="text-2xl font-bold text-blue-600">€{datosTrimestre.ivaRepercutido.toFixed(2)}</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Deducciones</p>
+            <p className="text-2xl font-bold text-amber-600">
+              €{(Math.max(0, declaraciones.modelo130.resultado) + Math.max(0, declaraciones.modelo303.resultadoLiquido) + datosTrimestre.comisiones).toFixed(2)}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-1">Impuestos + Comisiones</p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 bg-indigo-50/30">
+            <p className="text-xs font-bold text-indigo-400 uppercase mb-1 flex items-center gap-1">
+              Beneficio Neto <span title="Ingresos - Gastos - Impuestos - Comisiones"><Info className="w-3 h-3 cursor-help" /></span>
+            </p>
+            <p className="text-2xl font-black text-indigo-700">
+              €{(
+                datosTrimestre.ingresos -
+                datosTrimestre.gastos -
+                Math.max(0, declaraciones.modelo130.resultado) -
+                Math.max(0, declaraciones.modelo303.resultadoLiquido) -
+                datosTrimestre.comisiones
+              ).toFixed(2)}
+            </p>
+            <p className="text-xs text-indigo-500 mt-1 font-medium">Tu dinero real</p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">IVA Soportado</p>
-            <p className="text-2xl font-bold text-green-600">€{datosTrimestre.ivaSoportado.toFixed(2)}</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">IVA (303)</p>
+            <p className={`text-2xl font-bold ${getResultadoColor(declaraciones.modelo303.resultadoLiquido)}`}>
+              €{declaraciones.modelo303.resultadoLiquido.toFixed(2)}
+            </p>
           </div>
         </div>
       )}
@@ -211,7 +239,7 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
               <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">IRPF</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">Pago fraccionado IRPF (Estimación Directa)</p>
-            
+
             <div className="space-y-3 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Base Imponible</span>
@@ -254,7 +282,7 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
               <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">IRPF</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">Pago fraccionado IRPF (Actividad Económica)</p>
-            
+
             <div className="space-y-3 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Ingresos</span>
@@ -301,7 +329,7 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
               <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">IVA</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">Declaración trimestral de IVA</p>
-            
+
             <div className="space-y-3 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">IVA Repercutido</span>
