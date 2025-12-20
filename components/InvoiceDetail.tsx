@@ -265,11 +265,11 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        ignoreElements: (element) => {
-          // Ocultar elementos con clase 'print:hidden' o 'no-pdf'
-          return element.classList.contains('no-pdf') ||
-            window.getComputedStyle(element).display === 'none' ||
-            element.closest('.no-pdf') !== null;
+        onclone: (clonedDoc) => {
+          const elementsToHide = clonedDoc.querySelectorAll('.no-pdf');
+          elementsToHide.forEach(el => {
+            (el as HTMLElement).style.display = 'none';
+          });
         }
       });
 
@@ -347,10 +347,11 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
-      ignoreElements: (element) => {
-        return element.classList.contains('no-pdf') ||
-          window.getComputedStyle(element).display === 'none' ||
-          element.closest('.no-pdf') !== null;
+      onclone: (clonedDoc) => {
+        const elementsToHide = clonedDoc.querySelectorAll('.no-pdf');
+        elementsToHide.forEach(el => {
+          (el as HTMLElement).style.display = 'none';
+        });
       }
     });
 
