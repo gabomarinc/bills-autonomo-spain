@@ -346,12 +346,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff',
-      ignoreElements: (element) => {
-        return element.classList.contains('no-pdf') ||
-          window.getComputedStyle(element).display === 'none' ||
-          element.closest('.no-pdf') !== null;
-      }
+      backgroundColor: '#ffffff'
     });
 
     const imgData = canvas.toDataURL('image/png');
@@ -448,10 +443,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   };
 
   const renderModern = () => (
-    <div className="bg-white shadow-xl rounded-none md:rounded-lg overflow-hidden min-h-[800px] flex flex-col relative print:shadow-none pb-12">
+    <div className="bg-white shadow-xl rounded-none md:rounded-lg overflow-hidden min-h-[800px] flex flex-col relative print:shadow-none pb-8">
       <div className="h-4 w-full" style={{ backgroundColor: color }}></div>
-      <div className="p-8 md:p-12 flex-1">
-        <div className="flex justify-between items-start mb-12">
+      <div className="p-6 md:p-10 flex-1">
+        <div className="flex justify-between items-start mb-8">
           <div>
             <div className="flex items-center gap-3 mb-4">
               {logo ? (
@@ -507,11 +502,11 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
           </div>
         </div>
 
-        <div className="mb-12 bg-slate-50 rounded-xl p-8 border border-slate-100">
+        <div className="mb-8 bg-slate-50 rounded-xl p-6 border border-slate-100">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cliente</p>
-          <h3 className="text-2xl font-bold text-[#1c2938]">{invoice.clientName}</h3>
-          {invoice.clientTaxId && <p className="text-slate-600 font-mono text-base mt-1">{invoice.clientTaxId}</p>}
-          {invoice.clientEmail && <p className="text-slate-500 text-sm mt-1">{invoice.clientEmail}</p>}
+          <h3 className="text-xl font-bold text-[#1c2938]">{invoice.clientName}</h3>
+          {invoice.clientTaxId && <p className="text-slate-600 font-mono text-sm mt-1">{invoice.clientTaxId}</p>}
+          {invoice.clientEmail && <p className="text-slate-500 text-xs mt-1">{invoice.clientEmail}</p>}
         </div>
 
         <div className="mb-12">
@@ -527,13 +522,13 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             <tbody className="divide-y divide-slate-50">
               {invoice.items.map((item, idx) => (
                 <tr key={idx}>
-                  <td className="py-5">
-                    <p className="font-medium text-slate-800 text-lg">{item.description}</p>
-                    {item.details && <p className="text-sm text-slate-500 mt-1 whitespace-pre-wrap leading-relaxed">{item.details}</p>}
+                  <td className="py-3">
+                    <p className="font-medium text-slate-800 text-base">{item.description}</p>
+                    {item.details && <p className="text-xs text-slate-500 mt-1 whitespace-pre-wrap leading-relaxed">{item.details}</p>}
                   </td>
-                  <td className="py-5 text-center text-slate-600 align-top pt-6">{item.quantity}</td>
-                  <td className="py-5 text-right text-slate-600 align-top pt-6">€{item.price.toFixed(2)}</td>
-                  <td className="py-5 text-right font-bold text-[#1c2938] text-lg align-top pt-6">€{(item.quantity * item.price).toFixed(2)}</td>
+                  <td className="py-3 text-center text-slate-600 align-top pt-4">{item.quantity}</td>
+                  <td className="py-3 text-right text-slate-600 align-top pt-4">€{item.price.toFixed(2)}</td>
+                  <td className="py-3 text-right font-bold text-[#1c2938] text-base align-top pt-4">€{(item.quantity * item.price).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -568,12 +563,12 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <p className="opacity-90 text-[#1c2938] leading-relaxed">Esta cotización incluye impuestos. Para aprobar, favor de firmar y enviar respuesta a este correo.</p>
               </div>
             ) : (
-              <div className="bg-slate-50 p-6 pb-8 rounded-xl text-slate-700 text-sm">
-                <p className="font-bold mb-2 text-lg">Datos Bancarios</p>
+              <div className="bg-slate-50 p-5 pb-6 rounded-xl text-slate-700 text-xs">
+                <p className="font-bold mb-2 text-base">Datos Bancarios</p>
                 <p className="font-bold text-[#1c2938]">{issuer.legalName || issuer.name}</p>
                 {issuer.bankName && <p className="font-medium text-slate-600">{issuer.bankName}</p>}
-                <p className="font-mono text-base mb-1">
-                  <span className="text-xs font-bold text-slate-400 uppercase mr-1">{issuer.bankAccountType || 'Cuenta'}:</span>
+                <p className="font-mono text-sm mb-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">{issuer.bankAccountType || 'Cuenta'}:</span>
                   {issuer.bankAccount || 'No configurado'}
                 </p>
 
@@ -686,7 +681,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   );
 
   const renderClassic = () => (
-    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-12 md:p-16 border-t-[12px] pb-20" style={{ borderColor: color }}>
+    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-8 md:p-12 border-t-[12px] pb-12" style={{ borderColor: color }}>
       <div className="text-center border-b-4 border-slate-100 pb-8 mb-8">
         <h1 className="text-3xl font-serif font-bold text-slate-800 uppercase tracking-widest mb-1">{issuer.name}</h1>
         {issuer.legalName && <p className="text-slate-600 font-serif font-bold text-sm mb-1">{issuer.legalName}</p>}
@@ -792,7 +787,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
   );
 
   const renderMinimal = () => (
-    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-12 font-sans pb-20">
+    <div className="bg-white shadow-xl min-h-[800px] flex flex-col relative print:shadow-none p-8 font-sans pb-12">
       <div className="flex justify-between items-center mb-16">
         <div className="flex items-center gap-3">
           <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }}></div>
