@@ -1318,16 +1318,16 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">1</div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-[#1c2938] mb-1">Entra en Stripe Developers</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Accede directamente a la sección de Webhooks desde aquí:</p>
+                    <h4 className="font-bold text-[#1c2938] mb-1">Entra en Stripe</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Haz clic en este botón y si ya tienes sesión saldrá directo:</p>
                     <a
                       href="https://dashboard.stripe.com/webhooks"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-[#1c2938] rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#1c2938] text-white rounded-xl text-xs font-bold hover:bg-[#27bea5] transition-colors shadow-sm"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      Abrir Webhooks de Stripe
+                      Abrir Panel de Webhooks
                     </a>
                   </div>
                 </div>
@@ -1335,33 +1335,39 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">2</div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-[#1c2938] mb-1">Añadir Endpoint</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Haz clic en el botón azul <strong>+ Add destination</strong> (o <strong>Add endpoint</strong>) y pega esta URL:</p>
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-[10px] text-slate-600 break-all select-all flex justify-between items-center group">
-                      <span>{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
-                      <button onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
-                        alert.addToast('info', 'URL Copiada', 'Pégala en el dashboard de Stripe.');
-                      }} className="ml-2 p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors bg-white shadow-sm">
-                        <Save className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    <h4 className="font-bold text-[#1c2938] mb-1">Selecciona los Eventos</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Tras pulsar <strong>+ Add destination</strong>, verás la pantalla de eventos:</p>
+                    <ul className="text-xs text-slate-500 space-y-2 list-disc ml-4 font-medium">
+                      <li>Marca la opción <strong>"Your account"</strong>.</li>
+                      <li>En la barra de búsqueda escribe: <code className="bg-slate-100 px-1 rounded text-indigo-600">checkout.session.completed</code></li>
+                      <li>Marca esa casilla y pulsa el botón azul <strong>Continue</strong>.</li>
+                    </ul>
                   </div>
                 </div>
 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">3</div>
-                  <div>
-                    <h4 className="font-bold text-[#1c2938] mb-1">Seleccionar Eventos</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed">Haz clic en <strong>Select events</strong> y selecciona obligatoriamente <code>checkout.session.completed</code>.</p>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-[#1c2938] mb-1">Pega la URL de Kônsul</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">En el campo <strong>Endpoint URL</strong>, pega nuestra dirección:</p>
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-[10px] text-slate-600 break-all select-all flex justify-between items-center group mb-3">
+                      <span>{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
+                      <button onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
+                        alert.addToast('success', 'Copiado', '¡URL lista para pegar!');
+                      }} className="ml-2 p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors bg-white shadow-sm">
+                        <Save className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 font-medium italic">Finalmente pulsa en <strong>Add endpoint</strong> para activar la sincronización.</p>
                   </div>
                 </div>
 
                 <div className="flex gap-6">
-                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                  <div className="flex-shrink-0 w-8 h-8 bg-green-50 text-green-500 rounded-full flex items-center justify-center font-bold text-sm">4</div>
                   <div>
-                    <h4 className="font-bold text-[#1c2938] mb-1">¡Listo!</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed">Guarda el endpoint. Ahora, cada vez que cobres una factura por Stripe, Kônsul la marcará como pagada automáticamente.</p>
+                    <h4 className="font-bold text-[#1c2938] mb-1">¡Todo Listo!</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed">Ahora, cada vez que cobres una factura por Stripe, Kônsul detectará el pago y la marcará como <strong>Pagada</strong> automáticamente.</p>
                   </div>
                 </div>
               </div>
