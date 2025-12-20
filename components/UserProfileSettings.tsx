@@ -47,6 +47,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
     (profile.fiscalConfig?.activitySubcategory ? [profile.fiscalConfig.activitySubcategory] : [])
   );
   const [searchSector, setSearchSector] = useState('');
+  const [showStripeWizard, setShowStripeWizard] = useState(false);
 
   const alert = useAlert();
 
@@ -1084,10 +1085,26 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
               <div className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    <h4 className="font-bold text-[#1c2938] flex items-center gap-2 text-sm uppercase tracking-wider text-slate-400">Configuración de Stripe</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg"
+                          alt="Stripe"
+                          className="h-5 opacity-80"
+                        />
+                        <h4 className="font-bold text-[#1c2938] text-sm uppercase tracking-wider text-slate-400">Configuración de Stripe</h4>
+                      </div>
+                      <button
+                        onClick={() => setShowStripeWizard(true)}
+                        className="text-[#27bea5] hover:text-[#1c2938] text-xs font-bold flex items-center gap-1.5 transition-colors bg-[#27bea5]/5 px-3 py-1.5 rounded-lg border border-[#27bea5]/10"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        ¿Cómo lo hago?
+                      </button>
+                    </div>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Stripe Public Key</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">STRIPE PUBLIC KEY</label>
                         <div className="relative">
                           <Key className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
                           <input
@@ -1101,7 +1118,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Stripe Secret Key</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">STRIPE SECRET KEY</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-300" />
                           <input
@@ -1122,8 +1139,20 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
                       <CheckCircle2 className="w-5 h-5 text-[#27bea5]" /> Webhook URL
                     </h4>
                     <p className="text-sm text-slate-500 mb-4">Configura esta URL en tu dashboard de Stripe para sincronizar cobros automáticamente.</p>
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl font-mono text-xs text-[#1c2938] break-all">
-                      {window.location.origin}/api/webhooks/stripe?uid={profile.id}
+                    <div className="group relative">
+                      <div className="p-4 bg-white border border-slate-200 rounded-xl font-mono text-xs text-[#1c2938] break-all pr-12">
+                        {window.location.origin}/api/webhooks/stripe?uid={profile.id}
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
+                          alert.addToast('success', 'Copiado', 'URL del Webhook lista para Stripe.');
+                        }}
+                        className="absolute right-3 top-2.5 p-2 bg-slate-50 text-[#27bea5] hover:bg-[#27bea5] hover:text-white rounded-lg transition-all"
+                        title="Copiar URL"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1265,6 +1294,82 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
           </div>
         </div>
       )}
+      {/* Stripe Setup Wizard Modal */}
+      {showStripeWizard && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-[#1c2938]/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white rounded-2xl shadow-sm text-indigo-500">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#1c2938]">Configurar Sincronización</h3>
+                  <p className="text-slate-500 text-sm">Sigue estos pasos para conectar Stripe con Kônsul.</p>
+                </div>
+              </div>
+              <button onClick={() => setShowStripeWizard(false)} className="p-3 bg-white text-slate-400 hover:text-slate-600 rounded-2xl transition-all shadow-sm">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-8">
+              <div className="space-y-6">
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                  <div>
+                    <h4 className="font-bold text-[#1c2938] mb-1">Entra en Stripe Developers</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed">Accede a tu dashboard de Stripe y ve a la sección <strong>Developers {'>'} Webhooks</strong>.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-[#1c2938] mb-1">Añadir Endpoint</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-3">Haz clic en <strong>Add endpoint</strong> y pega la URL que aparece en la configuración:</p>
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-[10px] text-slate-600 break-all select-all flex justify-between items-center">
+                      <span>{window.location.origin}/api/webhooks/stripe?uid={profile.id}</span>
+                      <button onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/stripe?uid=${profile.id}`);
+                        alert.addToast('info', 'URL Copiada', 'Pégala en el dashboard de Stripe.');
+                      }} className="ml-2 p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors">
+                        <Save className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                  <div>
+                    <h4 className="font-bold text-[#1c2938] mb-1">Seleccionar Eventos</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed">Haz clic en <strong>Select events</strong> y selecciona obligatoriamente <code>checkout.session.completed</code>.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                  <div>
+                    <h4 className="font-bold text-[#1c2938] mb-1">¡Listo!</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed">Guarda el endpoint. Ahora, cada vez que cobres una factura por Stripe, Kônsul la marcará como pagada automáticamente.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-50 flex justify-end">
+                <button
+                  onClick={() => setShowStripeWizard(false)}
+                  className="px-8 py-3 bg-[#1c2938] text-white rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-lg shadow-[#1c2938]/10"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
