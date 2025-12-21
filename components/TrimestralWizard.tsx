@@ -196,7 +196,7 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
                 <Brain className="w-4 h-4" />
                 <span>CFO Virtual</span>
               </div>
-              <h2 className="text-3xl font-black">Tu dinero limpio</h2>
+              <h2 className="text-3xl font-black">Tu Dinero Limpio</h2>
               <p className="text-slate-400 text-sm max-w-sm">
                 Esto es lo que realmente te queda en el bolsillo tras apartar lo que es para Hacienda y pagar tus gastos y comisiones.
               </p>
