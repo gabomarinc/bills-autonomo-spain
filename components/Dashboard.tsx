@@ -394,8 +394,8 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
 
                   {/* Tab Switcher */}
                   <div className="flex justify-between items-center mb-6">
-                     <h3 className="text-sm font-bold text-[#1c2938] uppercase tracking-wider flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-slate-400" /> Estado
+                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5" /> Estado
                      </h3>
 
                      <div className="bg-slate-100 p-1 rounded-xl flex items-center relative">
