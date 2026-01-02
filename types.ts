@@ -132,6 +132,7 @@ export interface SpanishFiscalConfig {
   baseCotizacionSS?: number; // Base de cotización Seguridad Social
   bonificacionReduccion?: 'TARIFA_PLANA' | 'REDUCCION_50' | 'REDUCCION_25' | 'NINGUNA';
   tipoReduccion?: 'TARIFA_PLANA' | 'REDUCCION_50' | 'REDUCCION_25' | 'NINGUNA';
+  ingresosReales?: number; // Ingresos netos mensuales estimados (Nuevo 2026)
   ivaRegimen?: 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO';
   prorrateoIVA?: boolean; // Si tiene actividad mixta
   porcentajeProrrateo?: number; // % de actividad sujeta a IVA

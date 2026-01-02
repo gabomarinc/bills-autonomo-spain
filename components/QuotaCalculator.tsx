@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calculator, Calendar, TrendingUp, AlertCircle, CheckCircle2,
-  Euro, Info, Save, Loader2, ChevronRight, Clock, Wallet, ShieldPercent, ArrowRight
+  Euro, Info, Save, Loader2, ChevronRight, Clock, Wallet, Shield, ArrowRight
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import {
@@ -304,7 +304,7 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
           {/* Desglose de la Cuota (Universal) */}
           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
             <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-2">
-              <ShieldPercent className="w-6 h-6 text-[#27bea5]" />
+              <Shield className="w-6 h-6 text-[#27bea5]" />
               Desglose de la Cuota
             </h3>
 
