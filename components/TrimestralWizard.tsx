@@ -366,9 +366,7 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
             <button
               // ... existing button code
               onClick={() => setShowExplainModal('MODELO_130')}
-              className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
-                         hover:bg-[#27bea5]/10 p-1.5 rounded-full
-                         hover:shadow-[0_0_10px_rgba(39,190,165,0.3)] active:scale-95"
+              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
               title="¿Qué es esto?"
             >
               <Info className="w-5 h-5" />
@@ -437,9 +435,7 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
 
               <button
                 onClick={() => setShowExplainModal('MODELO_131')}
-                className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
-                         hover:bg-[#27bea5]/10 p-1.5 rounded-full
-                         hover:shadow-[0_0_10px_rgba(39,190,165,0.3)] active:scale-95"
+                className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
                 title="¿Qué es esto?"
               >
                 <Info className="w-5 h-5" />
@@ -503,9 +499,7 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
             <button
               onClick={() => setShowExplainModal('MODELO_303')}
-              className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
-                         hover:bg-[#27bea5]/10 p-1.5 rounded-full
-                         hover:shadow-[0_0_10px_rgba(39,190,165,0.3)] active:scale-95"
+              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
               title="¿Qué es esto?"
             >
               <Info className="w-5 h-5" />
