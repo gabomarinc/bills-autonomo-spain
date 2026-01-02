@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Calculator, Calendar, TrendingUp, AlertCircle, CheckCircle2, 
-  Euro, Info, Save, Loader2, ChevronRight, Clock
+import {
+  Calculator, Calendar, TrendingUp, AlertCircle, CheckCircle2,
+  Euro, Info, Save, Loader2, ChevronRight, Clock, Wallet, ShieldPercent, ArrowRight
 } from 'lucide-react';
-import { UserProfile, AutonomoQuotaConfig } from '../types';
-import { calcularCuotaAutonomo, obtenerHistorialCuotas, aplicaTarifaPlana } from '../services/seguridadSocialService';
+import { UserProfile } from '../types';
+import {
+  calcularCuotaAutonomo,
+  obtenerHistorialCuotas,
+  aplicaTarifaPlana,
+  TRAMOS_2026,
+  obtenerTramoPorIngresos,
+  TIPOS_COTIZACION_2026
+} from '../services/seguridadSocialService';
 import { useAlert } from './AlertSystem';
 
 interface QuotaCalculatorProps {
@@ -14,9 +21,18 @@ interface QuotaCalculatorProps {
 
 const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdateProfile }) => {
   const alert = useAlert();
-  const [baseCotizacion, setBaseCotizacion] = useState(1134.0); // Base mínima 2024
+
+  // Modos: TARIFA_PLANA (Simpificado) o INGRESOS_REALES (2026)
+  const [calcMode, setCalcMode] = useState<'TARIFA_PLANA' | 'INGRESOS_REALES'>('TARIFA_PLANA');
+
+  const [baseCotizacion, setBaseCotizacion] = useState(0);
   const [fechaAlta, setFechaAlta] = useState(new Date().toISOString().split('T')[0]);
   const [tipoReduccion, setTipoReduccion] = useState<'TARIFA_PLANA' | 'REDUCCION_50' | 'REDUCCION_25' | 'NINGUNA'>('NINGUNA');
+
+  // Nuevos estados para Ingresos Reales
+  const [ingresosNetos, setIngresosNetos] = useState<number>(0);
+  const [tramoSeleccionado, setTramoSeleccionado] = useState(TRAMOS_2026[0]);
+
   const [isSaving, setIsSaving] = useState(false);
 
   // Cargar configuración existente
@@ -24,45 +40,76 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
     const config = currentUser.fiscalConfig;
     if (config?.fechaAltaAutonomo) {
       setFechaAlta(config.fechaAltaAutonomo);
+
+      // Determinar modo inicial basado en configuración guardada
+      if (aplicaTarifaPlana(config.fechaAltaAutonomo) && config.tipoReduccion === 'TARIFA_PLANA') {
+        setCalcMode('TARIFA_PLANA');
+        setTipoReduccion('TARIFA_PLANA');
+      } else {
+        setCalcMode('INGRESOS_REALES');
+        setTipoReduccion(config.tipoReduccion || 'NINGUNA');
+      }
     }
+
     if (config?.baseCotizacionSS) {
       setBaseCotizacion(config.baseCotizacionSS);
+    } else {
+      // Default si no hay base
+      setBaseCotizacion(950.98); // Base provisional común
     }
-    if (config?.tipoReduccion) {
-      setTipoReduccion(config.tipoReduccion);
+
+    if (config?.ingresosReales) {
+      setIngresosNetos(config.ingresosReales);
+      const tramo = obtenerTramoPorIngresos(config.ingresosReales);
+      if (tramo) setTramoSeleccionado(tramo);
     }
   }, [currentUser]);
 
+  // Manejar cambio de ingresos
+  const handleIngresosChange = (valor: number) => {
+    setIngresosNetos(valor);
+    const nuevoTramo = obtenerTramoPorIngresos(valor);
+    if (nuevoTramo) {
+      setTramoSeleccionado(nuevoTramo);
+      // Si la base actual está fuera del nuevo rango, ajustarla al mínimo del tramo
+      if (baseCotizacion < nuevoTramo.baseMin || baseCotizacion > nuevoTramo.baseMax) {
+        setBaseCotizacion(nuevoTramo.baseMin);
+      }
+    }
+  };
+
+  // Switch de modo
+  const toggleMode = (mode: 'TARIFA_PLANA' | 'INGRESOS_REALES') => {
+    setCalcMode(mode);
+    if (mode === 'TARIFA_PLANA') {
+      setTipoReduccion('TARIFA_PLANA');
+    } else {
+      setTipoReduccion('NINGUNA');
+      // Si no tenemos ingresos definidos, poner un default
+      if (ingresosNetos === 0) handleIngresosChange(1500);
+    }
+  };
+
   // Calcular cuota actual
   const cuotaActual = useMemo(() => {
-    const tieneBonificacion = aplicaTarifaPlana(fechaAlta) && tipoReduccion === 'TARIFA_PLANA';
-    return calcularCuotaAutonomo(baseCotizacion, tieneBonificacion, tipoReduccion);
-  }, [baseCotizacion, fechaAlta, tipoReduccion]);
+    const tieneBonificacion = aplicaTarifaPlana(fechaAlta) && calcMode === 'TARIFA_PLANA';
+    // Forzar tipo reducción según modo visual
+    const reduccionEfectiva = calcMode === 'TARIFA_PLANA' ? 'TARIFA_PLANA' : tipoReduccion;
+
+    return calcularCuotaAutonomo(baseCotizacion, tieneBonificacion, reduccionEfectiva);
+  }, [baseCotizacion, fechaAlta, tipoReduccion, calcMode]);
 
   // Calcular total anual
   const totalAnual = useMemo(() => {
     return cuotaActual.cuotaMensual * 12;
   }, [cuotaActual]);
 
-  // Historial del año actual
-  const historialAnual = useMemo(() => {
-    const año = new Date().getFullYear();
-    const inicioAño = `${año}-01-01`;
-    const finAño = `${año}-12-31`;
-    return obtenerHistorialCuotas(inicioAño, finAño, {
-      baseCotizacion,
-      fechaAlta,
-      bonificacionReduccion: aplicaTarifaPlana(fechaAlta) && tipoReduccion === 'TARIFA_PLANA',
-      tipoReduccion
-    });
-  }, [baseCotizacion, fechaAlta, tipoReduccion]);
-
   const handleSave = async () => {
     if (!onUpdateProfile) {
       alert.addToast('error', 'Error', 'No se puede guardar: función de actualización no disponible.');
       return;
     }
-    
+
     setIsSaving(true);
     try {
       const updated = {
@@ -75,8 +122,9 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
           actividadPrincipal: currentUser.fiscalConfig?.actividadPrincipal || '',
           baseCotizacionSS: baseCotizacion,
           fechaAltaAutonomo: fechaAlta,
-          tipoReduccion,
-          bonificacionReduccion: (aplicaTarifaPlana(fechaAlta) && tipoReduccion === 'TARIFA_PLANA') ? 'TARIFA_PLANA' : tipoReduccion
+          tipoReduccion: calcMode === 'TARIFA_PLANA' ? 'TARIFA_PLANA' : tipoReduccion,
+          bonificacionReduccion: (aplicaTarifaPlana(fechaAlta) && calcMode === 'TARIFA_PLANA') ? 'TARIFA_PLANA' : tipoReduccion,
+          ingresosReales: ingresosNetos // Guardar ingresos estimados
         }
       };
       await onUpdateProfile(updated);
@@ -89,9 +137,6 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
     }
   };
 
-  const mesActual = new Date().getMonth() + 1;
-  const añoActual = new Date().getFullYear();
-
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in pb-12">
       {/* Header */}
@@ -99,9 +144,9 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
         <div>
           <h1 className="text-3xl font-bold text-[#1c2938] tracking-tight flex items-center gap-3">
             <Calculator className="w-8 h-8 text-[#27bea5]" />
-            Calculadora de Cuotas
+            Calculadora de Cuotas 2026
           </h1>
-          <p className="text-slate-500 mt-1 text-lg font-light">Gestiona tus cuotas de autónomo de Seguridad Social</p>
+          <p className="text-slate-500 mt-1 text-lg font-light">Calcula tu cuota exacta según ingresos reales o tarifa plana</p>
         </div>
         <button
           onClick={handleSave}
@@ -112,122 +157,208 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
         </button>
       </div>
 
+      {/* Mode Selector */}
+      <div className="flex p-1 bg-slate-100 rounded-2xl w-fit">
+        <button
+          onClick={() => toggleMode('TARIFA_PLANA')}
+          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${calcMode === 'TARIFA_PLANA' ? 'bg-white text-[#27bea5] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Tarifa Plana (Nuevo Autónomo)
+        </button>
+        <button
+          onClick={() => toggleMode('INGRESOS_REALES')}
+          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${calcMode === 'INGRESOS_REALES' ? 'bg-white text-[#27bea5] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Cotización por Ingresos Reales
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT: Configuración */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
-            <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-[#27bea5]" />
-              Configuración
-            </h3>
 
-            <div className="space-y-6">
-              {/* Base de Cotización */}
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  Base de Cotización (€/mes)
-                </label>
-                <div className="relative">
-                  <Euro className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+          {/* SECCIÓN TARIFA PLANA */}
+          {calcMode === 'TARIFA_PLANA' && (
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 animate-in fade-in slide-in-from-left-4">
+              <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-[#27bea5]" />
+                Datos de Alta
+              </h3>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                    Fecha de Alta como Autónomo
+                  </label>
                   <input
-                    type="number"
-                    min="1134"
-                    max="4507.2"
-                    step="0.01"
-                    value={baseCotizacion || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Permitir campo vacío temporalmente
-                      if (value === '') {
-                        setBaseCotizacion(0);
-                        return;
-                      }
-                      const numValue = parseFloat(value);
-                      if (!isNaN(numValue)) {
-                        setBaseCotizacion(numValue);
-                      }
-                    }}
-                    onBlur={(e) => {
-                      // Si está vacío o es menor al mínimo, establecer el mínimo
-                      const value = parseFloat(e.target.value);
-                      if (!value || isNaN(value) || value < 1134) {
-                        setBaseCotizacion(1134);
-                      } else if (value > 4507.2) {
-                        setBaseCotizacion(4507.2);
-                      }
-                    }}
-                    className="w-full pl-12 p-3 border border-slate-200 rounded-xl font-bold text-[#1c2938] outline-none focus:ring-2 focus:ring-[#27bea5]"
+                    type="date"
+                    value={fechaAlta}
+                    onChange={(e) => setFechaAlta(e.target.value)}
+                    className="w-full p-3 border border-slate-200 rounded-xl font-bold text-[#1c2938] outline-none focus:ring-2 focus:ring-[#27bea5]"
                   />
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Mínima: €1,134.00 | Máxima: €4,507.20 (2024)
-                </p>
-              </div>
-
-              {/* Fecha de Alta */}
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  Fecha de Alta como Autónomo
-                </label>
-                <input
-                  type="date"
-                  value={fechaAlta}
-                  onChange={(e) => setFechaAlta(e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-xl font-bold text-[#1c2938] outline-none focus:ring-2 focus:ring-[#27bea5]"
-                />
-                {aplicaTarifaPlana(fechaAlta) && (
-                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-bold text-green-800">Tarifa Plana Disponible</p>
-                      <p className="text-xs text-green-600">Aplicable durante los primeros 12 meses desde el alta</p>
+                  {aplicaTarifaPlana(fechaAlta) ? (
+                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl flex items-start gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-green-800">Tarifa Plana Disponible</p>
+                        <p className="text-xs text-green-600">Aplicable durante los primeros 12 meses (Extendible a 24 si < SMI)</p>
+                      </div>
                     </div>
+                  ) : (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-amber-800">Periodo de Tarifa Plana Finalizado</p>
+                        <p className="text-xs text-amber-600">Considera cambiar al modo "Ingresos Reales".</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {aplicaTarifaPlana(fechaAlta) && (
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[#1c2938]">Cuota Fija 2026</span>
+                      <span className="font-black text-2xl text-[#27bea5]">€88.56<span className="text-sm text-slate-400 font-medium">/mes</span></span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Incluye la cuota base de 80,00€ más el Mecanismo de Equidad Intergeneracional (MEI) del 0,9%.
+                    </p>
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Tipo de Reducción */}
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  Bonificación / Reducción
-                </label>
-                <select
-                  value={tipoReduccion}
-                  onChange={(e) => setTipoReduccion(e.target.value as any)}
-                  className="w-full p-3 border border-slate-200 rounded-xl font-bold text-[#1c2938] outline-none focus:ring-2 focus:ring-[#27bea5]"
-                >
-                  <option value="NINGUNA">Ninguna</option>
-                  <option value="TARIFA_PLANA">Tarifa Plana (€80/mes primeros 12 meses)</option>
-                  <option value="REDUCCION_50">Reducción 50%</option>
-                  <option value="REDUCCION_25">Reducción 25%</option>
-                </select>
+          {/* SECCIÓN INGRESOS REALES */}
+          {calcMode === 'INGRESOS_REALES' && (
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50 animate-in fade-in slide-in-from-right-4">
+              <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-2">
+                <Wallet className="w-6 h-6 text-[#27bea5]" />
+                Ingresos Reales 2026
+              </h3>
+
+              <div className="space-y-8">
+                {/* Selector de Ingresos */}
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                    ¿Qué ingresos netos mensuales esperas obtener?
+                  </label>
+                  <p className="text-xs text-slate-400 mb-3">(Ingresos - Gastos deducibles)</p>
+
+                  <select
+                    value={tramoSeleccionado.id}
+                    onChange={(e) => {
+                      const tramo = TRAMOS_2026.find(t => t.id === Number(e.target.value));
+                      if (tramo) handleIngresosChange(tramo.min + 1); // Setear valor seguro dentro del tramo
+                    }}
+                    className="w-full p-4 bg-white border border-slate-200 rounded-xl font-bold text-[#1c2938] outline-none focus:ring-2 focus:ring-[#27bea5] shadow-sm appearance-none"
+                  >
+                    {TRAMOS_2026.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.max > 50000
+                          ? `Más de €${t.min.toLocaleString()}/mes`
+                          : `De €${t.min.toLocaleString()} a €${t.max.toLocaleString()}/mes`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Slider de Base de Cotización */}
+                <div>
+                  <div className="flex justify-between items-end mb-4">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                      Elige tu base de cotización
+                    </label>
+                    <div className="text-right">
+                      <span className="text-2xl font-black text-[#1c2938]">€{baseCotizacion.toFixed(2)}</span>
+                      <span className="text-xs text-slate-400 font-bold ml-1">/mes</span>
+                    </div>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={tramoSeleccionado.baseMin}
+                    max={tramoSeleccionado.baseMax}
+                    step="0.01"
+                    value={baseCotizacion}
+                    onChange={(e) => setBaseCotizacion(parseFloat(e.target.value))}
+                    className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#27bea5]"
+                  />
+                  <div className="flex justify-between mt-2 text-xs font-bold text-slate-400">
+                    <span>Min: €{tramoSeleccionado.baseMin.toFixed(2)}</span>
+                    <span>Max: €{tramoSeleccionado.baseMax.toLocaleString()}</span>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded-xl flex items-start gap-2">
+                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <p>
+                      Tu cuota variará entre <strong>€{(tramoSeleccionado.baseMin * (TIPOS_COTIZACION_2026.total / 100)).toFixed(2)}</strong> y <strong>€{(tramoSeleccionado.baseMax * (TIPOS_COTIZACION_2026.total / 100)).toFixed(2)}</strong> dependiendo de la base elegida. Una base mayor implica mejores prestaciones futuras (pensión, baja, etc).
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Desglose de la Cuota */}
+          {/* Desglose de la Cuota (Universal) */}
           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
             <h3 className="text-xl font-bold text-[#1c2938] mb-6 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-[#27bea5]" />
-              Desglose Mensual
+              <ShieldPercent className="w-6 h-6 text-[#27bea5]" />
+              Desglose de la Cuota
             </h3>
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
-                <span className="text-sm font-bold text-slate-600">Contingencias Comunes</span>
-                <span className="text-lg font-bold text-[#1c2938]">€{cuotaActual.desglose.contingenciasComunes.toFixed(2)}</span>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-700">Contingencias Comunes</span>
+                  <span className="text-[10px] text-slate-400">Enfermedad común, maternidad, jubilación ({calcMode === 'TARIFA_PLANA' ? 'Incluido' : '28.3%'})</span>
+                </div>
+                <span className="text-base font-bold text-[#1c2938]">€{cuotaActual.desglose.contingenciasComunes.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
-                <span className="text-sm font-bold text-slate-600">Desempleo</span>
-                <span className="text-lg font-bold text-[#1c2938]">€{cuotaActual.desglose.desempleo.toFixed(2)}</span>
+
+              {calcMode === 'INGRESOS_REALES' && (
+                <>
+                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-700">Contingencias Profesionales</span>
+                      <span className="text-[10px] text-slate-400">Accidente laboral, enfermedad profesional (1.3%)</span>
+                    </div>
+                    <span className="text-base font-bold text-[#1c2938]">€{cuotaActual.desglose.contingenciasProfesionales?.toFixed(2) || '0.00'}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-700">Cese de Actividad</span>
+                      <span className="text-[10px] text-slate-400">Paro del autónomo (0.9%)</span>
+                    </div>
+                    <span className="text-base font-bold text-[#1c2938]">€{cuotaActual.desglose.desempleo.toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-700">Formación Profesional</span>
+                      <span className="text-[10px] text-slate-400">Acceso a formación (0.1%)</span>
+                    </div>
+                    <span className="text-base font-bold text-[#1c2938]">€{cuotaActual.desglose.formacionProfesional.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-between items-center p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-indigo-900">Mecanismo Equidad (MEI)</span>
+                  <span className="text-[10px] text-indigo-700/70">Solidaridad intergeneracional pensiones (0.9%)</span>
+                </div>
+                <span className="text-base font-bold text-indigo-700">€{cuotaActual.desglose.mei?.toFixed(2) || '0.00'}</span>
               </div>
-              <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
-                <span className="text-sm font-bold text-slate-600">Formación Profesional</span>
-                <span className="text-lg font-bold text-[#1c2938]">€{cuotaActual.desglose.formacionProfesional.toFixed(2)}</span>
-              </div>
-              <div className="pt-4 border-t-2 border-slate-200 flex justify-between items-center">
-                <span className="text-xl font-bold text-[#1c2938]">Total Mensual</span>
-                <span className="text-3xl font-black text-[#27bea5]">€{cuotaActual.cuotaMensual.toFixed(2)}</span>
+
+              <div className="pt-4 border-t-2 border-slate-100 flex justify-between items-end mt-4">
+                <span className="text-lg font-bold text-[#1c2938]">Total Mensual</span>
+                <div className="text-right">
+                  <span className="text-4xl font-black text-[#27bea5] tracking-tighter">€{cuotaActual.cuotaMensual.toFixed(2)}</span>
+                  <div className="text-xs text-slate-400 font-medium mt-1">Base de cálculo: €{cuotaActual.baseActual.toFixed(2)}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -236,18 +367,22 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
         {/* RIGHT: Resumen y Proyección */}
         <div className="space-y-6">
           {/* Resumen Card */}
-          <div className="bg-gradient-to-br from-[#1c2938] to-[#27bea5] p-6 rounded-[2rem] text-white shadow-xl">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <div className="bg-gradient-to-br from-[#1c2938] to-[#27bea5] p-6 rounded-[2rem] text-white shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity"></div>
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 relative z-10">
               <Info className="w-5 h-5" />
-              Resumen Anual
+              Resumen Anual 2026
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 relative z-10">
               <div className="flex justify-between items-center">
                 <span className="text-slate-200 text-sm">Cuota Mensual</span>
                 <span className="text-xl font-bold">€{cuotaActual.cuotaMensual.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-white/20">
-                <span className="text-slate-200 text-sm font-bold">Total Anual</span>
+                <div className="flex flex-col">
+                  <span className="text-slate-200 text-sm font-bold">Total Anual Estimado</span>
+                  <span className="text-[10px] text-white/50">12 mensualidades</span>
+                </div>
                 <span className="text-2xl font-black">€{totalAnual.toFixed(2)}</span>
               </div>
             </div>
@@ -260,8 +395,8 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
               Próximo Vencimiento
             </h4>
             <p className="text-2xl font-bold text-[#1c2938]">
-              {new Date(cuotaActual.fechaVencimiento).toLocaleDateString('es-ES', { 
-                day: 'numeric', 
+              {new Date(cuotaActual.fechaVencimiento).toLocaleDateString('es-ES', {
+                day: 'numeric',
                 month: 'long',
                 year: 'numeric'
               })}
@@ -269,24 +404,25 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
             <p className="text-sm text-slate-500 mt-1">Primer día del mes siguiente</p>
           </div>
 
-          {/* Historial del Año */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
-            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
-              Historial {añoActual}
-            </h4>
-            <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
-              {historialAnual.map((cuota, idx) => {
-                if (!cuota.mes) return null;
-                const mesNombre = new Date(2024, cuota.mes - 1, 1).toLocaleDateString('es-ES', { month: 'long' });
-                return (
-                  <div key={idx} className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
-                    <span className="text-xs font-bold text-slate-600 capitalize">{mesNombre}</span>
-                    <span className="text-sm font-bold text-[#1c2938]">€{cuota.cuotaMensual.toFixed(2)}</span>
-                  </div>
-                );
-              })}
+          {/* Info del Tramo Actual (Solo Ingresos Reales) */}
+          {calcMode === 'INGRESOS_REALES' && tramoSeleccionado && (
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
+              <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
+                Tramo Aplicable
+              </h4>
+              <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Ingresos:</span>
+                  <span className="font-bold text-[#1c2938]">€{tramoSeleccionado.min} - €{tramoSeleccionado.max}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Base Mínima:</span>
+                  <span className="font-bold text-[#1c2938]">€{tramoSeleccionado.baseMin}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
         </div>
       </div>
     </div>
@@ -294,4 +430,3 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
 };
 
 export default QuotaCalculator;
-
