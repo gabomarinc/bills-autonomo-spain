@@ -440,7 +440,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
     if (docType === 'Invoice' && showIrpfRetention && irpfRetention > 0) {
       // IRPF se calcula sobre la base imponible (sin IVA)
       irpfRetentionAmount = taxableBase * (irpfRetention / 100);
-      setIrpfAmount(irpfRetentionAmount);
+      // setIrpfAmount was causing infinite loop - removed
     }
 
     // Total = Base + IVA - Retención IRPF
