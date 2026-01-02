@@ -520,6 +520,9 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
         </div>
       )}
 
+      {/* Renderizar Modal */}
+      <ExplainModal />
+
       {!declaraciones && (
         <div className="bg-white p-12 rounded-2xl shadow-sm border border-slate-50 text-center">
           <Calculator className="w-16 h-16 text-slate-300 mx-auto mb-4" />
