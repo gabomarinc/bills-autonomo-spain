@@ -201,7 +201,7 @@ const QuotaCalculator: React.FC<QuotaCalculatorProps> = ({ currentUser, onUpdate
                       <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-bold text-green-800">Tarifa Plana Disponible</p>
-                        <p className="text-xs text-green-600">Aplicable durante los primeros 12 meses (Extendible a 24 si < SMI)</p>
+                        <p className="text-xs text-green-600">Aplicable durante los primeros 12 meses (Extendible a 24 si &lt; SMI)</p>
                       </div>
                     </div>
                   ) : (
