@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FileText, Calendar, Calculator, CheckCircle2, AlertTriangle,
   Download, Save, Loader2, ChevronRight, TrendingUp, TrendingDown,
@@ -141,8 +142,6 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
     if (resultado < 0) return <TrendingDown className="w-5 h-5" />;
     return null;
   };
-
-  import { createPortal } from 'react-dom';
 
   // --- ELI5 Explanations ---
   const [showExplainModal, setShowExplainModal] = useState<'MODELO_130' | 'MODELO_131' | 'MODELO_303' | null>(null);
