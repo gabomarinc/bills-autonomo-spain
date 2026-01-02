@@ -323,10 +323,17 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
       {declaraciones && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Modelo 130 */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
+            <button
+              onClick={() => setShowExplainModal('MODELO_130')}
+              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
+              title="¿Qué es esto?"
+            >
+              <Info className="w-5 h-5" />
+            </button>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[#1c2938]">Modelo 130</h3>
-              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">IRPF</span>
+              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded mr-6">IRPF</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">Pago fraccionado IRPF (Estimación Directa)</p>
 
@@ -383,10 +390,17 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
           </div>
 
           {/* Modelo 131 */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
+            <button
+              onClick={() => setShowExplainModal('MODELO_131')}
+              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
+              title="¿Qué es esto?"
+            >
+              <Info className="w-5 h-5" />
+            </button>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[#1c2938]">Modelo 131</h3>
-              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">IRPF</span>
+              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded mr-6">IRPF</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">Pago fraccionado IRPF (Actividad Económica)</p>
 
@@ -439,10 +453,17 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
           </div>
 
           {/* Modelo 303 */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
+            <button
+              onClick={() => setShowExplainModal('MODELO_303')}
+              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
+              title="¿Qué es esto?"
+            >
+              <Info className="w-5 h-5" />
+            </button>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[#1c2938]">Modelo 303</h3>
-              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">IVA</span>
+              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded mr-6">IVA</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">Declaración trimestral de IVA</p>
 
