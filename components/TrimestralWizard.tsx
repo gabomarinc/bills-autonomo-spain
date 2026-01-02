@@ -142,6 +142,67 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
     return null;
   };
 
+  // --- ELI5 Explanations ---
+  const [showExplainModal, setShowExplainModal] = useState<'MODELO_130' | 'MODELO_131' | 'MODELO_303' | null>(null);
+
+  const getExplanation = (model: 'MODELO_130' | 'MODELO_131' | 'MODELO_303') => {
+    if (model === 'MODELO_130') {
+      return {
+        title: '¿Qué es el Modelo 130?',
+        emoji: '🐷',
+        text: 'Imagina que tienes una hucha. Cada vez que ganas dinero (beneficio), Hacienda quiere que guardes un trocito (el 20%) en esa hucha. Cada 3 meses, le das esa hucha a Hacienda. Es como un adelanto de lo que tendrás que pagar al año que viene en la Declaración de la Renta.'
+      };
+    }
+    if (model === 'MODELO_131') {
+      return {
+        title: '¿Qué es el Modelo 131?',
+        emoji: '📏',
+        text: 'Aquí Hacienda no mira cuánto ganas realmente. Ellos han calculado (por el tamaño de tu local, luz que gastas, etc.) cuánto "deberías" ganar. Pagas una cantidad fija cada trimestre, ganes mucho o poco. Es como una tarifa plana.'
+      };
+    }
+    return {
+      title: '¿Qué es el Modelo 303?',
+      emoji: '🤝',
+      text: 'Tú eres un recaudador del Rey. Cuando cobras una factura con IVA, ese dinero extra NO es tuyo, es del Rey (Hacienda). Tú solo lo guardas. Cada 3 meses, tienes que darle al Rey todo el dinero que has guardado pa él. Si tú también has pagado IVA comprando cosas, eso se resta y le das menos.'
+    };
+  };
+
+  const ExplainModal = () => {
+    if (!showExplainModal) return null;
+    const content = getExplanation(showExplainModal);
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowExplainModal(null)}>
+        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-4xl bg-slate-100 p-3 rounded-2xl">{content.emoji}</span>
+              <h3 className="text-2xl font-black text-[#1c2938] leading-tight">{content.title}</h3>
+            </div>
+            <button onClick={() => setShowExplainModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+              <X className="w-6 h-6 text-slate-400" />
+            </button>
+          </div>
+
+          <div className="bg-[#eef2ff] p-5 rounded-2xl border border-[#c7d2fe] mb-6">
+            <p className="text-[#3730a3] text-lg leading-relaxed font-medium">
+              "{content.text}"
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowExplainModal(null)}
+              className="px-6 py-3 bg-[#1c2938] text-white rounded-xl font-bold hover:bg-[#2c3e50] transition-colors"
+            >
+              ¡Entendido!
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in pb-12">
       {/* Header */}
