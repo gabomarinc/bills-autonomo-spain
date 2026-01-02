@@ -413,15 +413,28 @@ export const getExchangeRateForInvoiceDate = async (
       [normalizedCurrency, invoiceDate]
     );
 
+    let storedRate: ExchangeRate | null = null;
+    let shouldUseStored = false;
+
     if (dbResult.rows.length > 0) {
       const row = dbResult.rows[0];
-      await client.end();
-      // Asegurar que rate_date sea siempre un string
+      const rateDate = new Date(row.rate_date);
+      const targetDate = new Date(invoiceDate);
+
+      // Calculate difference in days between invoice date and found rate date
+      const diffTime = Math.abs(targetDate.getTime() - rateDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // If the stored rate is close enough (<= 5 days), we trust it.
+      if (diffDays <= 5) {
+        shouldUseStored = true;
+      }
+
       const rateDateString = row.rate_date instanceof Date
         ? row.rate_date.toISOString().split('T')[0]
         : (typeof row.rate_date === 'string' ? row.rate_date : new Date().toISOString().split('T')[0]);
 
-      return {
+      storedRate = {
         id: row.id,
         currency: row.currency,
         rateToEur: parseFloat(row.rate_to_eur),
@@ -429,6 +442,34 @@ export const getExchangeRateForInvoiceDate = async (
         source: row.source || 'BCE',
         createdAt: row.created_at
       };
+    }
+
+    if (shouldUseStored && storedRate) {
+      await client.end();
+      return storedRate;
+    }
+
+    // If we are here, either DB is empty OR the data found is too old compared to invoice date.
+    // Try to fetch fresh data for the specific invoice date.
+    const fetchedRate = await fetchExchangeRateFromAPI(normalizedCurrency, invoiceDate);
+
+    if (fetchedRate) {
+      // Guardar en BD
+      await client.query(
+        `INSERT INTO exchange_rates (currency, rate_to_eur, rate_date, source) 
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (currency, rate_date) DO NOTHING`,
+        [normalizedCurrency, fetchedRate.rateToEur, fetchedRate.rateDate, fetchedRate.source]
+      );
+      await client.end();
+      return fetchedRate;
+    }
+
+    // Only fallback to the Stored Rate (even if old) if API fetch completely failed
+    if (storedRate) {
+      console.warn(`Falling back to old stored rate (${storedRate.rateDate}) for ${invoiceDate} as API failed.`);
+      await client.end();
+      return storedRate;
     }
 
     // Si no hay en BD, intentar obtener vía API route
