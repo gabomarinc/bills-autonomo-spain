@@ -227,6 +227,21 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
     );
   };
 
+
+  // Determine if Modelo 131 should be shown based on Fiscal Profile
+  // Hide if Estimación Directa (GENERAL or SIMPLIFICADO)
+  const shouldShowModelo131 = useMemo(() => {
+    const regimen = currentUser.fiscalConfig?.regimenFiscal;
+    if (regimen === 'GENERAL' || regimen === 'SIMPLIFICADO') {
+      return false;
+    }
+    // Default to false for safety if unknown, or true if explicit 'AGRICOLA' etc?
+    // Safest for this user persona (Digital/Tech) is to hide unless explicitly 'MODULOS' (if it existed)
+    // Given current types, let's assume if it's NOT Directa, show it. 
+    // But wait, user asked to hide for them.
+    return !['GENERAL', 'SIMPLIFICADO'].includes(regimen || 'GENERAL');
+  }, [currentUser]);
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in pb-12">
       {/* Header */}
@@ -345,10 +360,11 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
 
       {/* Declaraciones */}
       {declaraciones && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 ${shouldShowModelo131 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
           {/* Modelo 130 */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
             <button
+              // ... existing button code
               onClick={() => setShowExplainModal('MODELO_130')}
               className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
                          hover:bg-[#27bea5]/10 p-2 rounded-full
@@ -415,70 +431,73 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
             </div>
           </div>
 
-          {/* Modelo 131 */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
-            <button
-              onClick={() => setShowExplainModal('MODELO_131')}
-              className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
+          {/* Modelo 131 - Hidden based on Profile */}
+          {shouldShowModelo131 && (
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
+
+              <button
+                onClick={() => setShowExplainModal('MODELO_131')}
+                className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
                          hover:bg-[#27bea5]/10 p-2 rounded-full
                          hover:shadow-[0_0_15px_rgba(39,190,165,0.4)] hover:scale-110 active:scale-95"
-              title="¿Qué es esto?"
-            >
-              <Info className="w-5 h-5" />
-            </button>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#1c2938]">Modelo 131</h3>
-              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded mr-6">IRPF</span>
-            </div>
-            <p className="text-xs text-slate-500 mb-4">Pago fraccionado IRPF (Actividad Económica)</p>
+                title="¿Qué es esto?"
+              >
+                <Info className="w-5 h-5" />
+              </button>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-[#1c2938]">Modelo 131</h3>
+                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded mr-6">IRPF</span>
+              </div>
+              <p className="text-xs text-slate-500 mb-4">Pago fraccionado IRPF (Actividad Económica)</p>
 
-            <div className="space-y-3 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Ingresos</span>
-                <span className="font-bold">€{declaraciones.modelo131.ingresos.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Gastos</span>
-                <span className="font-bold">€{declaraciones.modelo131.gastos.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Base Imponible</span>
-                <span className="font-bold">€{declaraciones.modelo131.baseImponible.toFixed(2)}</span>
-              </div>
-              <div className="pt-3 border-t">
-                <div className={`flex justify-between items-center ${getResultadoColor(declaraciones.modelo131.resultado)}`}>
-                  <span className="font-bold">Resultado</span>
-                  <div className="flex items-center gap-2">
-                    {getResultadoIcon(declaraciones.modelo131.resultado)}
-                    <span className="text-xl font-black">
-                      {declaraciones.modelo131.resultado > 0 ? '+' : ''}€{declaraciones.modelo131.resultado.toFixed(2)}
-                    </span>
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Ingresos</span>
+                  <span className="font-bold">€{declaraciones.modelo131.ingresos.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Gastos</span>
+                  <span className="font-bold">€{declaraciones.modelo131.gastos.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Base Imponible</span>
+                  <span className="font-bold">€{declaraciones.modelo131.baseImponible.toFixed(2)}</span>
+                </div>
+                <div className="pt-3 border-t">
+                  <div className={`flex justify-between items-center ${getResultadoColor(declaraciones.modelo131.resultado)}`}>
+                    <span className="font-bold">Resultado</span>
+                    <div className="flex items-center gap-2">
+                      {getResultadoIcon(declaraciones.modelo131.resultado)}
+                      <span className="text-xl font-black">
+                        {declaraciones.modelo131.resultado > 0 ? '+' : ''}€{declaraciones.modelo131.resultado.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Conversational Insight */}
-            {declaraciones.modelo131.resultado > 0 && (
-              <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                  ⚠️ <span className="font-bold">Aviso preventivo</span>: Debes reservar <span className="font-bold">€{declaraciones.modelo131.resultado.toFixed(2)}</span> para cumplir con el pago fraccionado de tu actividad.
-                </p>
+              {/* Conversational Insight */}
+              {declaraciones.modelo131.resultado > 0 && (
+                <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                  <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                    ⚠️ <span className="font-bold">Aviso preventivo</span>: Debes reservar <span className="font-bold">€{declaraciones.modelo131.resultado.toFixed(2)}</span> para cumplir con el pago fraccionado de tu actividad.
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-4 border-t space-y-2">
+                <p className="text-xs text-slate-400">Vencimiento: {new Date(fechasVencimiento.modelo131).toLocaleDateString('es-ES')}</p>
+                <button
+                  onClick={() => handleSave('MODELO_131')}
+                  disabled={isSaving}
+                  className="w-full py-2 bg-[#27bea5] text-white rounded-lg font-bold hover:bg-[#22a890] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Guardar
+                </button>
               </div>
-            )}
-
-            <div className="pt-4 border-t space-y-2">
-              <p className="text-xs text-slate-400">Vencimiento: {new Date(fechasVencimiento.modelo131).toLocaleDateString('es-ES')}</p>
-              <button
-                onClick={() => handleSave('MODELO_131')}
-                disabled={isSaving}
-                className="w-full py-2 bg-[#27bea5] text-white rounded-lg font-bold hover:bg-[#22a890] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Guardar
-              </button>
             </div>
-          </div>
+          )}
 
           {/* Modelo 303 */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
