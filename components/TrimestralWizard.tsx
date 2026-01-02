@@ -64,23 +64,32 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
 
   // Calcular declaraciones
   const declaraciones = useMemo(() => {
-    if (!datosTrimestre) return null;
+    // Para el cálculo de declaraciones necesitamos TODAS las facturas del año (YTD)
+    // No filtramos por trimestre aquí, eso lo hace el servicio internamente
 
-    const facturas = datosTrimestre.facturasTrimestre.map(f => ({
-      fecha: f.date,
-      total: f.total,
-      iva: f.ivaAmount || 0,
-      tipo: f.type as 'Invoice' | 'Expense'
-    }));
+    // Mapeamos todas las facturas disponibles
+    const facturasAnuales = invoices.map(f => {
+      // Determinamos la base imponible y el IVA
+      // Usamos baseAmountEur si existe (multidivisa) o el total menos IVA si es EUR
+      // Simplificación: base = total - ivaAmount (si no hay iva, base = total)
 
-    const gastos = datosTrimestre.gastosTrimestre.map(g => ({
-      fecha: g.date,
-      total: g.total,
-      iva: g.ivaAmount || 0
-    }));
+      let base = f.baseAmountEur || f.total;
+      if (f.currency === 'EUR' && f.ivaAmount) {
+        base = f.total - f.ivaAmount;
+      }
 
-    return calcularDeclaracionesDesdeFacturas(facturas, gastos, trimestre, año);
-  }, [datosTrimestre, trimestre, año]);
+      return {
+        fecha: f.date,
+        total: f.total,
+        base: base,
+        iva: f.ivaAmount || 0,
+        irpf: f.irpfAmount || 0, // Pasamos la retención
+        tipo: f.type as 'Invoice' | 'Expense'
+      };
+    });
+
+    return calcularDeclaracionesDesdeFacturas(facturasAnuales, trimestre, año);
+  }, [invoices, trimestre, año]);
 
   const fechasVencimiento = useMemo(() => {
     return obtenerFechasVencimiento(trimestre, año);
@@ -262,12 +271,20 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
 
             <div className="space-y-3 mb-4">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Base Imponible</span>
-                <span className="font-bold">€{declaraciones.modelo130.baseImponible.toFixed(2)}</span>
+                <span className="text-slate-600">Rendimiento Neto (YTD)</span>
+                <span className="font-bold">€{declaraciones.modelo130.rendimientoNeto.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Cuota (20%)</span>
-                <span className="font-bold">€{declaraciones.modelo130.cuota.toFixed(2)}</span>
+                <span className="text-slate-600">Cuota Líquida (20%)</span>
+                <span className="font-bold">€{declaraciones.modelo130.cuotaLiquida.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-amber-600">
+                <span className="">- Retenciones Acumuladas</span>
+                <span className="font-bold">-€{declaraciones.modelo130.retencionesAcumuladas.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-slate-500">
+                <span className="">- Pagos Anteriores</span>
+                <span className="font-bold">-€{declaraciones.modelo130.pagosFraccionadosAnteriores.toFixed(2)}</span>
               </div>
               <div className="pt-3 border-t">
                 <div className={`flex justify-between items-center ${getResultadoColor(declaraciones.modelo130.resultado)}`}>
