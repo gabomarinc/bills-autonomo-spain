@@ -142,6 +142,8 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
     return null;
   };
 
+  import { createPortal } from 'react-dom';
+
   // --- ELI5 Explanations ---
   const [showExplainModal, setShowExplainModal] = useState<'MODELO_130' | 'MODELO_131' | 'MODELO_303' | null>(null);
 
@@ -150,20 +152,23 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
       return {
         title: '¿Qué es el Modelo 130?',
         emoji: '🐷',
-        text: 'Imagina que tienes una hucha. Cada vez que ganas dinero (beneficio), Hacienda quiere que guardes un trocito (el 20%) en esa hucha. Cada 3 meses, le das esa hucha a Hacienda. Es como un adelanto de lo que tendrás que pagar al año que viene en la Declaración de la Renta.'
+        text: 'Imagina que tienes una hucha. Cada vez que ganas dinero (beneficio), Hacienda quiere que guardes un trocito (el 20%) en esa hucha. Cada 3 meses, le das esa hucha a Hacienda.',
+        example: 'Ejemplo: Si este trimestre has ganado 1.000€ (ingresos - gastos), tienes que apartar 200€ para Hacienda. Si ya te retuvieron 50€ en tus facturas, entonces solo tienes que poner 150€ más en la hucha.'
       };
     }
     if (model === 'MODELO_131') {
       return {
         title: '¿Qué es el Modelo 131?',
         emoji: '📏',
-        text: 'Aquí Hacienda no mira cuánto ganas realmente. Ellos han calculado (por el tamaño de tu local, luz que gastas, etc.) cuánto "deberías" ganar. Pagas una cantidad fija cada trimestre, ganes mucho o poco. Es como una tarifa plana.'
+        text: 'Aquí Hacienda no mira cuánto ganas realmente. Ellos han calculado (por el tamaño de tu local, luz que gastas, etc.) cuánto "deberías" ganar. Pagas una cantidad fija cada trimestre, ganes mucho o poco.',
+        example: 'Ejemplo: Tienes una cafetería pequeña. Hacienda dice que por tus mesas y barra debes pagar 300€ al trimestre. Da igual si vendes 1.000 cafés o ninguno, pagarás esos 300€ fijos.'
       };
     }
     return {
       title: '¿Qué es el Modelo 303?',
       emoji: '🤝',
-      text: 'Tú eres un recaudador del Rey. Cuando cobras una factura con IVA, ese dinero extra NO es tuyo, es del Rey (Hacienda). Tú solo lo guardas. Cada 3 meses, tienes que darle al Rey todo el dinero que has guardado pa él. Si tú también has pagado IVA comprando cosas, eso se resta y le das menos.'
+      text: 'Tú eres un recaudador del Rey. Cuando cobras una factura con IVA, ese dinero extra NO es tuyo, es del Rey (Hacienda). Tú solo lo guardas. Cada 3 meses, le das todo el dinero que has guardado.',
+      example: 'Ejemplo: Cobras 100€ + 21€ de IVA. Esos 21€ NO son tuyos. Son "dinero caliente". Si gastaste 10€ de IVA comprando papel, se lo restas. Al final le das al Rey: 21€ (recudado) - 10€ (pagado) = 11€.'
     };
   };
 
@@ -171,35 +176,55 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
     if (!showExplainModal) return null;
     const content = getExplanation(showExplainModal);
 
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowExplainModal(null)}>
-        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-4xl bg-slate-100 p-3 rounded-2xl">{content.emoji}</span>
-              <h3 className="text-2xl font-black text-[#1c2938] leading-tight">{content.title}</h3>
+    // Usamos Portal para que el modal salga por encima de TODO (incluido el sidebar)
+    return createPortal(
+      <div className="fixed inset-0 bg-[#0f172a]/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 font-sans" onClick={() => setShowExplainModal(null)}>
+        <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+
+          {/* Header con gradiente suave */}
+          <div className="bg-gradient-to-r from-slate-50 to-white p-6 border-b border-slate-100 flex justify-between items-start">
+            <div className="flex items-center gap-4">
+              <div className="text-5xl shadow-sm bg-white p-2 rounded-2xl border border-slate-100">{content.emoji}</div>
+              <div>
+                <h3 className="text-2xl font-black text-[#1c2938] leading-tight">{content.title}</h3>
+                <p className="text-sm text-slate-400 font-bold uppercase tracking-wider mt-1">Explicación simple</p>
+              </div>
             </div>
             <button onClick={() => setShowExplainModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
               <X className="w-6 h-6 text-slate-400" />
             </button>
           </div>
 
-          <div className="bg-[#eef2ff] p-5 rounded-2xl border border-[#c7d2fe] mb-6">
-            <p className="text-[#3730a3] text-lg leading-relaxed font-medium">
-              "{content.text}"
+          <div className="p-8 space-y-6">
+            <p className="text-[#334155] text-lg leading-relaxed font-medium">
+              {content.text}
             </p>
+
+            {/* Ejemplo Visual */}
+            <div className="bg-[#f0fdfa] p-5 rounded-2xl border border-[#ccfbf1] flex gap-4 items-start">
+              <div className="bg-[#27bea5]/20 p-2 rounded-lg mt-1">
+                <Info className="w-5 h-5 text-[#0d9488]" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-[#0f766e] text-xs font-black uppercase tracking-wide">Ejemplo práctico</p>
+                <p className="text-[#134e4a] text-sm leading-relaxed">
+                  {content.example}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
             <button
               onClick={() => setShowExplainModal(null)}
-              className="px-6 py-3 bg-[#1c2938] text-white rounded-xl font-bold hover:bg-[#2c3e50] transition-colors"
+              className="px-8 py-3 bg-[#1c2938] text-white rounded-xl font-bold hover:bg-[#2c3e50] shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 transition-all transform hover:-translate-y-0.5"
             >
-              ¡Entendido!
+              ¡Entendido, gracias!
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   };
 
@@ -326,7 +351,9 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
             <button
               onClick={() => setShowExplainModal('MODELO_130')}
-              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
+                         hover:bg-[#27bea5]/10 p-2 rounded-full
+                         hover:shadow-[0_0_15px_rgba(39,190,165,0.4)] hover:scale-110 active:scale-95"
               title="¿Qué es esto?"
             >
               <Info className="w-5 h-5" />
@@ -393,7 +420,9 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
             <button
               onClick={() => setShowExplainModal('MODELO_131')}
-              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
+                         hover:bg-[#27bea5]/10 p-2 rounded-full
+                         hover:shadow-[0_0_15px_rgba(39,190,165,0.4)] hover:scale-110 active:scale-95"
               title="¿Qué es esto?"
             >
               <Info className="w-5 h-5" />
@@ -456,7 +485,9 @@ const TrimestralWizard: React.FC<TrimestralWizardProps> = ({ currentUser, invoic
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 relative group hover:shadow-md transition-shadow">
             <button
               onClick={() => setShowExplainModal('MODELO_303')}
-              className="absolute top-4 right-4 text-slate-300 hover:text-[#27bea5] transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-[#27bea5] transition-all
+                         hover:bg-[#27bea5]/10 p-2 rounded-full
+                         hover:shadow-[0_0_15px_rgba(39,190,165,0.4)] hover:scale-110 active:scale-95"
               title="¿Qué es esto?"
             >
               <Info className="w-5 h-5" />
