@@ -157,7 +157,7 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
         legalMention: legalMention || undefined
       }));
 
-      // Si es exportación o intracomunitaria, aplicar 0% IVA automáticamente
+      // Si es exportación o intracomunitaria, aplicar 0% IVA automáticamente y desactivar IRPF
       if (detectedType === 'EXPORTACION' || detectedType === 'INTRACOMUNITARIA') {
         setApplyIva(false);
         setIvaType('EXENTO');
@@ -169,6 +169,9 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
             taxType: 'EXENTO'
           }))
         }));
+        // Disable IRPF for exports
+        setIrpfRetention(0);
+        setShowIrpfRetention(false);
       }
     }
   }, [draft.clientCountry]);
