@@ -366,8 +366,8 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
       // We use 3.0 as a safe approximation for "current year + next 2"
       if (diffYears < 3) {
         setIrpfRetention(7);
-        // Optional: Auto-enable retention for new invoices if they are likely to need it
-        // setShowIrpfRetention(true); 
+        // Auto-enable retention visibility for new freelancers so they see the 7% immediately
+        setShowIrpfRetention(true);
       } else {
         setIrpfRetention(15);
       }
@@ -932,13 +932,13 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                 {/* Información sobre Tipo de Operación */}
                 {draft.operationType && draft.operationType !== 'NACIONAL' && (
                   <div className={`p-4 rounded-xl border-2 ${draft.operationType === 'EXPORTACION'
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'bg-purple-50 border-purple-200'
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'bg-purple-50 border-purple-200'
                     }`}>
                     <div className="flex items-start gap-3">
                       <div className={`p-2 rounded-lg ${draft.operationType === 'EXPORTACION'
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-purple-100 text-purple-600'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-purple-100 text-purple-600'
                         }`}>
                         {draft.operationType === 'EXPORTACION' ? (
                           <Globe className="w-5 h-5" />
@@ -1220,8 +1220,8 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                         <button
                           onClick={() => handleIvaTypeChange('GENERAL')}
                           className={`flex-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all ${ivaType === 'GENERAL'
-                              ? 'bg-[#27bea5] text-white shadow-sm'
-                              : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                            ? 'bg-[#27bea5] text-white shadow-sm'
+                            : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
                             }`}
                         >
                           21%
@@ -1229,8 +1229,8 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                         <button
                           onClick={() => handleIvaTypeChange('REDUCIDO')}
                           className={`flex-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all ${ivaType === 'REDUCIDO'
-                              ? 'bg-[#27bea5] text-white shadow-sm'
-                              : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                            ? 'bg-[#27bea5] text-white shadow-sm'
+                            : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
                             }`}
                         >
                           10%
@@ -1238,8 +1238,8 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
                         <button
                           onClick={() => handleIvaTypeChange('SUPERREDUCIDO')}
                           className={`flex-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all ${ivaType === 'SUPERREDUCIDO'
-                              ? 'bg-[#27bea5] text-white shadow-sm'
-                              : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                            ? 'bg-[#27bea5] text-white shadow-sm'
+                            : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
                             }`}
                         >
                           4%
