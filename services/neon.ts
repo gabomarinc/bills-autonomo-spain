@@ -1,7 +1,7 @@
 
 import { Client } from '@neondatabase/serverless';
 import { Invoice, UserProfile, DbClient, DbProvider, CatalogItem, TrimestralDeclaration } from '../types';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 
 // Helper for Browser/Edge compatible SHA-256
 async function computeSha256(message: string): Promise<string> {
