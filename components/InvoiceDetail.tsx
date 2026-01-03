@@ -666,7 +666,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             )}
           </div>
 
-          <div className="w-full md:w-80 space-y-4">
+          <div className="w-full md:w-96 space-y-4">
             <div className="flex justify-between text-slate-500 text-lg">
               <span>Subtotal</span>
               <span>${subtotal.toFixed(2)}</span>
@@ -688,10 +688,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <span className="text-amber-600">-${invoice.irpfAmount!.toFixed(2)}</span>
               </div>
             )}
-            <div className="pt-6 border-t-2 border-slate-100 flex justify-between items-end">
+            <div className="pt-6 border-t-2 border-slate-100 flex justify-between items-center">
               <span className="font-bold text-[#1c2938] text-xl">Total</span>
               <div className="text-right">
-                <span className="font-bold text-[#1c2938] text-4xl whitespace-nowrap" style={{ color: color }}>
+                <span className="font-bold text-[#1c2938] text-3xl whitespace-nowrap" style={{ color: color }}>
                   {(() => {
                     const currency = invoice.invoiceCurrency || invoice.currency;
                     const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
