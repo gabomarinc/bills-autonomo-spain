@@ -51,6 +51,7 @@ const getAiClient = (keys?: AiKeys) => {
 };
 
 // Helper to sanitize JSON response from LLM
+// Helper to sanitize JSON response from LLM
 const cleanJson = (text: string) => {
     if (!text) return "{}";
 
@@ -63,9 +64,21 @@ const cleanJson = (text: string) => {
     // 2. Fallback: Cleanup common markdown artifacts
     let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
 
-    // 3. Find brackets to strip introductory text
-    const firstOpen = cleaned.indexOf('{');
-    const lastClose = cleaned.lastIndexOf('}');
+    // 3. Find brackets to strip introductory text (Objects OR Arrays)
+    const firstObjOpen = cleaned.indexOf('{');
+    const firstArrOpen = cleaned.indexOf('[');
+
+    // Determine which comes first to decide if it's an object or array
+    let firstOpen = -1;
+    let lastClose = -1;
+
+    if (firstObjOpen !== -1 && (firstArrOpen === -1 || firstObjOpen < firstArrOpen)) {
+        firstOpen = firstObjOpen;
+        lastClose = cleaned.lastIndexOf('}');
+    } else if (firstArrOpen !== -1) {
+        firstOpen = firstArrOpen;
+        lastClose = cleaned.lastIndexOf(']');
+    }
 
     if (firstOpen !== -1 && lastClose !== -1) {
         cleaned = cleaned.substring(firstOpen, lastClose + 1);
