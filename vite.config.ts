@@ -9,7 +9,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       // Polyfill process.env for existing code compatibility
-      'process.env': env
+      'process.env': env,
+      'global': {}
     }
   }
 })
