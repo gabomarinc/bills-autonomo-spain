@@ -162,7 +162,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
       updatedInvoice.paymentReceivedOriginal = amount;
       updatedInvoice.paymentExchangeRate = paymentExchangeRate || undefined;
       updatedInvoice.paymentDate = paymentDate;
-      updatedInvoice.exchangeDifference = (invoice.exchangeDifference || 0) + exchangeDifference;
+      updatedInvoice.exchangeDifference = (invoice.exchangeDifference || 0) + (exchangeDifference || 0);
     }
     if (bankFee) {
       updatedInvoice.bankFee = (invoice.bankFee || 0) + parseFloat(bankFee);
