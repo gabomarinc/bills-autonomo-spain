@@ -17,16 +17,22 @@ async function computeSha256(message: string): Promise<string> {
 const getDbClient = () => {
   try {
     // Check both import.meta.env (Vite) and process.env (Node/Fallback)
-    const url = import.meta.env?.VITE_DATABASE_URL || process.env?.DATABASE_URL;
+    // Priority: VITE_DATABASE_URL > DATABASE_URL
+    const url = import.meta.env?.VITE_DATABASE_URL || process.env?.DATABASE_URL || process.env?.VITE_DATABASE_URL;
 
     if (!url) {
-      console.warn("DATABASE_URL environment variable is not set.");
+      console.error("❌ CRITICAL: DATABASE_URL is not set. The app cannot connect to Neon DB.");
+      console.log("Debug Info:", {
+        viteEnv: !!import.meta.env?.VITE_DATABASE_URL,
+        processEnv: !!process.env?.DATABASE_URL,
+        processViteEnv: !!process.env?.VITE_DATABASE_URL
+      });
       return null;
     }
 
     // Validate URL format simply
     if (!url.startsWith('postgres://') && !url.startsWith('postgresql://')) {
-      console.warn("Invalid Database URL format");
+      console.warn("Invalid Database URL format. Must start with postgres://");
       return null;
     }
 

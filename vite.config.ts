@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       // Polyfill process.env for existing code compatibility
+      'process.env.DATABASE_URL': JSON.stringify(env.DATABASE_URL),
+      'process.env.VITE_DATABASE_URL': JSON.stringify(env.VITE_DATABASE_URL),
       'process.env': env
     }
   }
