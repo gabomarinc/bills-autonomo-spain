@@ -54,14 +54,18 @@ export default async function handler(req, res) {
     const hasUserApiKey = apiKeys?.gemini && apiKeys.gemini.trim();
     const hasEnvApiKey = process.env.API_KEY && process.env.API_KEY.trim();
 
-    console.log('Verificando API keys:', {
-      hasUserApiKey: !!hasUserApiKey,
-      hasEnvApiKey: !!hasEnvApiKey,
-      hasEnvApiKey: !!hasEnvApiKey,
-      businessDescription: businessDescription.trim().substring(0, 50),
-      sector,
-      subcategories: subcategories?.length || 0
+    console.log('[DEBUG] Environment Check:', {
+      nodeEnv: process.env.NODE_ENV,
+      hasSystemKey: !!process.env.API_KEY,
+      systemKeyLength: process.env.API_KEY ? process.env.API_KEY.length : 0,
+      hasUserKey: !!hasUserApiKey,
+      context: { sector, subcategories: subcategories?.length }
     });
+
+    // Explicitly check if Vercel is stripping env vars
+    if (!process.env.API_KEY && process.env.VERCEL) {
+      console.error('[CRITICAL] Vercel environment detected but API_KEY is missing!');
+    }
 
     if (!hasUserApiKey && !hasEnvApiKey) {
       console.warn('No hay API key configurada');
