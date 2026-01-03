@@ -513,8 +513,12 @@ export const fetchInvoicesFromDb = async (userId: string): Promise<Invoice[] | n
         data JSONB,
         created_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    await sql(`
       CREATE TABLE IF NOT EXISTS expenses (
         id TEXT PRIMARY KEY,
+        user_id TEXT, -- Added missing column definition implied by usage or just ignore if not needed, but safe to keep consistent
         provider_name TEXT,
         date TEXT,
         total NUMERIC,
@@ -631,6 +635,9 @@ export const fetchClientsFromDb = async (userId: string): Promise<DbClient[]> =>
         notes TEXT,
         updated_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    await sql(`
       CREATE TABLE IF NOT EXISTS prospects (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
