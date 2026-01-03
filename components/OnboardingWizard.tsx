@@ -139,7 +139,25 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       };
 
       if (selectedSector && sectorMap[selectedSector]) {
-        mockItems = sectorMap[selectedSector];
+        // Sub-logic for specific sectors to be more granular
+        if (selectedSector === 'PROGRAMACION') {
+          if (businessDescLower.includes('consult') || businessDescLower.includes('estrategia') || businessDescLower.includes('negocio') || businessDescLower.includes('asesor') || businessDescLower.includes('b2b')) {
+            mockItems = [
+              { id: '1', name: 'Consultoría Tecnológica', description: 'Auditoría y estrategia digital para empresa.', price: 120.00 },
+              { id: '2', name: 'Mentoria Técnica', description: 'Sesión de acompañamiento a equipos.', price: 90.00 },
+              { id: '3', name: 'Optimización de Procesos', description: 'Análisis y mejora de flujos de trabajo.', price: 150.00 }
+            ];
+          } else {
+            // Default Dev
+            mockItems = [
+              { id: '1', name: 'Desarrollo Web', description: 'Sitio web corporativo.', price: 800.00 },
+              { id: '2', name: 'Mantenimiento', description: 'Mantenimiento mensual web.', price: 50.00 },
+              { id: '3', name: 'Consultoría IT', description: 'Hora de soporte técnico.', price: 60.00 }
+            ];
+          }
+        } else {
+          mockItems = sectorMap[selectedSector];
+        }
       } else {
         // Priority 2: Keyword Matching Fallback (Legacy)
         if (businessDescLower.includes('tecnologia') || businessDescLower.includes('software') || businessDescLower.includes('consultor') || businessDescLower.includes('programador') || businessDescLower.includes('web')) {
