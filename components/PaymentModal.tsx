@@ -394,7 +394,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
           </button>
         </div>
       </div>
-      );
+    </div>
+  );
 };
 
-      export default PaymentModal;
+export default PaymentModal;
