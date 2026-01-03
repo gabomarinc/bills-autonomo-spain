@@ -2,7 +2,14 @@
 import { Client } from '@neondatabase/serverless';
 import { Invoice, UserProfile, DbClient, DbProvider, CatalogItem, TrimestralDeclaration } from '../types';
 import bcrypt from 'bcryptjs';
-import { createHash } from 'crypto';
+
+// Helper for Browser/Edge compatible SHA-256
+async function computeSha256(message: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 /**
  * NEON DATABASE CONFIGURATION
@@ -869,7 +876,7 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
           // 2. Compute Current Hash
           // String to sign: PreviousHash + ID + Date + Total + ClientTaxID
           const stringToSign = `${previousHash}${invoice.id}${invoice.date}${invoice.total.toFixed(2)}${invoice.clientTaxId || ''}`;
-          const chainHash = createHash('sha256').update(stringToSign).digest('hex');
+          const chainHash = await computeSha256(stringToSign);
 
           // 3. Attach to Invoice
           invoice.verifactu = {
