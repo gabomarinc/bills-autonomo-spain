@@ -273,11 +273,19 @@ export interface Invoice {
   paymentExchangeRate?: number; // Tipo de cambio que aplicó el banco
   paymentDate?: string; // Fecha en que se recibió el pago
   exchangeDifference?: number; // Diferencia entre factura y pago (base_amount_eur - payment_received_eur) - gasto financiero deducible
+  bankFee?: number; // Comisión bancaria (gasto deducible extra)
 
   // Quote-Invoice Relationship & Payment Plan (NEW)
   parentQuoteId?: string; // ID de la cotización desde la cual se generó esta factura
   parentInvoiceId?: string; // ID de la factura padre cuando esta factura es parte de una división de pagos
   paymentPlan?: PaymentPlan; // Plan de pagos para facturas con múltiples pagos
+
+  // VeriFactu Compliance
+  verifactu?: {
+    chainHash: string;
+    previousHash: string;
+    timestamp: string;
+  };
 }
 
 // Plan de pagos para facturas con múltiples pagos

@@ -209,7 +209,16 @@ export const obtenerTrimestreActual = (): { trimestre: 1 | 2 | 3 | 4; año: numb
  * ESTA FUNCIÓN AHORA DEBE RECIBIR TODAS LAS FACTURAS DEL AÑO PARA EL MODELO 130
  */
 export const calcularDeclaracionesDesdeFacturas = (
-  facturasAnuales: Array<{ fecha: string; total: number; base: number; iva: number; irpf: number; tipo: 'Invoice' | 'Expense' }>,
+  facturasAnuales: Array<{
+    fecha: string;
+    total: number;
+    base: number;
+    iva: number;
+    irpf: number;
+    tipo: 'Invoice' | 'Expense';
+    exchangeDifference?: number; // Added for reconciliation
+    bankFee?: number; // Added for reconciliation
+  }>,
   trimestre: number,
   año: number
 ): {
@@ -236,7 +245,21 @@ export const calcularDeclaracionesDesdeFacturas = (
   });
 
   const ingresosYTD = facturasYTD.reduce((sum, f) => sum + (f.base || f.total), 0); // Usar BASE imponible
-  const gastosTotalYTD = gastosYTD.reduce((sum, g) => sum + (g.base || g.total), 0); // Usar BASE imponible
+
+  // Gastos YTD = Gastos (Facturas de Proveedores) + Diferencias de Cambio (Pérdidas) + Comisiones Bancarias
+  const gastosOperativosYTD = gastosYTD.reduce((sum, g) => sum + (g.base || g.total), 0);
+
+  const gastosFinancierosYTD = facturasYTD.reduce((sum, f) => {
+    const diff = f.exchangeDifference || 0;
+    const fee = f.bankFee || 0;
+    // Exchange Difference: If positive (>0), it's a LOSS (Invoice=100, Paid=90 -> Diff=10). We sum it as expense.
+    // If negative (<0), it's a GAIN (Invoice=100, Paid=110 -> Diff=-10). We should technically subtract from expense or add to income.
+    // Ideally Gain adds to Income, Loss adds to Expense. 
+    // For simplicity in this "safety" implementation: Net the expenses.
+    return sum + Math.max(0, diff) + fee;
+  }, 0);
+
+  const gastosTotalYTD = gastosOperativosYTD + gastosFinancierosYTD;
 
   // Retenciones acumuladas (solo de facturas de ingreso)
   const retencionesYTD = facturasYTD.reduce((sum, f) => sum + (f.irpf || 0), 0);

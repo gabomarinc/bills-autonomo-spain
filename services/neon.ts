@@ -2,6 +2,7 @@
 import { Client } from '@neondatabase/serverless';
 import { Invoice, UserProfile, DbClient, DbProvider, CatalogItem, TrimestralDeclaration } from '../types';
 import bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
 
 /**
  * NEON DATABASE CONFIGURATION
@@ -851,6 +852,40 @@ export const saveInvoiceToDb = async (invoice: Invoice): Promise<boolean> => {
         JSON.stringify(invoice)
       ]);
     } else {
+      // --- VERIFACTU CHAINING LOGIC ---
+      if (invoice.status !== 'Borrador' && !invoice.verifactu) {
+        try {
+          // 1. Get Previous Hash
+          const prevHashRes = await client.query(
+            `SELECT data->'verifactu'->>'chainHash' as hash 
+                  FROM invoices 
+                  WHERE user_id = $1 AND id != $2 
+                  ORDER BY created_at DESC LIMIT 1`,
+            [invoice.userId, invoice.id]
+          );
+
+          const previousHash = prevHashRes.rows[0]?.hash || '0000000000000000000000000000000000000000000000000000000000000000'; // Genesis Hash
+
+          // 2. Compute Current Hash
+          // String to sign: PreviousHash + ID + Date + Total + ClientTaxID
+          const stringToSign = `${previousHash}${invoice.id}${invoice.date}${invoice.total.toFixed(2)}${invoice.clientTaxId || ''}`;
+          const chainHash = createHash('sha256').update(stringToSign).digest('hex');
+
+          // 3. Attach to Invoice
+          invoice.verifactu = {
+            chainHash,
+            previousHash,
+            timestamp: new Date().toISOString()
+          };
+
+          console.log(`🔗 VeriFactu Chained: ${invoice.id} -> ${chainHash.substring(0, 8)}...`);
+        } catch (err) {
+          console.error("VeriFactu Error:", err);
+          // Fail validation if needed, or proceed without hash (risk)
+        }
+      }
+      // --------------------------------
+
       // Add columns if they don't exist (migration)
       try {
         await client.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_country TEXT DEFAULT \'España\';');

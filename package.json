@@ -21,7 +21,9 @@
     "react-dom": "^18.2.0",
     "recharts": "^2.12.2",
     "stripe": "^14.19.0",
-    "tailwind-merge": "^2.2.1"
+    "tailwind-merge": "^2.2.1",
+    "tesseract.js": "^7.0.0",
+    "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

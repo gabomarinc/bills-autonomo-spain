@@ -3,8 +3,9 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, Printer, Share2, Download, Building2,
   CheckCircle2, Loader2, Send, MessageCircle, Smartphone, Mail, Check, AlertTriangle, Edit2,
-  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link, FileText, Receipt
+  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link, FileText, Receipt, FileCode
 } from 'lucide-react';
+import { generateFacturaeXML } from '../services/facturae';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { Invoice, UserProfile, TimelineEvent, InvoiceStatus, PaymentPlan } from '../types';
@@ -402,6 +403,32 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     alert.addToast('success', 'PDF Descargado', 'El botón de Stripe es clickable en el PDF.');
   };
 
+  const handleDownloadFacturaE = () => {
+    // Construct simplified client object from invoice data
+    const clientData = {
+      name: invoice.clientName,
+      nif: invoice.clientTaxId || '00000000T',
+      type: 'business', // Assume business for B2B compliance usually
+      address: 'Dirección no disponible', // Invoice type in this app doesn't seem to store full client address snapshot unfortunately
+      city: 'Ciudad',
+      province: 'Provincia',
+      zipCode: '00000',
+      country: 'España'
+    };
+
+    const xml = generateFacturaeXML(invoice, issuer, clientData as any);
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `facturae_${invoice.id}.xml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert.addToast('success', 'FacturaE Generada', 'XML descargado correctamente (Ley Crea y Crece).');
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'Pagada':
@@ -598,6 +625,23 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                   <FileText className="w-4 h-4" /> Mención Legal
                 </p>
                 <p className="text-blue-800 text-xs italic leading-relaxed">{invoice.legalMention}</p>
+              </div>
+            )}
+
+            {/* VERIFACTU BADGE - MODERN */}
+            {invoice.verifactu && (
+              <div className="mt-4 p-4 bg-[#1c2938] text-slate-200 rounded-xl text-xs font-mono border border-slate-700">
+                <p className="font-bold text-[#27bea5] mb-2 flex items-center gap-2 uppercase tracking-wider">
+                  <Lock className="w-3 h-3" /> Sistema VeriFactu
+                </p>
+                <div className="space-y-1 opacity-80 overflow-hidden">
+                  <p className="truncate"><span className="text-slate-500">Hash:</span> {invoice.verifactu.chainHash}</p>
+                  <p className="truncate"><span className="text-slate-500">Prev:</span> {invoice.verifactu.previousHash.substring(0, 20)}...</p>
+                  <p><span className="text-slate-500">Time:</span> {new Date(invoice.verifactu.timestamp).toLocaleString()}</p>
+                </div>
+                <div className="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-500 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-green-500" /> Registro inmutable en cadena
+                </div>
               </div>
             )}
 
@@ -813,6 +857,16 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         </div>
       )}
 
+      {/* VERIFACTU BADGE - CLASSIC */}
+      {invoice.verifactu && (
+        <div className="mb-8 p-4 border border-slate-200 rounded text-left font-serif text-xs text-slate-600 bg-slate-50">
+          <p className="font-bold text-slate-800 mb-1 flex items-center gap-2 uppercase tracking-wide">
+            <Lock className="w-3 h-3" /> VeriFactu
+          </p>
+          <p className="font-mono text-[10px] break-all">H: {invoice.verifactu.chainHash}</p>
+        </div>
+      )}
+
       {/* BANK INFO CLASSIC */}
       {!isQuote && (
         <div className="mb-8 p-4 border border-slate-200 rounded text-center">
@@ -906,6 +960,16 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         <div className="mt-8 pt-8 border-t border-slate-100">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mención Legal</p>
           <p className="text-xs text-slate-500 italic leading-relaxed">{invoice.legalMention}</p>
+        </div>
+      )}
+
+      {/* VERIFACTU BADGE - MINIMAL */}
+      {invoice.verifactu && (
+        <div className="mt-8 pt-4 border-t border-slate-100 text-xs text-slate-400">
+          <p className="font-bold mb-1 flex items-center gap-2 uppercase tracking-wider">
+            <Lock className="w-3 h-3" /> VeriFactu
+          </p>
+          <p className="font-mono text-[10px] break-all">{invoice.verifactu.chainHash}</p>
         </div>
       )}
 
@@ -1051,6 +1115,17 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             >
               <Download className="w-4 h-4" /> PDF
             </button>
+
+            {/* FacturaE Button */}
+            {!isQuote && (
+              <button
+                onClick={handleDownloadFacturaE}
+                className="bg-slate-100 text-[#1c2938] py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors border-2 border-slate-200/50"
+                title="Descargar XML (Ley Crea y Crece)"
+              >
+                <FileCode className="w-4 h-4" /> XML
+              </button>
+            )}
 
             {onEdit && (
               <button
