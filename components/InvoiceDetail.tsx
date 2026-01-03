@@ -681,16 +681,17 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
               <span>IVA {invoice.items[0]?.tax ? `(${invoice.items[0].tax}%)` : ''}</span>
               <span>${(invoice.ivaAmount || taxTotal).toFixed(2)}</span>
             </div>
-            {invoice.irpfAmount && invoice.irpfAmount > 0 && (
+            {/* IRPF Amount - Fix stray '0' by using boolean check */}
+            {(invoice.irpfAmount || 0) > 0 && (
               <div className="flex justify-between text-slate-500 text-lg">
                 <span>Ret. IRPF ({invoice.irpfRetention}%)</span>
-                <span className="text-amber-600">-${invoice.irpfAmount.toFixed(2)}</span>
+                <span className="text-amber-600">-${invoice.irpfAmount!.toFixed(2)}</span>
               </div>
             )}
             <div className="pt-6 border-t-2 border-slate-100 flex justify-between items-end">
               <span className="font-bold text-[#1c2938] text-xl">Total</span>
-              <div className="text-center">
-                <span className="font-bold text-[#1c2938] text-4xl" style={{ color: color }}>
+              <div className="text-right">
+                <span className="font-bold text-[#1c2938] text-4xl whitespace-nowrap" style={{ color: color }}>
                   {(() => {
                     const currency = invoice.invoiceCurrency || invoice.currency;
                     const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
@@ -730,11 +731,11 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <div className="w-full bg-slate-100 rounded-full h-2.5 mb-1">
                   <div
                     className="bg-green-500 h-2.5 rounded-full"
-                    style={{ width: `${Math.min(100, (paidEur / invoiceTotal) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (amountPaid / invoice.total) * 100)}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between text-xs text-slate-400">
-                  <span>{((paidEur / invoiceTotal) * 100).toFixed(0)}% Completado</span>
+                  <span>{((amountPaid / invoice.total) * 100).toFixed(0)}% Completado</span>
                   <span>
                     Resta: {(() => {
                       const currency = invoice.invoiceCurrency || invoice.currency;
