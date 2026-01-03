@@ -227,10 +227,20 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tone: selectedTone })
       });
-      const data = await response.json();
-      setEmailPreview(data.text || '');
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        setEmailPreview(data.text || '');
+      } else {
+        throw new Error('API returned non-JSON response');
+      }
     } catch (error) {
-      console.error('Error generando plantilla:', error);
+      console.error('Error generando plantilla (usando fallback):', error);
       setEmailPreview(selectedTone === 'Formal'
         ? "Estimado cliente,\n\nAdjunto encontrará la factura correspondiente.\n\nSaludos cordiales."
         : "¡Hola!\n\nAquí tienes tu factura. Cualquier duda, avísame.\n\n¡Un abrazo!");
