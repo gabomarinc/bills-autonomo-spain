@@ -20,7 +20,7 @@ const getDbClient = () => {
     const url = import.meta.env?.VITE_DATABASE_URL ||
       process.env?.DATABASE_URL ||
       process.env?.VITE_DATABASE_URL ||
-      'postgresql://neondb_owner:npg_8KpMkHIF2aqB@ep-morning-glade-ab2v6wo5-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'; // Emergency fallback for Vercel
+      process.env?.VITE_DATABASE_URL;
 
     if (!url) {
       console.error("❌ CRITICAL: DATABASE_URL is not set. The app cannot connect to Neon DB.");
