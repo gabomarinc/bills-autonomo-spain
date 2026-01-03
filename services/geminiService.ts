@@ -7,8 +7,8 @@ const GEMINI_VISION_MODEL_ID = 'gemini-2.5-flash';
 const TIMEOUT_MS = 25000; // 25 seconds timeout
 
 export interface AiKeys {
-  gemini?: string;
-  openai?: string;
+    gemini?: string;
+    openai?: string;
 }
 
 // --- UTILS ---
@@ -17,7 +17,7 @@ export interface AiKeys {
 const withTimeout = <T>(promise: Promise<T>, timeoutMs: number = TIMEOUT_MS): Promise<T> => {
     return Promise.race([
         promise,
-        new Promise<T>((_, reject) => 
+        new Promise<T>((_, reject) =>
             setTimeout(() => reject(new Error("Tiempo de espera agotado. La IA tardó demasiado en responder.")), timeoutMs)
         )
     ]);
@@ -25,100 +25,100 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number = TIMEOUT_MS): Pr
 
 // Helper to get API key: user keys first, then fallback to process.env.API_KEY
 const getApiKey = (keys?: AiKeys): string | null => {
-  // Prioridad 1: API key del usuario (Gemini)
-  if (keys?.gemini && keys.gemini.trim()) {
-    return keys.gemini.trim();
-  }
-  
-  // Prioridad 2: API key del sistema (variable de entorno)
-  if (process.env.API_KEY) {
-    return process.env.API_KEY;
-  }
-  
-  return null;
+    // Prioridad 1: API key del usuario (Gemini)
+    if (keys?.gemini && keys.gemini.trim()) {
+        return keys.gemini.trim();
+    }
+
+    // Prioridad 2: API key del sistema (variable de entorno)
+    if (process.env.API_KEY) {
+        return process.env.API_KEY;
+    }
+
+    return null;
 };
 
 // Get AI client using user API keys or fallback to process.env.API_KEY
 const getAiClient = (keys?: AiKeys) => {
-  const apiKey = getApiKey(keys);
-  
-  if (apiKey) {
-    return new GoogleGenAI({ apiKey });
-  }
-  
-  console.error("Gemini AI Error: No API key found. Configure your API key in Settings or set process.env.API_KEY.");
-  throw new Error(AI_ERROR_BLOCKED);
+    const apiKey = getApiKey(keys);
+
+    if (apiKey) {
+        return new GoogleGenAI({ apiKey });
+    }
+
+    console.error("Gemini AI Error: No API key found. Configure your API key in Settings or set process.env.API_KEY.");
+    throw new Error(AI_ERROR_BLOCKED);
 };
 
 // Helper to sanitize JSON response from LLM
 const cleanJson = (text: string) => {
-  if (!text) return "{}";
-  
-  // 1. Try to extract JSON from Markdown code blocks first
-  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/i);
-  if (jsonBlockMatch && jsonBlockMatch[1]) {
-      return jsonBlockMatch[1].trim();
-  }
+    if (!text) return "{}";
 
-  // 2. Fallback: Cleanup common markdown artifacts
-  let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  
-  // 3. Find brackets to strip introductory text
-  const firstOpen = cleaned.indexOf('{');
-  const lastClose = cleaned.lastIndexOf('}');
-  
-  if (firstOpen !== -1 && lastClose !== -1) {
-      cleaned = cleaned.substring(firstOpen, lastClose + 1);
-  }
+    // 1. Try to extract JSON from Markdown code blocks first
+    const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/i);
+    if (jsonBlockMatch && jsonBlockMatch[1]) {
+        return jsonBlockMatch[1].trim();
+    }
 
-  return cleaned.trim();
+    // 2. Fallback: Cleanup common markdown artifacts
+    let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+    // 3. Find brackets to strip introductory text
+    const firstOpen = cleaned.indexOf('{');
+    const lastClose = cleaned.lastIndexOf('}');
+
+    if (firstOpen !== -1 && lastClose !== -1) {
+        cleaned = cleaned.substring(firstOpen, lastClose + 1);
+    }
+
+    return cleaned.trim();
 };
 
 // --- APP FEATURES (Strict Mode: process.env.API_KEY Only) ---
 
 export const parseExpenseImage = async (
-  imageBase64: string, 
-  mimeType: string, 
-  keys?: AiKeys
+    imageBase64: string,
+    mimeType: string,
+    keys?: AiKeys
 ): Promise<ParsedInvoiceData | null> => {
-  
-  try {
-    const ai = getAiClient(keys);
 
-    const schema: Schema = {
-      type: Type.OBJECT,
-      properties: {
-        clientName: { type: Type.STRING },
-        amount: { type: Type.NUMBER },
-        currency: { type: Type.STRING },
-        date: { type: Type.STRING },
-        concept: { type: Type.STRING }
-      },
-      required: ["clientName", "amount", "currency", "concept"]
-    };
+    try {
+        const ai = getAiClient(keys);
 
-    const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
-      model: GEMINI_VISION_MODEL_ID,
-      contents: {
-        parts: [
-          { inlineData: { data: imageBase64, mimeType: mimeType } },
-          { text: "Extrae: Proveedor (clientName), Total (amount), Moneda (currency), Fecha YYYY-MM-DD (date), Concepto breve (concept)." }
-        ]
-      },
-      config: { responseMimeType: "application/json", responseSchema: schema }
-    }));
+        const schema: Schema = {
+            type: Type.OBJECT,
+            properties: {
+                clientName: { type: Type.STRING },
+                amount: { type: Type.NUMBER },
+                currency: { type: Type.STRING },
+                date: { type: Type.STRING },
+                concept: { type: Type.STRING }
+            },
+            required: ["clientName", "amount", "currency", "concept"]
+        };
 
-    if (response.text) {
-       const cleaned = cleanJson(response.text);
-       const data = JSON.parse(cleaned);
-       return { ...data, detectedType: 'Expense' } as ParsedInvoiceData;
+        const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
+            model: GEMINI_VISION_MODEL_ID,
+            contents: {
+                parts: [
+                    { inlineData: { data: imageBase64, mimeType: mimeType } },
+                    { text: "Extrae: Proveedor (clientName), Total (amount), Moneda (currency), Fecha YYYY-MM-DD (date), Concepto breve (concept)." }
+                ]
+            },
+            config: { responseMimeType: "application/json", responseSchema: schema }
+        }));
+
+        if (response.text) {
+            const cleaned = cleanJson(response.text);
+            const data = JSON.parse(cleaned);
+            return { ...data, detectedType: 'Expense' } as ParsedInvoiceData;
+        }
+        return null;
+
+    } catch (error) {
+        console.error("Gemini Vision Error:", error);
+        return null;
     }
-    return null;
-
-  } catch (error) {
-    console.error("Gemini Vision Error:", error);
-    return null;
-  }
 };
 
 export const parseInvoiceRequest = async (input: string, keys?: AiKeys): Promise<ParsedInvoiceData | null> => {
@@ -162,7 +162,7 @@ export const askSupportBot = async (message: string, keys?: AiKeys): Promise<str
             config: { systemInstruction: "Eres un asistente de soporte técnico amigable y servicial para la plataforma Kônsul Bills." }
         }));
         return response.text || "No entendí, ¿puedes repetir?";
-    } catch(e) {
+    } catch (e) {
         if ((e as Error).message === AI_ERROR_BLOCKED) return "Por favor configura tu API Key de IA en Ajustes para hablar conmigo.";
         return "Lo siento, estoy teniendo problemas de conexión. Intenta más tarde.";
     }
@@ -170,10 +170,10 @@ export const askSupportBot = async (message: string, keys?: AiKeys): Promise<str
 
 // --- ONBOARDING FEATURES (process.env.API_KEY Only) ---
 
-export const suggestCatalogItems = async (businessDescription: string, keys?: AiKeys, _useSystemKey: boolean = false): Promise<CatalogItem[]> => {
+export const suggestCatalogItems = async (businessDescription: string, keys?: AiKeys, _useSystemKey: boolean = false, sector?: string, subcategories?: string[]): Promise<CatalogItem[]> => {
     try {
         const ai = getAiClient(keys);
-        
+
         const schema: Schema = {
             type: Type.ARRAY,
             items: {
@@ -186,30 +186,33 @@ export const suggestCatalogItems = async (businessDescription: string, keys?: Ai
                 required: ['name', 'price', 'description']
             }
         };
-        
-        console.log('Llamando a Gemini para generar catálogo...');
+
+        const sectorContext = sector ? ` El usuario opera en el sector: ${sector}.` : '';
+        const subContext = subcategories && subcategories.length > 0 ? ` Especialidades: ${subcategories.join(', ')}.` : '';
+
+        console.log('Llamando a Gemini para generar catálogo...', { sector, subcategories });
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
-            contents: `Sugiere 3-5 servicios o productos con precios estimados para: ${businessDescription}. Precios en EUR (Euros).`,
+            contents: `Eres un experto consultor de negocios. Sugiere 3-5 servicios o productos específicos con precios estimados (en EUR) para el siguiente negocio.${sectorContext}${subContext} Descripción del usuario: "${businessDescription}". Sé creativo pero realista.`,
             config: { responseMimeType: "application/json", responseSchema: schema }
         }));
-        
+
         const text = response.text || "[]";
         console.log('Respuesta de Gemini (raw):', text.substring(0, 200));
-        
+
         const cleaned = cleanJson(text);
         const items = JSON.parse(cleaned);
-        
+
         if (!Array.isArray(items) || items.length === 0) {
             console.warn('Gemini devolvió array vacío o inválido');
             return [];
         }
-        
+
         console.log('Catálogo generado exitosamente:', items.length, 'items');
-        return items.map((i: any) => ({ 
-            ...i, 
-            id: `cat_${Date.now()}_${Math.random()}`, 
-            isRecurring: false 
+        return items.map((i: any) => ({
+            ...i,
+            id: `cat_${Date.now()}_${Math.random()}`,
+            isRecurring: false
         }));
     } catch (e: any) {
         console.error("Suggest Catalog Error:", e);
@@ -233,9 +236,9 @@ export const generateEmailTemplate = async (tone: 'Formal' | 'Casual', keys?: Ai
         // Limitar a las primeras 3 líneas o 200 caracteres
         const lines = text.split('\n').slice(0, 3).join('\n');
         return lines.length > 200 ? lines.substring(0, 200) + '...' : lines;
-    } catch(e) {
-        return tone === 'Formal' 
-            ? "Estimado cliente,\n\nAdjunto encontrará la factura correspondiente.\n\nSaludos cordiales." 
+    } catch (e) {
+        return tone === 'Formal'
+            ? "Estimado cliente,\n\nAdjunto encontrará la factura correspondiente.\n\nSaludos cordiales."
             : "¡Hola!\n\nAquí tienes tu factura. Cualquier duda, avísame.\n\n¡Un abrazo!";
     }
 };
@@ -250,7 +253,7 @@ export const testAiConnection = async (provider: 'gemini' | 'openai', key: strin
             return true;
         } catch { return false; }
     }
-    return true; 
+    return true;
 };
 
 export const generateFinancialAnalysis = async (summary: string, keys?: AiKeys): Promise<FinancialAnalysisResult | null> => {
@@ -288,21 +291,21 @@ export const generateFinancialAnalysis = async (summary: string, keys?: AiKeys):
             Responde SOLO en JSON válido.`,
             config: { responseMimeType: "application/json", responseSchema: schema }
         }));
-        
+
         const cleaned = cleanJson(response.text || "{}");
         const result = JSON.parse(cleaned);
-        
+
         // Safety Fallback for Enums
         const validStatuses = ['Excelente', 'Buena', 'Regular', 'Crítica'];
         if (!validStatuses.includes(result.healthStatus)) {
-            result.healthStatus = 'Regular'; 
+            result.healthStatus = 'Regular';
         }
-        
+
         return result;
-    } catch (e) { 
+    } catch (e) {
         console.error("Analysis Error:", e);
         if ((e as Error).message === AI_ERROR_BLOCKED) throw e;
-        return null; 
+        return null;
     }
 };
 
@@ -314,10 +317,10 @@ export const generateDeepDiveReport = async (title: string, context: string, key
             properties: {
                 chartTitle: { type: Type.STRING },
                 executiveSummary: { type: Type.STRING },
-                keyMetrics: { 
-                    type: Type.ARRAY, 
-                    items: { 
-                        type: Type.OBJECT, 
+                keyMetrics: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
                         properties: {
                             label: { type: Type.STRING },
                             value: { type: Type.STRING },
@@ -347,26 +350,26 @@ export const generateDeepDiveReport = async (title: string, context: string, key
             - IMPORTANTE: 'trend' debe ser obligatoriamente 'up', 'down' o 'neutral'.`,
             config: { responseMimeType: "application/json", responseSchema: schema }
         }));
-        
+
         const cleaned = cleanJson(response.text || "{}");
         const parsed = JSON.parse(cleaned);
         if (!parsed.chartTitle) return null;
         return parsed;
     } catch (e) {
         console.error("Deep Dive Error:", e);
-        return null; 
+        return null;
     }
 };
 
 export const analyzePriceMarket = async (
-    itemName: string, 
-    country: string, 
+    itemName: string,
+    country: string,
     keys?: AiKeys,
     userContext?: UserProfile
 ): Promise<PriceAnalysisResult | null> => {
     try {
         const ai = getAiClient(keys);
-        
+
         let contextPrompt = `Ubicación: ${country}.`;
         if (userContext) {
             contextPrompt += ` Perfil: ${userContext.type}.`;
@@ -394,7 +397,7 @@ export const analyzePriceMarket = async (
         return JSON.parse(cleaned);
     } catch (e) {
         if ((e as Error).message === AI_ERROR_BLOCKED) throw e;
-        return null; 
+        return null;
     }
 };
 
@@ -407,13 +410,13 @@ export const enhanceProductDescription = async (desc: string, name: string, form
         }));
         return response.text || desc;
     } catch (e) {
-        return desc; 
+        return desc;
     }
 };
 
 export const getDiscountRecommendation = async (
-    amount: number, 
-    clientName: string, 
+    amount: number,
+    clientName: string,
     keys?: AiKeys
 ): Promise<{ recommendedRate: number, reasoning: string } | null> => {
     try {
@@ -426,13 +429,13 @@ export const getDiscountRecommendation = async (
             },
             required: ['recommendedRate', 'reasoning']
         };
-        
+
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
             contents: `Recomienda un descuento para venta de €${amount} a "${clientName}". Prioriza rentabilidad.`,
             config: { responseMimeType: "application/json", responseSchema: schema }
         }));
-        
+
         const cleaned = cleanJson(response.text || "{}");
         return JSON.parse(cleaned);
     } catch (e) {
@@ -441,8 +444,8 @@ export const getDiscountRecommendation = async (
 };
 
 export const generateRevenueInsight = async (
-    currentRevenue: number, 
-    prevRevenue: number, 
+    currentRevenue: number,
+    prevRevenue: number,
     percentChange: number,
     keys?: AiKeys
 ): Promise<string | null> => {

@@ -101,65 +101,99 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     }
     setIsLoading(true);
 
-    // Function to run local mock generation
+    // Function to run local mock generation (Enhanced)
     const runLocalMock = async () => {
-      console.log('🔄 Ejecutando generación local (Fallback)...');
+      console.log('🔄 Ejecutando generación local (Fallback)...', { sector: selectedSector });
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
 
       const businessDescLower = businessDesc.toLowerCase();
       let mockItems: CatalogItem[] = [];
 
-      if (businessDescLower.includes('tecnologia') || businessDescLower.includes('software') || businessDescLower.includes('consultor') || businessDescLower.includes('programador') || businessDescLower.includes('web')) {
-        mockItems = [
-          { id: '1', name: 'Consultoría Tecnológica', description: 'Asesoramiento especializado en transformación digital.', price: 80.00 },
-          { id: '2', name: 'Desarrollo de Software', description: 'Desarrollo de soluciones a medida.', price: 120.00 },
-          { id: '3', name: 'Mantenimiento de Sistemas', description: 'Soporte técnico y mantenimiento preventivo.', price: 60.00 },
-          { id: '4', name: 'Auditoría de Seguridad', description: 'Análisis de vulnerabilidades y seguridad.', price: 150.00 }
-        ];
-      } else if (businessDescLower.includes('diseño') || businessDescLower.includes('marketing') || businessDescLower.includes('redes') || businessDescLower.includes('social') || businessDescLower.includes('creativo')) {
-        mockItems = [
-          { id: '1', name: 'Diseño de Identidad Visual', description: 'Creación de logo y manual de marca.', price: 500.00 },
-          { id: '2', name: 'Gestión de Redes Sociales', description: 'Planificación y publicación de contenido mensual.', price: 300.00 },
-          { id: '3', name: 'Diseño Web', description: 'Diseño y desarrollo de sitio web corporativo.', price: 1200.00 }
-        ];
-      } else if (businessDescLower.includes('abogado') || businessDescLower.includes('legal') || businessDescLower.includes('asesor') || businessDescLower.includes('gestor')) {
-        mockItems = [
-          { id: '1', name: 'Consulta Legal', description: 'Hora de consulta jurídica especializada.', price: 150.00 },
-          { id: '2', name: 'Revisión de Contratos', description: 'Análisis y redacción de documentos legales.', price: 250.00 },
-          { id: '3', name: 'Gestión de Trámites', description: 'Representación y gestión administrativa.', price: 300.00 }
-        ];
-      } else if (businessDescLower.includes('video') || businessDescLower.includes('foto') || businessDescLower.includes('camara') || businessDescLower.includes('edicion') || businessDescLower.includes('produccion')) {
-        mockItems = [
-          { id: '1', name: 'Sesión de Grabación (Jornada)', description: 'Grabación de video profesional (8h).', price: 450.00 },
-          { id: '2', name: 'Edición de Video', description: 'Edición y post-producción por proyecto.', price: 300.00 },
-          { id: '3', name: 'Fotografía de Producto', description: 'Pack de 10 fotos editadas.', price: 150.00 },
-          { id: '4', name: 'Reel para Redes Sociales', description: 'Grabación y edición de video corto vertical.', price: 120.00 }
-        ];
-      } else if (businessDescLower.includes('limpieza') || businessDescLower.includes('mantenimiento') || businessDescLower.includes('hogar')) {
-        mockItems = [
-          { id: '1', name: 'Limpieza General', description: 'Servicio de limpieza por hora.', price: 15.00 },
-          { id: '2', name: 'Limpieza a Fondo', description: 'Limpieza profunda de estancia o local.', price: 120.00 },
-          { id: '3', name: 'Mantenimiento Mensual', description: 'Servicio recurrente de mantenimiento.', price: 200.00 }
-        ];
-      } else if (businessDescLower.includes('salud') || businessDescLower.includes('entrenador') || businessDescLower.includes('nutricion') || businessDescLower.includes('fisio') || businessDescLower.includes('psicolog')) {
-        mockItems = [
-          { id: '1', name: 'Consulta Inicial', description: 'Evaluación y diagnóstico inicial.', price: 60.00 },
-          { id: '2', name: 'Sesión de Seguimiento', description: 'Sesión individual de tratamiento/entrenamiento.', price: 45.00 },
-          { id: '3', name: 'Pack Mensual', description: '4 sesiones al mes con seguimiento.', price: 160.00 }
-        ];
-      } else if (businessDescLower.includes('obra') || businessDescLower.includes('reforma') || businessDescLower.includes('construccion') || businessDescLower.includes('pintor')) {
-        mockItems = [
-          { id: '1', name: 'Mano de Obra (Hora)', description: 'Hora de trabajo especializado.', price: 25.00 },
-          { id: '2', name: 'Presupuesto Reforma Baño', description: 'Reforma integral de baño estándar.', price: 2500.00 },
-          { id: '3', name: 'Pintura Habitación', description: 'Mano de obra y materiales para habitación.', price: 350.00 }
-        ];
+      // Priority 1: Sector Based Fallback (Matches what User Selected)
+      const sectorMap: Record<string, CatalogItem[]> = {
+        'MARKETING': [
+          { id: '1', name: 'Gestión de RRSS', description: 'Plan mensual de redes sociales.', price: 300.00 },
+          { id: '2', name: 'Diseño de Logo', description: 'Diseño de identidad visual.', price: 150.00 },
+          { id: '3', name: 'Campaña Ads', description: 'Configuración y gestión de campaña.', price: 250.00 }
+        ],
+        'PROGRAMACION': [
+          { id: '1', name: 'Desarrollo Web', description: 'Sitio web corporativo.', price: 800.00 },
+          { id: '2', name: 'Mantenimiento', description: 'Mantenimiento mensual web.', price: 50.00 },
+          { id: '3', name: 'Consultoría IT', description: 'Hora de soporte técnico.', price: 60.00 }
+        ],
+        'DISENO': [
+          { id: '1', name: 'Diseño Web UI', description: 'Diseño de interfaz web.', price: 400.00 },
+          { id: '2', name: 'Branding Completo', description: 'Logo, papelería y manual.', price: 600.00 },
+          { id: '3', name: 'Diseño Editorial', description: 'Maquetación de dossier.', price: 150.00 }
+        ],
+        'SALUD': [
+          { id: '1', name: 'Consulta Inicial', description: 'Evaluación y diagnóstico.', price: 60.00 },
+          { id: '2', name: 'Sesión Terapia', description: 'Sesión individual (1h).', price: 50.00 },
+          { id: '3', name: 'Bono Mensual', description: 'Pack de 4 sesiones.', price: 180.00 }
+        ],
+        'CONSTRUCCION': [
+          { id: '1', name: 'Mano de Obra', description: 'Hora de oficial primera.', price: 28.00 },
+          { id: '2', name: 'Presupuesto Reforma', description: 'Reforma parcial según medición.', price: 1500.00 },
+          { id: '3', name: 'Desplazamiento', description: 'Salida y diagnóstico.', price: 40.00 }
+        ]
+      };
+
+      if (selectedSector && sectorMap[selectedSector]) {
+        mockItems = sectorMap[selectedSector];
       } else {
-        // Generic Fallback
-        mockItems = [
-          { id: '1', name: 'Servicio Profesional', description: 'Prestación de servicios profesionales.', price: 100.00 },
-          { id: '2', name: 'Asesoría / Consultoría', description: 'Hora de asesoría estándar.', price: 50.00 },
-          { id: '3', name: 'Proyecto a Medida', description: 'Ejecución de proyecto según presupuesto.', price: 1000.00 }
-        ];
+        // Priority 2: Keyword Matching Fallback (Legacy)
+        if (businessDescLower.includes('tecnologia') || businessDescLower.includes('software') || businessDescLower.includes('consultor') || businessDescLower.includes('programador') || businessDescLower.includes('web')) {
+          mockItems = [
+            { id: '1', name: 'Consultoría Tecnológica', description: 'Asesoramiento especializado en transformación digital.', price: 80.00 },
+            { id: '2', name: 'Desarrollo de Software', description: 'Desarrollo de soluciones a medida.', price: 120.00 },
+            { id: '3', name: 'Mantenimiento de Sistemas', description: 'Soporte técnico y mantenimiento preventivo.', price: 60.00 },
+            { id: '4', name: 'Auditoría de Seguridad', description: 'Análisis de vulnerabilidades y seguridad.', price: 150.00 }
+          ];
+        } else if (businessDescLower.includes('diseño') || businessDescLower.includes('marketing') || businessDescLower.includes('redes') || businessDescLower.includes('social') || businessDescLower.includes('creativo')) {
+          mockItems = [
+            { id: '1', name: 'Diseño de Identidad Visual', description: 'Creación de logo y manual de marca.', price: 500.00 },
+            { id: '2', name: 'Gestión de Redes Sociales', description: 'Planificación y publicación de contenido mensual.', price: 300.00 },
+            { id: '3', name: 'Diseño Web', description: 'Diseño y desarrollo de sitio web corporativo.', price: 1200.00 }
+          ];
+        } else if (businessDescLower.includes('abogado') || businessDescLower.includes('legal') || businessDescLower.includes('asesor') || businessDescLower.includes('gestor')) {
+          mockItems = [
+            { id: '1', name: 'Consulta Legal', description: 'Hora de consulta jurídica especializada.', price: 150.00 },
+            { id: '2', name: 'Revisión de Contratos', description: 'Análisis y redacción de documentos legales.', price: 250.00 },
+            { id: '3', name: 'Gestión de Trámites', description: 'Representación y gestión administrativa.', price: 300.00 }
+          ];
+        } else if (businessDescLower.includes('video') || businessDescLower.includes('foto') || businessDescLower.includes('camara') || businessDescLower.includes('edicion') || businessDescLower.includes('produccion')) {
+          mockItems = [
+            { id: '1', name: 'Sesión de Grabación (Jornada)', description: 'Grabación de video profesional (8h).', price: 450.00 },
+            { id: '2', name: 'Edición de Video', description: 'Edición y post-producción por proyecto.', price: 300.00 },
+            { id: '3', name: 'Fotografía de Producto', description: 'Pack de 10 fotos editadas.', price: 150.00 },
+            { id: '4', name: 'Reel para Redes Sociales', description: 'Grabación y edición de video corto vertical.', price: 120.00 }
+          ];
+        } else if (businessDescLower.includes('limpieza') || businessDescLower.includes('mantenimiento') || businessDescLower.includes('hogar')) {
+          mockItems = [
+            { id: '1', name: 'Limpieza General', description: 'Servicio de limpieza por hora.', price: 15.00 },
+            { id: '2', name: 'Limpieza a Fondo', description: 'Limpieza profunda de estancia o local.', price: 120.00 },
+            { id: '3', name: 'Mantenimiento Mensual', description: 'Servicio recurrente de mantenimiento.', price: 200.00 }
+          ];
+        } else if (businessDescLower.includes('salud') || businessDescLower.includes('entrenador') || businessDescLower.includes('nutricion') || businessDescLower.includes('fisio') || businessDescLower.includes('psicolog')) {
+          mockItems = [
+            { id: '1', name: 'Consulta Inicial', description: 'Evaluación y diagnóstico inicial.', price: 60.00 },
+            { id: '2', name: 'Sesión de Seguimiento', description: 'Sesión individual de tratamiento/entrenamiento.', price: 45.00 },
+            { id: '3', name: 'Pack Mensual', description: '4 sesiones al mes con seguimiento.', price: 160.00 }
+          ];
+        } else if (businessDescLower.includes('obra') || businessDescLower.includes('reforma') || businessDescLower.includes('construccion') || businessDescLower.includes('pintor')) {
+          mockItems = [
+            { id: '1', name: 'Mano de Obra (Hora)', description: 'Hora de trabajo especializado.', price: 25.00 },
+            { id: '2', name: 'Presupuesto Reforma Baño', description: 'Reforma integral de baño estándar.', price: 2500.00 },
+            { id: '3', name: 'Pintura Habitación', description: 'Mano de obra y materiales para habitación.', price: 350.00 }
+          ];
+        } else {
+          // Generic Fallback
+          mockItems = [
+            { id: '1', name: 'Servicio Profesional', description: 'Prestación de servicios profesionales.', price: 100.00 },
+            { id: '2', name: 'Asesoría / Consultoría', description: 'Hora de asesoría estándar.', price: 50.00 },
+            { id: '3', name: 'Proyecto a Medida', description: 'Ejecución de proyecto según presupuesto.', price: 1000.00 }
+          ];
+        }
       }
 
       setCatalogItems(mockItems);
@@ -170,7 +204,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       const response = await fetch('/api/generate-catalog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessDescription: businessDesc.trim() })
+        body: JSON.stringify({
+          businessDescription: businessDesc.trim(),
+          sector: selectedSector,
+          subcategories: selectedSubcategories
+        })
       });
 
       // Verify JSON content type
