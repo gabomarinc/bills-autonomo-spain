@@ -17,7 +17,8 @@ async function computeSha256(message: string): Promise<string> {
 
 const getDbClient = () => {
   try {
-    const url = process.env.DATABASE_URL;
+    // Check both import.meta.env (Vite) and process.env (Node/Fallback)
+    const url = import.meta.env?.VITE_DATABASE_URL || process.env?.DATABASE_URL;
 
     if (!url) {
       console.warn("DATABASE_URL environment variable is not set.");
