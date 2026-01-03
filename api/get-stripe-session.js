@@ -18,9 +18,9 @@ export default async function handler(req, res) {
   try {
     // 1. Retrieve the Checkout Session to get the Customer ID and Subscription ID
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    
+
     let renewalDate = null;
-    let planName = 'Emprendedor Pro';
+    let planName = 'Money Honey';
 
     // 2. Retrieve Subscription details to get the exact renewal date (current_period_end)
     if (session.subscription) {
@@ -28,10 +28,10 @@ export default async function handler(req, res) {
       // Stripe timestamps are in seconds, convert to JS Date
       renewalDate = new Date(subscription.current_period_end * 1000).toISOString();
     } else {
-        // Fallback for one-time payments or trials (1 month from now)
-        const d = new Date();
-        d.setMonth(d.getMonth() + 1);
-        renewalDate = d.toISOString();
+      // Fallback for one-time payments or trials (1 month from now)
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      renewalDate = d.toISOString();
     }
 
     return res.status(200).json({

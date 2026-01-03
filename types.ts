@@ -182,7 +182,7 @@ export interface UserProfile {
   whatsappCountryCode?: string; // New: Prefix
 
   // Subscription
-  plan?: 'Free' | 'Emprendedor Pro' | 'Empresa Scale';
+  plan?: 'Freshie' | 'Money Honey' | 'Empresa Scale';
   renewalDate?: string;
   stripeCustomerId?: string; // NEW: To link with Stripe Billing Portal
 

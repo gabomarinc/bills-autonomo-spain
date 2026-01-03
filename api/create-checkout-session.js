@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   // We only support one plan for this test flow, linked to a specific Product ID
   // The product ID provided is: prod_Tb5hEomvGYQEhh
   // We use price_data to define the cost on the fly while linking to the existing product.
-  
+
   const priceData = {
     currency: 'eur',
     product: 'prod_Tb5hEomvGYQEhh', // Explicitly linking to the existing Stripe Product
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       client_reference_id: userId,
       metadata: {
         userId: userId,
-        plan: 'Emprendedor Pro' // Keeping metadata consistent
+        plan: 'Money Honey' // Keeping metadata consistent
       }
     });
 

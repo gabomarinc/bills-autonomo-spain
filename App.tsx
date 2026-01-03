@@ -17,17 +17,17 @@ import ExpenseTracker from './components/ExpenseTracker';
 import ExpenseWizard from './components/ExpenseWizard';
 import ClientWizard from './components/ClientWizard';
 import QuotaCalculator from './components/QuotaCalculator';
-import TrimestralWizard from './components/TrimestralWizard'; 
+import TrimestralWizard from './components/TrimestralWizard';
 import { AlertProvider, useAlert } from './components/AlertSystem';
-import { 
-  authenticateUser, 
-  createUserInDb, 
-  updateUserProfileInDb, 
-  fetchInvoicesFromDb, 
-  saveInvoiceToDb, 
+import {
+  authenticateUser,
+  createUserInDb,
+  updateUserProfileInDb,
+  fetchInvoicesFromDb,
+  saveInvoiceToDb,
   deleteInvoiceFromDb,
   saveClientToDb,
-  saveProviderToDb, 
+  saveProviderToDb,
   getUserById,
   fetchClientsFromDb,
   fetchCatalogItemsFromDb,
@@ -40,81 +40,81 @@ const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeView, setActiveView] = useState<AppView>(AppView.DASHBOARD);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [dbClients, setDbClients] = useState<DbClient[]>([]); 
-  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]); 
+  const [dbClients, setDbClients] = useState<DbClient[]>([]);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedClientName, setSelectedClientName] = useState<string | null>(null);
   const [documentToEdit, setDocumentToEdit] = useState<Invoice | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
-  
-  const alert = useAlert(); 
+
+  const alert = useAlert();
 
   // SESSION RESTORATION LOGIC
   useEffect(() => {
     const initSession = async () => {
-        const params = new URLSearchParams(window.location.search);
-        const paymentSuccess = params.get('payment_success');
-        const sessionId = params.get('session_id');
-        
-        const storedUserStr = localStorage.getItem('konsul_user_data'); 
-        const storedUserId = localStorage.getItem('konsul_session_id');
+      const params = new URLSearchParams(window.location.search);
+      const paymentSuccess = params.get('payment_success');
+      const sessionId = params.get('session_id');
 
-        if (storedUserStr) {
-           try {
-             let cachedUser = JSON.parse(storedUserStr);
-             
-             if (paymentSuccess === 'true' && sessionId) {
-                 try {
-                    const stripeRes = await fetch(`/api/get-stripe-session?sessionId=${sessionId}`);
-                    const stripeData = await stripeRes.json();
+      const storedUserStr = localStorage.getItem('konsul_user_data');
+      const storedUserId = localStorage.getItem('konsul_session_id');
 
-                    if (stripeData.customerId) {
-                        const updatedUserWithStripe = {
-                            ...cachedUser,
-                            stripeCustomerId: stripeData.customerId,
-                            renewalDate: stripeData.renewalDate || cachedUser.renewalDate, // Store ISO string
-                            plan: stripeData.plan || 'Emprendedor Pro'
-                        };
+      if (storedUserStr) {
+        try {
+          let cachedUser = JSON.parse(storedUserStr);
 
-                        cachedUser = updatedUserWithStripe;
-                        localStorage.setItem('konsul_user_data', JSON.stringify(updatedUserWithStripe));
-                        await updateUserProfileInDb(updatedUserWithStripe);
-
-                        setTimeout(() => {
-                            alert.addToast('success', 'Suscripción Activada', 'Tu cuenta Pro está lista y sincronizada.');
-                        }, 1000);
-                    }
-                 } catch (err) {
-                    console.error("Error syncing Stripe data:", err);
-                 }
-                 window.history.replaceState({}, document.title, window.location.pathname);
-             }
-
-             setCurrentUser(cachedUser);
-             setIsSessionLoading(false); 
-           } catch (e) {
-             console.error("Cache parse error", e);
-           }
-        }
-
-        if (storedUserId) {
+          if (paymentSuccess === 'true' && sessionId) {
             try {
-                const user = await getUserById(storedUserId);
-                if (user) {
-                    setCurrentUser(prev => {
-                        if (prev?.stripeCustomerId && !user.stripeCustomerId) return prev;
-                        return user;
-                    });
-                    localStorage.setItem('konsul_user_data', JSON.stringify(user));
-                } else {
-                    handleLogout();
-                }
-            } catch (error) {
-                setIsOffline(true);
+              const stripeRes = await fetch(`/api/get-stripe-session?sessionId=${sessionId}`);
+              const stripeData = await stripeRes.json();
+
+              if (stripeData.customerId) {
+                const updatedUserWithStripe = {
+                  ...cachedUser,
+                  stripeCustomerId: stripeData.customerId,
+                  renewalDate: stripeData.renewalDate || cachedUser.renewalDate, // Store ISO string
+                  plan: stripeData.plan || 'Money Honey'
+                };
+
+                cachedUser = updatedUserWithStripe;
+                localStorage.setItem('konsul_user_data', JSON.stringify(updatedUserWithStripe));
+                await updateUserProfileInDb(updatedUserWithStripe);
+
+                setTimeout(() => {
+                  alert.addToast('success', 'Suscripción Activada', 'Tu cuenta Pro está lista y sincronizada.');
+                }, 1000);
+              }
+            } catch (err) {
+              console.error("Error syncing Stripe data:", err);
             }
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+
+          setCurrentUser(cachedUser);
+          setIsSessionLoading(false);
+        } catch (e) {
+          console.error("Cache parse error", e);
         }
-        setIsSessionLoading(false);
+      }
+
+      if (storedUserId) {
+        try {
+          const user = await getUserById(storedUserId);
+          if (user) {
+            setCurrentUser(prev => {
+              if (prev?.stripeCustomerId && !user.stripeCustomerId) return prev;
+              return user;
+            });
+            localStorage.setItem('konsul_user_data', JSON.stringify(user));
+          } else {
+            handleLogout();
+          }
+        } catch (error) {
+          setIsOffline(true);
+        }
+      }
+      setIsSessionLoading(false);
     };
     initSession();
   }, [alert]);
@@ -125,10 +125,10 @@ const AppContent: React.FC = () => {
       const loadData = async () => {
         const docs = await fetchInvoicesFromDb(currentUser.id);
         if (docs) {
-            setInvoices(docs);
-            setIsOffline(false);
+          setInvoices(docs);
+          setIsOffline(false);
         } else {
-            setIsOffline(true);
+          setIsOffline(true);
         }
 
         const clients = await fetchClientsFromDb(currentUser.id);
@@ -136,8 +136,8 @@ const AppContent: React.FC = () => {
 
         const items = await fetchCatalogItemsFromDb(currentUser.id);
         if (items) {
-            setCatalogItems(items);
-            setCurrentUser(prev => prev ? ({ ...prev, defaultServices: items }) : null);
+          setCatalogItems(items);
+          setCurrentUser(prev => prev ? ({ ...prev, defaultServices: items }) : null);
         }
       };
       loadData();
@@ -146,7 +146,7 @@ const AppContent: React.FC = () => {
 
   const handleLoginSuccess = (user: UserProfile) => {
     localStorage.setItem('konsul_session_id', user.id);
-    localStorage.setItem('konsul_user_data', JSON.stringify(user)); 
+    localStorage.setItem('konsul_user_data', JSON.stringify(user));
     setCurrentUser(user);
     alert.addToast('success', `Bienvenido, ${user.name}`, 'Tu sesión ha iniciado correctamente.');
   };
@@ -163,18 +163,18 @@ const AppContent: React.FC = () => {
 
   const handleOnboardingComplete = async (data: Partial<UserProfile> & { password?: string, email?: string }) => {
     if (data.password && data.email) {
-       const success = await createUserInDb(data, data.password, data.email);
-       if (success) {
-         const user = await authenticateUser(data.email, data.password);
-         if (user) handleLoginSuccess(user);
-       } else {
-         alert.addToast('error', 'Error de Registro', 'El correo podría ya estar registrado.');
-       }
+      const success = await createUserInDb(data, data.password, data.email);
+      if (success) {
+        const user = await authenticateUser(data.email, data.password);
+        if (user) handleLoginSuccess(user);
+      } else {
+        alert.addToast('error', 'Error de Registro', 'El correo podría ya estar registrado.');
+      }
     } else if (currentUser) {
-       const updated = { ...currentUser, ...data, isOnboardingComplete: true };
-       await updateUserProfileInDb(updated);
-       setCurrentUser(updated);
-       localStorage.setItem('konsul_user_data', JSON.stringify(updated));
+      const updated = { ...currentUser, ...data, isOnboardingComplete: true };
+      await updateUserProfileInDb(updated);
+      setCurrentUser(updated);
+      localStorage.setItem('konsul_user_data', JSON.stringify(updated));
     }
   };
 
@@ -184,7 +184,7 @@ const AppContent: React.FC = () => {
       alert.addToast('error', 'Error', 'No hay sesión activa. Por favor inicia sesión nuevamente.');
       return;
     }
-    
+
     console.log('💾 Iniciando guardado de factura/cotización:', {
       id: invoice.id,
       type: invoice.type,
@@ -193,7 +193,7 @@ const AppContent: React.FC = () => {
       status: invoice.status,
       userId: currentUser.id
     });
-    
+
     // Guardar en base de datos primero
     const saved = await saveInvoiceToDb({ ...invoice, userId: currentUser.id });
     if (!saved) {
@@ -201,7 +201,7 @@ const AppContent: React.FC = () => {
       alert.addToast('error', 'Error al Guardar', 'No se pudo guardar el documento en la base de datos. Por favor intenta de nuevo.');
       return;
     }
-    
+
     console.log('✅ Guardado exitoso en BD, actualizando estado local...');
     // Actualizar estado local
     const exists = invoices.find(i => i.id === invoice.id);
@@ -211,13 +211,13 @@ const AppContent: React.FC = () => {
       setInvoices([invoice, ...invoices]);
     }
     if (invoice.clientName) {
-       if (invoice.type === 'Expense') {
-           await saveProviderToDb({ name: invoice.clientName.trim(), category: invoice.items[0]?.description || 'General' }, currentUser.id);
-       } else {
-           const existingClient = dbClients.find(c => c.name.trim().toLowerCase() === invoice.clientName.trim().toLowerCase());
-           await saveClientToDb({ id: existingClient?.id, name: invoice.clientName.trim(), taxId: invoice.clientTaxId, email: invoice.clientEmail, address: invoice.clientAddress }, currentUser.id, invoice.type === 'Invoice' ? 'CLIENT' : 'PROSPECT');
-           setDbClients(await fetchClientsFromDb(currentUser.id));
-       }
+      if (invoice.type === 'Expense') {
+        await saveProviderToDb({ name: invoice.clientName.trim(), category: invoice.items[0]?.description || 'General' }, currentUser.id);
+      } else {
+        const existingClient = dbClients.find(c => c.name.trim().toLowerCase() === invoice.clientName.trim().toLowerCase());
+        await saveClientToDb({ id: existingClient?.id, name: invoice.clientName.trim(), taxId: invoice.clientTaxId, email: invoice.clientEmail, address: invoice.clientAddress }, currentUser.id, invoice.type === 'Invoice' ? 'CLIENT' : 'PROSPECT');
+        setDbClients(await fetchClientsFromDb(currentUser.id));
+      }
     }
     setDocumentToEdit(null);
     alert.addToast('success', 'Documento Guardado');
@@ -349,20 +349,20 @@ const AppContent: React.FC = () => {
   const handleUpdateProfile = async (updated: UserProfile) => {
     try {
       setCurrentUser(updated);
-      localStorage.setItem('konsul_user_data', JSON.stringify(updated)); 
-      
+      localStorage.setItem('konsul_user_data', JSON.stringify(updated));
+
       // Llamar a la API route en lugar de la función directa
       const response = await fetch('/api/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile: updated })
       });
-      
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'No se pudo guardar en la base de datos');
       }
-      
+
       alert.addToast('success', 'Perfil Actualizado');
     } catch (error: any) {
       console.error('Error actualizando perfil:', error);
@@ -375,19 +375,19 @@ const AppContent: React.FC = () => {
     if (!currentUser) return;
     const res = await saveCatalogItemToDb(item, currentUser.id);
     if (res.success) {
-        const updated = await fetchCatalogItemsFromDb(currentUser.id);
-        setCatalogItems(updated);
-        setCurrentUser(prev => prev ? ({ ...prev, defaultServices: updated }) : null);
-        alert.addToast('success', 'Ítem Guardado');
+      const updated = await fetchCatalogItemsFromDb(currentUser.id);
+      setCatalogItems(updated);
+      setCurrentUser(prev => prev ? ({ ...prev, defaultServices: updated }) : null);
+      alert.addToast('success', 'Ítem Guardado');
     }
   };
 
   const handleDeleteCatalogItem = async (itemId: string) => {
     if (!currentUser) return;
     if (await deleteCatalogItemFromDb(itemId, currentUser.id)) {
-        const updated = catalogItems.filter(i => i.id !== itemId);
-        setCatalogItems(updated);
-        setCurrentUser(prev => prev ? ({ ...prev, defaultServices: updated }) : null);
+      const updated = catalogItems.filter(i => i.id !== itemId);
+      setCatalogItems(updated);
+      setCurrentUser(prev => prev ? ({ ...prev, defaultServices: updated }) : null);
     }
   };
 
@@ -404,12 +404,12 @@ const AppContent: React.FC = () => {
       {activeView === AppView.INVOICES && <DocumentList invoices={invoices} onSelectInvoice={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }} onCreateNew={() => setActiveView(AppView.WIZARD)} onDeleteInvoice={handleDeleteInvoice} onEditInvoice={(inv) => { setDocumentToEdit(inv); setActiveView(AppView.WIZARD); }} onUpdateStatus={handleUpdateStatus} currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} currentUser={currentUser} />}
       {activeView === AppView.INVOICE_DETAIL && selectedInvoice && <InvoiceDetail invoice={selectedInvoice} issuer={currentUser} onBack={() => setActiveView(AppView.INVOICES)} onUpdateInvoice={(updated) => { setInvoices(invoices.map(i => i.id === updated.id ? updated : i)); setSelectedInvoice(updated); saveInvoiceToDb({ ...updated, userId: currentUser.id }); }} onUpdateStatus={handleUpdateStatus} onEdit={(inv) => { setDocumentToEdit(inv); setActiveView(AppView.WIZARD); }} onDelete={handleDeleteInvoice} onConvertQuote={handleConvertQuote} />}
       {activeView === AppView.CLIENTS && <ClientList invoices={invoices} dbClients={dbClients} onCreateDocument={(c) => { setDocumentToEdit(c ? { id: '', clientName: c.name, clientTaxId: c.taxId, type: 'Invoice', status: 'Borrador', date: new Date().toISOString(), total: 0, currency: currentUser.defaultCurrency || 'EUR', items: [] } : null); setActiveView(AppView.WIZARD); }} onCreateClient={() => setActiveView(AppView.CLIENT_WIZARD)} currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} currentUser={currentUser} onSelectClient={(name) => { setSelectedClientName(name); setActiveView(AppView.CLIENT_DETAIL); }} />}
-      {activeView === AppView.CLIENT_WIZARD && <ClientWizard onSave={async (clientData) => { 
-        await saveClientToDb({ 
-          name: clientData.name, 
+      {activeView === AppView.CLIENT_WIZARD && <ClientWizard onSave={async (clientData) => {
+        await saveClientToDb({
+          name: clientData.name,
           contactName: clientData.contactName,
-          taxId: clientData.taxId, 
-          email: clientData.email, 
+          taxId: clientData.taxId,
+          email: clientData.email,
           address: clientData.address,
           phone: clientData.phone,
           country: clientData.country || 'España',
@@ -420,13 +420,13 @@ const AppContent: React.FC = () => {
         alert.addToast('success', 'Cliente Creado', 'El cliente se ha guardado correctamente.');
         setActiveView(AppView.CLIENTS);
       }} onCancel={() => setActiveView(AppView.CLIENTS)} />}
-      {activeView === AppView.CLIENT_DETAIL && selectedClientName && <ClientDetail 
-        clientName={selectedClientName} 
-        invoices={invoices} 
-        dbClientData={dbClients.find(c => c.name.trim().toLowerCase() === selectedClientName.trim().toLowerCase())} 
-        onBack={() => setActiveView(AppView.CLIENTS)} 
-        onSelectInvoice={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }} 
-        currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} 
+      {activeView === AppView.CLIENT_DETAIL && selectedClientName && <ClientDetail
+        clientName={selectedClientName}
+        invoices={invoices}
+        dbClientData={dbClients.find(c => c.name.trim().toLowerCase() === selectedClientName.trim().toLowerCase())}
+        onBack={() => setActiveView(AppView.CLIENTS)}
+        onSelectInvoice={(inv) => { setSelectedInvoice(inv); setActiveView(AppView.INVOICE_DETAIL); }}
+        currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'}
         onUpdateClientContact={async (old, upd) => { await saveClientToDb(upd, currentUser.id, 'CLIENT'); setDbClients(await fetchClientsFromDb(currentUser.id)); }}
         onCreateDocument={(type, clientData) => {
           // Crear documento inicial con información del cliente prellenada
@@ -452,7 +452,7 @@ const AppContent: React.FC = () => {
       {activeView === AppView.CATALOG && <CatalogDashboard items={catalogItems} userCountry={currentUser.country || 'España'} apiKey={currentUser.apiKeys} onSaveItem={handleSaveCatalogItem} onDeleteItem={handleDeleteCatalogItem} referenceHourlyRate={currentUser.hourlyRateConfig?.calculatedRate} currentUser={currentUser} />}
       {activeView === AppView.REPORTS && <ReportsDashboard invoices={invoices} currencySymbol={currentUser.defaultCurrency === 'EUR' ? '€' : '€'} apiKey={currentUser.apiKeys} currentUser={currentUser} />}
       {activeView === AppView.QUOTA_CALCULATOR && <QuotaCalculator currentUser={currentUser} onUpdateProfile={handleUpdateProfile} />}
-      {activeView === AppView.TRIMESTRAL && <TrimestralWizard currentUser={currentUser} invoices={invoices} onSave={async (decl) => { 
+      {activeView === AppView.TRIMESTRAL && <TrimestralWizard currentUser={currentUser} invoices={invoices} onSave={async (decl) => {
         const { saveTrimestralDeclaration } = await import('./services/neon');
         await saveTrimestralDeclaration(decl);
         alert.addToast('success', 'Declaración Guardada', 'La declaración se ha guardado correctamente.');

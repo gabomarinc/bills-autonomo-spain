@@ -239,7 +239,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
 
   const handleManageSubscription = async () => {
     if (!profile.stripeCustomerId) {
-      if (profile.plan === 'Free') {
+      if (profile.plan === 'Freshie') {
         alert.addToast('info', 'Plan Gratis', "Actualmente estás en el plan Gratis. Contacta a soporte para actualizar.");
       } else {
         alert.addToast('error', 'Error', "No se encontró el ID de cliente de Stripe. Contacta a soporte.");
@@ -828,7 +828,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ currentUser, 
 
             <div className="relative rounded-[2rem] shadow-xl overflow-hidden group bg-gradient-to-br from-[#27bea5] to-[#1e9984] p-8 text-white">
               <p className="text-xs font-bold uppercase mb-1">Membresía</p>
-              <h3 className="text-2xl font-bold flex items-center gap-2 mb-1">{profile.plan || 'Free'} <Crown size={20} className="text-yellow-300" /></h3>
+              <h3 className="text-2xl font-bold flex items-center gap-2 mb-1">{profile.plan || 'Freshie'} <Crown size={20} className="text-yellow-300" /></h3>
               {profile.renewalDate && (
                 <div className="flex items-center gap-2 text-[10px] font-bold text-white/80 uppercase tracking-widest mb-6">
                   <Calendar size={12} />

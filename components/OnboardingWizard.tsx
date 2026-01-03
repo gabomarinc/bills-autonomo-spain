@@ -10,6 +10,7 @@ import { UserProfile, CatalogItem, EmailConfig, ProfileType } from '../types';
 import { createUserInDb } from '../services/neon'; // Import for direct DB creation
 import { sendWelcomeEmail } from '../services/resendService'; // Import Email Service
 import { ACTIVITY_SECTORS, getIvaArticleForActivity, ActivitySector } from '../data/activitySectors';
+import { FreePlanModal } from './FreePlanModal';
 
 interface OnboardingWizardProps {
   onComplete: (profileData: Partial<UserProfile> & { password?: string, email?: string }) => void;
@@ -35,10 +36,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
   const [taxId, setTaxId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
-  const [email, setEmail] = useState(''); // New
-  const [password, setPassword] = useState(''); // New
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [manualEntryMode, setManualEntryMode] = useState(false);
+  const [showFreeModal, setShowFreeModal] = useState(false); // New State
 
   // Step 2 State - Activity Selection (NEW)
   const [selectedSector, setSelectedSector] = useState<string>('');
@@ -273,9 +275,76 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
     }
   };
 
-  const skipPayment = () => {
-    // Continuar sin pago - redirigir al dashboard
-    window.location.href = '/';
+  const skipPayment = async () => {
+    setIsRedirecting(true);
+    try {
+      // Generate ID locally
+      const newUserId = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      const emailConfig: EmailConfig = {
+        provider: 'SYSTEM',
+        email: email
+      };
+
+      const profileData = {
+        id: newUserId,
+        name: companyName || 'Usuario Nuevo',
+        taxId,
+        address,
+        country: DEFAULT_COUNTRY,
+        fiscalConfig: {
+          entityType: (personType === 'JURIDICA' ? 'JURIDICA' : 'FISICA') as 'FISICA' | 'JURIDICA',
+          nif: taxId,
+          regimenFiscal: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICOLA' | 'GANADERO' | 'FORESTAL',
+          actividadPrincipal: businessDesc || '',
+          activitySector: selectedSector || undefined,
+          activitySubcategory: selectedSubcategories.length > 0 ? selectedSubcategories[0] : undefined,
+          activitySubcategories: selectedSubcategories.length > 0 ? selectedSubcategories : undefined,
+          ivaArticle: (() => {
+            if (!selectedSector || selectedSubcategories.length === 0) return undefined;
+            const articles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
+            const uniqueArticles = [...new Set(articles)];
+            if (uniqueArticles.length > 1) return 'MIXTO';
+            return uniqueArticles[0] as 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO';
+          })(),
+          ivaRegimen: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO',
+          prorrateoIVA: false
+        },
+        branding: { primaryColor, templateStyle, logoUrl: logoPreview || undefined },
+        bankAccount,
+        acceptsOnlinePayment: acceptsOnline,
+        defaultCurrency: currency,
+        defaultServices: catalogItems,
+        toneOfVoice: tone || 'Casual',
+        emailConfig,
+        whatsappNumber,
+        whatsappCountryCode,
+        plan: 'Freshie' as const, // Free Plan
+        isOnboardingComplete: true,
+        email,
+        password,
+        type: personType === 'JURIDICA' ? ProfileType.COMPANY : ProfileType.FREELANCE,
+        avatar: logoPreview || ''
+      };
+
+      console.log('Creando usuario Freshie en BD...', { email, userId: newUserId });
+      const success = await createUserInDb(profileData, password, email);
+
+      if (!success) {
+        throw new Error('No se pudo crear el usuario en la base de datos.');
+      }
+
+      await sendWelcomeEmail({ ...profileData, email } as UserProfile);
+      localStorage.setItem('konsul_user_data', JSON.stringify(profileData));
+
+      // Redirect to Dashboard
+      window.location.href = '/';
+
+    } catch (e: any) {
+      console.error("Skip Payment Error", e);
+      alert(e.message || "Hubo un error al crear tu cuenta gratuita.");
+      setIsRedirecting(false);
+    }
   };
 
   const finishOnboarding = async () => {
@@ -321,7 +390,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       emailConfig,
       whatsappNumber,
       whatsappCountryCode,
-      plan: 'Emprendedor Pro' as const, // Force Paid Plan
+      plan: 'Money Honey' as const, // Force Paid Plan
       isOnboardingComplete: true,
       email,
       password,
@@ -1294,7 +1363,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
 
           <div className="relative z-10 text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <h3 className="text-3xl font-bold text-[#1c2938]">Suscripción Kônsul</h3>
+              <h3 className="text-3xl font-bold text-[#1c2938]">Money Honey</h3>
               <Crown className="w-8 h-8 text-amber-500 fill-amber-500" />
             </div>
             <p className="text-6xl font-black text-[#1c2938] mb-2">€5 <span className="text-xl font-medium text-slate-400">/mes</span></p>
@@ -1321,21 +1390,31 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                   <><CreditCard className="w-6 h-6" /> Suscribirse y Continuar</>
                 )}
               </button>
+
               <button
-                onClick={skipPayment}
+                onClick={() => setShowFreeModal(true)}
                 disabled={isRedirecting}
                 className="w-full bg-slate-100 text-slate-600 py-4 px-10 rounded-[2rem] font-bold text-lg hover:bg-slate-200 transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Hacerlo más tarde
+                Empezar Gratis
               </button>
+
               <p className="text-xs text-slate-400 mt-4 flex items-center justify-center gap-1">
                 <Lock className="w-3 h-3" /> Pago seguro vía Stripe
               </p>
             </div>
           </div>
         </div>
-
       </div>
+
+      <FreePlanModal
+        isOpen={showFreeModal}
+        onClose={() => setShowFreeModal(false)}
+        onConfirm={() => {
+          setShowFreeModal(false);
+          skipPayment();
+        }}
+      />
     </div>
   );
 

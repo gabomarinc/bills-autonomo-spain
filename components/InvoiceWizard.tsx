@@ -598,6 +598,24 @@ const InvoiceWizard: React.FC<InvoiceWizardProps> = ({
 
   const handleSave = async (targetStatus: 'Borrador' | 'Creada') => {
     if (!draft.clientName) return;
+
+    // --- FREE PLAN LIMIT CHECK ---
+    if (currentUser.plan === 'Freshie' && targetStatus !== 'Borrador') {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+
+      const invoicesThisMonth = invoices.filter(inv => {
+        const d = new Date(inv.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear && inv.status !== 'Borrador';
+      });
+
+      if (invoicesThisMonth.length >= 5) {
+        alert("🔒 Límite del Plan Gratuito alcanzado.\n\nSolo puedes crear 5 facturas al mes en el plan gratis. Actualiza a Premium para facturación ilimitada.");
+        return; // Block save
+      }
+    }
+    // -----------------------------
+
     setIsSaving(true);
 
     let newId = generatedId;

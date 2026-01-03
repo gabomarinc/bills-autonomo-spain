@@ -151,7 +151,7 @@ const mapUserRowToProfile = (row: any): UserProfile => {
     bankAccountType: profileSettings.bankAccountType || 'Ahorro',
     fiscalConfig: fiscalConfig,
     stripeCustomerId: row.stripe_customer_id || profileSettings.stripeCustomerId,
-    plan: row.plan_name || profileSettings.plan || 'Free',
+    plan: row.plan_name || profileSettings.plan || 'Freshie',
     renewalDate: row.renewal_date || profileSettings.renewalDate,
     ...profileSettings,
     isOnboardingComplete: true
@@ -175,7 +175,7 @@ export const getUserById = async (userId: string): Promise<UserProfile | null> =
       avatar: '',
       isOnboardingComplete: true,
       defaultCurrency: 'EUR',
-      plan: 'Emprendedor Pro',
+      plan: 'Money Honey',
       country: 'España',
       bankAccountType: 'Corriente',
       branding: { primaryColor: '#27bea5', templateStyle: 'Modern' },
@@ -263,7 +263,7 @@ export const authenticateUser = async (email: string, password: string): Promise
       avatar: '',
       isOnboardingComplete: true,
       defaultCurrency: 'EUR',
-      plan: 'Emprendedor Pro',
+      plan: 'Money Honey',
       country: 'España',
       bankAccountType: 'Corriente',
       branding: { primaryColor: '#27bea5', templateStyle: 'Modern' },
@@ -322,7 +322,7 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
         dbType,
         JSON.stringify(profileData),
         profile.stripeCustomerId || null,
-        profile.plan || 'Free',
+        profile.plan || 'Freshie',
         profile.renewalDate || null
       ]
     );
@@ -372,7 +372,7 @@ export const updateUserProfileInDb = async (profile: UserProfile): Promise<boole
         dbType,
         JSON.stringify(profileData),
         profile.stripeCustomerId || null,
-        profile.plan || 'Free',
+        profile.plan || 'Freshie',
         profile.renewalDate || null,
         profile.id
       ]
