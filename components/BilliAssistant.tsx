@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, AppView } from '../types';
 import { askBilli } from '../services/geminiService';
-import { X, Send, Sparkles, MessageSquare, ChevronRight } from 'lucide-react';
+import { X, Send, Sparkles, ChevronRight, MessageCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BilliAssistantProps {
     currentUser: UserProfile;
@@ -19,70 +20,49 @@ interface Message {
 const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate, onAction }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const [position, setPosition] = useState({ x: window.innerWidth - 100, y: window.innerHeight - 100 });
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [showGreeting, setShowGreeting] = useState(true);
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    // Initial Greeting
+    // Initial Greeting & Auto-hide logic
     useEffect(() => {
+        // Show greeting on mount
+        setShowGreeting(true);
+
+        // Auto hide greeting after 8 seconds if no interaction
+        const timer = setTimeout(() => {
+            if (!isMenuOpen && !isChatOpen) {
+                setShowGreeting(false);
+            }
+        }, 8000);
+
+        // Preload welcome message for chat
         if (messages.length === 0) {
-            setTimeout(() => {
-                setMessages([
-                    {
-                        id: 'welcome',
-                        role: 'assistant',
-                        text: `¡Hola ${currentUser.name.split(' ')[0]}! 👋 Soy Billi, tu asistente inteligente. ¿En qué puedo ayudarte hoy?`,
-                        actions: [
-                            { label: 'Crear Factura', action: 'CREATE_INVOICE', view: AppView.WIZARD },
-                            { label: 'Ver Impuestos', action: 'VIEW_TAXES', view: AppView.TRIMESTRAL },
-                            { label: 'Calcular Cuota', action: 'CALC_QUOTA', view: AppView.QUOTA_CALCULATOR }
-                        ]
-                    }
-                ]);
-            }, 1000);
+            setMessages([
+                {
+                    id: 'welcome',
+                    role: 'assistant',
+                    text: `¡Hola ${currentUser.name.split(' ')[0]}! 👋 Soy Billi, tu asistente inteligente. ¿En qué puedo ayudarte hoy?`,
+                    actions: [
+                        { label: 'Crear Factura', action: 'CREATE_INVOICE', view: AppView.WIZARD },
+                        { label: 'Ver Impuestos', action: 'VIEW_TAXES', view: AppView.TRIMESTRAL },
+                        { label: 'Calcular Cuota', action: 'CALC_QUOTA', view: AppView.QUOTA_CALCULATOR }
+                    ]
+                }
+            ]);
         }
-    }, [currentUser]);
 
-    // Handle Dragging
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (isChatOpen) return; // Disable drag when chat is open
-        setIsDragging(true);
-        setDragOffset({
-            x: e.clientX - position.x,
-            y: e.clientY - position.y
-        });
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-        if (isDragging) {
-            setPosition({
-                x: e.clientX - dragOffset.x,
-                y: e.clientY - dragOffset.y
-            });
-        }
-    };
-
-    const handleMouseUp = () => {
-        setIsDragging(false);
-    };
+        return () => clearTimeout(timer);
+    }, [currentUser, isMenuOpen, isChatOpen, messages.length]);
 
     useEffect(() => {
-        if (isDragging) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
-        } else {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
+        if (chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging]);
+    }, [messages, isTyping]);
 
     const handleSendMessage = async () => {
         if (!inputValue.trim()) return;
@@ -119,7 +99,6 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
         }
         if (onAction) onAction(action.action);
 
-        // Add system message confirming action
         setMessages(prev => [...prev, {
             id: Date.now().toString(),
             role: 'assistant',
@@ -128,76 +107,62 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
     };
 
     const toggleMenu = () => {
-        if (!isDragging) {
-            if (isChatOpen) {
-                // If chat is open, close it and close menu
-                setIsChatOpen(false);
-                setIsMenuOpen(false);
-            } else {
-                // Toggle menu
-                setIsMenuOpen(!isMenuOpen);
-            }
+        if (isChatOpen) {
+            setIsChatOpen(false);
+            setIsMenuOpen(false);
+        } else {
+            setIsMenuOpen(!isMenuOpen);
+            // Hide greeting when interacting
+            setShowGreeting(false);
         }
     }
 
     return (
-        <>
-            {/* Quick Actions Bubbles (Menu) */}
-            {isMenuOpen && !isChatOpen && (
-                <div
-                    style={{
-                        left: position.x - 200, // Show to the left of avatar
-                        top: position.y - 150,
-                        width: 200
-                    }}
-                    className="fixed z-50 flex flex-col items-end gap-2 animate-in slide-in-from-right-4 fade-in duration-300 pointer-events-none"
-                >
-                    <div className="pointer-events-auto">
-                        <button
-                            onClick={() => { onNavigate(AppView.WIZARD); setIsMenuOpen(false); }}
-                            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 border-slate-100 text-slate-600 font-bold py-2 px-4 rounded-full hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
-                        >
-                            📄 Crear Factura
-                        </button>
-                    </div>
-                    <div className="pointer-events-auto transition-all delay-75">
-                        <button
-                            onClick={() => { onNavigate(AppView.EXPENSE_WIZARD); setIsMenuOpen(false); }}
-                            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 border-slate-100 text-slate-600 font-bold py-2 px-4 rounded-full hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
-                        >
-                            💸 Registrar Gasto
-                        </button>
-                    </div>
-                    <div className="pointer-events-auto transition-all delay-100">
-                        <button
-                            onClick={() => { onNavigate(AppView.CLIENT_WIZARD); setIsMenuOpen(false); }}
-                            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 border-slate-100 text-slate-600 font-bold py-2 px-4 rounded-full hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
-                        >
-                            👤 Nuevo Cliente
-                        </button>
-                    </div>
-                    <div className="pointer-events-auto transition-all delay-150">
-                        <button
-                            onClick={() => { setIsChatOpen(true); setIsMenuOpen(false); }}
-                            className="bg-[#27bea5] shadow-lg shadow-[#27bea5]/20 text-white font-bold py-2 px-4 rounded-full hover:bg-[#22a890] hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
-                        >
-                            💬 Chatear con Billi
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Floating Avatar */}
-            <div
-                style={{ left: position.x, top: position.y }}
-                className={`fixed z-50 transition-transform ${isDragging ? 'scale-110 cursor-grabbing' : 'cursor-grab hover:scale-105'}`}
-                onMouseDown={handleMouseDown}
+        <div ref={containerRef} className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+            {/* Draggable Avatar Area */}
+            <motion.div
+                drag
+                dragMomentum={true}
+                dragElastic={0.1}
+                dragConstraints={containerRef}
+                initial={{ x: window.innerWidth - 100, y: window.innerHeight - 150 }}
+                whileDrag={{ scale: 1.1, cursor: 'grabbing' }}
+                whileHover={{ scale: 1.05 }}
+                className="absolute pointer-events-auto cursor-grab touch-none"
                 onClick={toggleMenu}
             >
                 <div className="relative group">
-                    {/* Glow Effect */}
-                    <div className={`absolute inset-0 bg-[#27bea5] rounded-full blur-md opacity-20 transition-opacity animate-pulse ${isMenuOpen || isChatOpen ? 'opacity-60' : 'group-hover:opacity-40'}`}></div>
+                    {/* Persistent Greeting Bubble (Left side) */}
+                    <AnimatePresence>
+                        {showGreeting && !isMenuOpen && !isChatOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20, scale: 0.8 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                className="absolute right-full mr-4 top-2 bg-white px-4 py-2 rounded-2xl rounded-tr-none shadow-xl border border-slate-100 whitespace-nowrap"
+                            >
+                                <p className="text-sm font-medium text-slate-700">
+                                    ¡Hola, <strong>{currentUser.name.split(' ')[0]}</strong>! 👋
+                                </p>
+                                <span className="absolute -right-2 top-0 w-4 h-4 bg-white transform rotate-45 border-r border-t border-slate-100 shadow-none"></span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
+                    {/* Animated Glow */}
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.2, 1],
+                            opacity: [0.3, 0.6, 0.3]
+                        }}
+                        transition={{
+                            repeat: Infinity,
+                            duration: 2
+                        }}
+                        className={`absolute inset-0 bg-[#27bea5] rounded-full blur-md -z-10 ${isMenuOpen || isChatOpen ? 'opacity-60' : 'group-hover:opacity-40'}`}
+                    />
+
+                    {/* Avatar Image */}
                     <div className="w-16 h-16 bg-white rounded-full shadow-2xl border-2 border-white overflow-hidden flex items-center justify-center relative z-10">
                         <img
                             src="/billi_avatar.png"
@@ -213,112 +178,155 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                         </div>
                     </div>
 
-                    {/* Notification Badge */}
+                    {/* Badge */}
                     {!isChatOpen && !isMenuOpen && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
                         <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center z-20">
                             <span className="text-[10px] text-white font-bold">1</span>
                         </div>
                     )}
 
-                    {/* Close 'X' indicator when menu is open */}
+                    {/* Close Icon (only when interacting) */}
                     {(isMenuOpen || isChatOpen) && (
                         <div className="absolute -top-1 -right-1 w-6 h-6 bg-slate-800 rounded-full border-2 border-white flex items-center justify-center z-20 text-white shadow-sm">
                             <X size={12} />
                         </div>
                     )}
                 </div>
-            </div>
 
-            {/* Chat Window */}
-            {isChatOpen && (
-                <div
-                    style={{
-                        left: Math.min(window.innerWidth - 380, Math.max(20, position.x - 300)),
-                        top: Math.min(window.innerHeight - 500, Math.max(20, position.y - 450))
-                    }}
-                    className="fixed w-[350px] h-[450px] bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col z-50 animate-in zoom-in-95 origin-bottom-right overflow-hidden"
-                >
-                    {/* Header */}
-                    <div className="bg-[#1c2938] p-4 flex justify-between items-center text-white">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
-                                <Sparkles size={16} className="text-[#27bea5]" />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-sm">Billi Assistant</h3>
-                                <p className="text-[10px] text-slate-400 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 bg-[#27bea5] rounded-full animate-pulse"></span> En línea
-                                </p>
-                            </div>
+                {/* Floating Menu Bubbles (Positioned relative to Avatar) */}
+                <AnimatePresence>
+                    {isMenuOpen && !isChatOpen && (
+                        <div className="absolute bottom-20 right-0 flex flex-col items-end gap-3 w-64 pointer-events-none">
+                            {[
+                                { label: 'Crear Factura', icon: '📄', view: AppView.WIZARD, delay: 0 },
+                                { label: 'Nuevo Cliente', icon: '👤', view: AppView.CLIENT_WIZARD, delay: 0.1 },
+                                { label: 'Registrar Gasto', icon: '💸', view: AppView.EXPENSE_WIZARD, delay: 0.2 },
+                                { label: 'Chatear con Billi', icon: '💬', chat: true, delay: 0.3 },
+                            ].map((item, i) => (
+                                <motion.button
+                                    key={i}
+                                    initial={{ opacity: 0, x: 20, scale: 0.8 }}
+                                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                                    exit={{ opacity: 0, x: 20, scale: 0.8 }}
+                                    transition={{ delay: item.delay }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (item.chat) {
+                                            setIsChatOpen(true);
+                                            setIsMenuOpen(false);
+                                        } else if (item.view) {
+                                            onNavigate(item.view);
+                                            setIsMenuOpen(false);
+                                        }
+                                    }}
+                                    className={`pointer-events-auto px-5 py-3 rounded-full font-bold shadow-lg backdrop-blur-md flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 ${item.chat
+                                            ? 'bg-[#27bea5] text-white'
+                                            : 'bg-white/95 text-slate-700 border border-slate-100'
+                                        }`}
+                                >
+                                    <span className="text-lg">{item.icon}</span>
+                                    <span className="text-sm">{item.label}</span>
+                                </motion.button>
+                            ))}
                         </div>
-                        <button onClick={() => setIsChatOpen(false)} className="text-white/50 hover:text-white transition-colors">
-                            <X size={20} />
-                        </button>
-                    </div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 custom-scrollbar">
-                        {messages.map(msg => (
-                            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] rounded-2xl p-3 text-sm ${msg.role === 'user'
-                                    ? 'bg-[#1c2938] text-white rounded-br-none'
-                                    : 'bg-white text-slate-600 shadow-sm border border-slate-100 rounded-bl-none'
-                                    }`}>
-                                    <p>{msg.text}</p>
-
-                                    {/* Actions */}
-                                    {msg.actions && (
-                                        <div className="mt-3 space-y-2">
-                                            {msg.actions.map((action, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => handleActionClick(action)}
-                                                    className="w-full text-left text-xs font-bold text-[#27bea5] bg-[#27bea5]/5 hover:bg-[#27bea5]/10 py-2 px-3 rounded-lg transition-colors flex items-center justify-between group"
-                                                >
-                                                    {action.label}
-                                                    <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
+            {/* Chat Window (Fixed Position relative to screen but constrained) */}
+            <AnimatePresence>
+                {isChatOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        drag
+                        dragConstraints={containerRef}
+                        className="fixed pointer-events-auto w-[350px] h-[450px] bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col z-50 overflow-hidden"
+                        style={{
+                            right: 20,
+                            bottom: 100
+                        }}
+                    >
+                        {/* Header */}
+                        <div className="bg-[#1c2938] p-4 flex justify-between items-center text-white cursor-move" onPointerDownCapture={e => e.stopPropagation()}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                                    <Sparkles size={16} className="text-[#27bea5]" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm">Billi Assistant</h3>
+                                    <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 bg-[#27bea5] rounded-full animate-pulse"></span> En línea
+                                    </p>
                                 </div>
                             </div>
-                        ))}
-                        {isTyping && (
-                            <div className="flex justify-start">
-                                <div className="bg-white px-4 py-2 rounded-2xl rounded-bl-none shadow-sm border border-slate-100">
-                                    <div className="flex gap-1">
-                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-75"></span>
-                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-150"></span>
+                            <button onClick={() => setIsChatOpen(false)} className="text-white/50 hover:text-white transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 custom-scrollbar">
+                            {messages.map(msg => (
+                                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[85%] rounded-2xl p-3 text-sm ${msg.role === 'user'
+                                        ? 'bg-[#1c2938] text-white rounded-br-none'
+                                        : 'bg-white text-slate-600 shadow-sm border border-slate-100 rounded-bl-none'
+                                        }`}>
+                                        <p>{msg.text}</p>
+                                        {msg.actions && (
+                                            <div className="mt-3 space-y-2">
+                                                {msg.actions.map((action, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => handleActionClick(action)}
+                                                        className="w-full text-left text-xs font-bold text-[#27bea5] bg-[#27bea5]/5 hover:bg-[#27bea5]/10 py-2 px-3 rounded-lg transition-colors flex items-center justify-between group"
+                                                    >
+                                                        {action.label}
+                                                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                        <div ref={chatEndRef} />
-                    </div>
+                            ))}
+                            {isTyping && (
+                                <div className="flex justify-start">
+                                    <div className="bg-white px-4 py-2 rounded-2xl rounded-bl-none shadow-sm border border-slate-100">
+                                        <div className="flex gap-1">
+                                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-75"></span>
+                                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-150"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </div>
 
-                    {/* Input */}
-                    <div className="p-3 bg-white border-t border-slate-100 flex gap-2">
-                        <input
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                            placeholder="Pregúntale a Billi..."
-                            className="flex-1 bg-slate-50 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-[#27bea5]/20 focus:outline-none"
-                        />
-                        <button
-                            onClick={handleSendMessage}
-                            disabled={!inputValue.trim() || isTyping}
-                            className="bg-[#27bea5] text-white p-2 rounded-xl hover:bg-[#22a890] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <Send size={18} />
-                        </button>
-                    </div>
-                </div>
-            )}
-        </>
+                        <div className="p-3 bg-white border-t border-slate-100 flex gap-2">
+                            <input
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                placeholder="Pregúntale a Billi..."
+                                className="flex-1 bg-slate-50 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-[#27bea5]/20 focus:outline-none"
+                            />
+                            <button
+                                onClick={handleSendMessage}
+                                disabled={!inputValue.trim() || isTyping}
+                                className="bg-[#27bea5] text-white p-2 rounded-xl hover:bg-[#22a890] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <Send size={18} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 };
 
