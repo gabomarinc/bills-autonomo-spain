@@ -17,7 +17,8 @@ interface Message {
 }
 
 const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate, onAction }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(false);
     const [position, setPosition] = useState({ x: window.innerWidth - 100, y: window.innerHeight - 100 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -48,7 +49,7 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
 
     // Handle Dragging
     const handleMouseDown = (e: React.MouseEvent) => {
-        if (isOpen) return; // Disable drag when chat is open
+        if (isChatOpen) return; // Disable drag when chat is open
         setIsDragging(true);
         setDragOffset({
             x: e.clientX - position.x,
@@ -113,7 +114,8 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
     const handleActionClick = (action: { label: string; action: string; view?: AppView }) => {
         if (action.view) {
             onNavigate(action.view);
-            setIsOpen(false);
+            setIsChatOpen(false);
+            setIsMenuOpen(false);
         }
         if (onAction) onAction(action.action);
 
@@ -125,18 +127,76 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
         }]);
     };
 
+    const toggleMenu = () => {
+        if (!isDragging) {
+            if (isChatOpen) {
+                // If chat is open, close it and close menu
+                setIsChatOpen(false);
+                setIsMenuOpen(false);
+            } else {
+                // Toggle menu
+                setIsMenuOpen(!isMenuOpen);
+            }
+        }
+    }
+
     return (
         <>
+            {/* Quick Actions Bubbles (Menu) */}
+            {isMenuOpen && !isChatOpen && (
+                <div
+                    style={{
+                        left: position.x - 200, // Show to the left of avatar
+                        top: position.y - 150,
+                        width: 200
+                    }}
+                    className="fixed z-50 flex flex-col items-end gap-2 animate-in slide-in-from-right-4 fade-in duration-300 pointer-events-none"
+                >
+                    <div className="pointer-events-auto">
+                        <button
+                            onClick={() => { onNavigate(AppView.WIZARD); setIsMenuOpen(false); }}
+                            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 border-slate-100 text-slate-600 font-bold py-2 px-4 rounded-full hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
+                        >
+                            📄 Crear Factura
+                        </button>
+                    </div>
+                    <div className="pointer-events-auto transition-all delay-75">
+                        <button
+                            onClick={() => { onNavigate(AppView.EXPENSE_WIZARD); setIsMenuOpen(false); }}
+                            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 border-slate-100 text-slate-600 font-bold py-2 px-4 rounded-full hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
+                        >
+                            💸 Registrar Gasto
+                        </button>
+                    </div>
+                    <div className="pointer-events-auto transition-all delay-100">
+                        <button
+                            onClick={() => { onNavigate(AppView.CLIENT_WIZARD); setIsMenuOpen(false); }}
+                            className="bg-white/90 backdrop-blur-sm shadow-lg border-2 border-slate-100 text-slate-600 font-bold py-2 px-4 rounded-full hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
+                        >
+                            👤 Nuevo Cliente
+                        </button>
+                    </div>
+                    <div className="pointer-events-auto transition-all delay-150">
+                        <button
+                            onClick={() => { setIsChatOpen(true); setIsMenuOpen(false); }}
+                            className="bg-[#27bea5] shadow-lg shadow-[#27bea5]/20 text-white font-bold py-2 px-4 rounded-full hover:bg-[#22a890] hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
+                        >
+                            💬 Chatear con Billi
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Floating Avatar */}
             <div
                 style={{ left: position.x, top: position.y }}
                 className={`fixed z-50 transition-transform ${isDragging ? 'scale-110 cursor-grabbing' : 'cursor-grab hover:scale-105'}`}
                 onMouseDown={handleMouseDown}
-                onClick={(e) => { if (!isDragging) setIsOpen(!isOpen); }}
+                onClick={toggleMenu}
             >
                 <div className="relative group">
                     {/* Glow Effect */}
-                    <div className="absolute inset-0 bg-[#27bea5] rounded-full blur-md opacity-20 group-hover:opacity-40 transition-opacity animate-pulse"></div>
+                    <div className={`absolute inset-0 bg-[#27bea5] rounded-full blur-md opacity-20 transition-opacity animate-pulse ${isMenuOpen || isChatOpen ? 'opacity-60' : 'group-hover:opacity-40'}`}></div>
 
                     <div className="w-16 h-16 bg-white rounded-full shadow-2xl border-2 border-white overflow-hidden flex items-center justify-center relative z-10">
                         <img
@@ -144,7 +204,6 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                             alt="Billi"
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                                // Fallback to Icon if image fails
                                 e.currentTarget.style.display = 'none';
                                 e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
@@ -154,17 +213,24 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                         </div>
                     </div>
 
-                    {/* Notification Badge if closed and has unread messages (simplified logic for now) */}
-                    {!isOpen && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
+                    {/* Notification Badge */}
+                    {!isChatOpen && !isMenuOpen && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
                         <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center z-20">
                             <span className="text-[10px] text-white font-bold">1</span>
+                        </div>
+                    )}
+
+                    {/* Close 'X' indicator when menu is open */}
+                    {(isMenuOpen || isChatOpen) && (
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-slate-800 rounded-full border-2 border-white flex items-center justify-center z-20 text-white shadow-sm">
+                            <X size={12} />
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Chat Window */}
-            {isOpen && (
+            {isChatOpen && (
                 <div
                     style={{
                         left: Math.min(window.innerWidth - 380, Math.max(20, position.x - 300)),
@@ -185,7 +251,7 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                                 </p>
                             </div>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-white transition-colors">
+                        <button onClick={() => setIsChatOpen(false)} className="text-white/50 hover:text-white transition-colors">
                             <X size={20} />
                         </button>
                     </div>
