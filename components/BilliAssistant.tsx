@@ -238,69 +238,77 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                 </AnimatePresence>
             </motion.div>
 
-            {/* Chat Window (Fixed Position relative to screen but constrained) */}
+            {/* Chat Window (Floating Glass Bubble) */}
             <AnimatePresence>
                 {isChatOpen && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.5, y: 100, x: 50 }}
+                        animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.5, y: 100, x: 50 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         drag
                         dragConstraints={containerRef}
-                        className="fixed pointer-events-auto w-[350px] h-[450px] bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col z-50 overflow-hidden"
+                        className="fixed pointer-events-auto w-[380px] h-[550px] bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/50 flex flex-col z-50 overflow-hidden"
                         style={{
-                            right: 20,
-                            bottom: 100
+                            right: 40,
+                            bottom: 120
                         }}
                     >
-                        {/* Header */}
-                        <div className="bg-[#1c2938] p-4 flex justify-between items-center text-white cursor-move" onPointerDownCapture={e => e.stopPropagation()}>
+                        {/* Minimal Header */}
+                        <div className="p-6 pb-2 flex justify-between items-center cursor-move" onPointerDownCapture={e => e.stopPropagation()}>
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
-                                    <Sparkles size={16} className="text-[#27bea5]" />
+                                <div className="w-10 h-10 bg-gradient-to-tr from-[#27bea5] to-[#1c2938] rounded-full flex items-center justify-center shadow-lg text-white">
+                                    <Sparkles size={18} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-sm">Billi Assistant</h3>
-                                    <p className="text-[10px] text-slate-400 flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 bg-[#27bea5] rounded-full animate-pulse"></span> En línea
+                                    <h3 className="font-bold text-slate-800 text-lg">Billi</h3>
+                                    <p className="text-xs text-[#27bea5] font-medium flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 bg-[#27bea5] rounded-full animate-pulse"></span>
+                                        Online
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsChatOpen(false)} className="text-white/50 hover:text-white transition-colors">
-                                <X size={20} />
+                            <button
+                                onClick={() => setIsChatOpen(false)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-rose-100 hover:text-rose-500 transition-colors"
+                            >
+                                <X size={16} />
                             </button>
                         </div>
 
-                        {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 custom-scrollbar">
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 custom-scrollbar scroll-smooth">
                             {messages.map(msg => (
-                                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] rounded-2xl p-3 text-sm ${msg.role === 'user'
-                                        ? 'bg-[#1c2938] text-white rounded-br-none'
-                                        : 'bg-white text-slate-600 shadow-sm border border-slate-100 rounded-bl-none'
+                                <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                    <div className={`max-w-[85%] p-4 text-sm shadow-sm relative group ${msg.role === 'user'
+                                        ? 'bg-[#1c2938] text-white rounded-2xl rounded-tr-sm'
+                                        : 'bg-white text-slate-600 border border-slate-50 rounded-2xl rounded-tl-sm'
                                         }`}>
-                                        <p>{msg.text}</p>
+                                        <p className="leading-relaxed">{msg.text}</p>
+
+                                        {/* Actions Grid */}
                                         {msg.actions && (
-                                            <div className="mt-3 space-y-2">
+                                            <div className="mt-4 grid gap-2">
                                                 {msg.actions.map((action, idx) => (
                                                     <button
                                                         key={idx}
                                                         onClick={() => handleActionClick(action)}
-                                                        className="w-full text-left text-xs font-bold text-[#27bea5] bg-[#27bea5]/5 hover:bg-[#27bea5]/10 py-2 px-3 rounded-lg transition-colors flex items-center justify-between group"
+                                                        className="w-full text-left text-xs font-bold text-[#1c2938] bg-slate-50 hover:bg-[#27bea5]/10 hover:text-[#27bea5] py-2.5 px-4 rounded-xl transition-all border border-slate-100 flex items-center justify-between group/btn"
                                                     >
                                                         {action.label}
-                                                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                                        <ChevronRight size={14} className="text-slate-300 group-hover/btn:text-[#27bea5]" />
                                                     </button>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
+                                    {/* Timestamp or tiny label could go here */}
                                 </div>
                             ))}
                             {isTyping && (
                                 <div className="flex justify-start">
-                                    <div className="bg-white px-4 py-2 rounded-2xl rounded-bl-none shadow-sm border border-slate-100">
-                                        <div className="flex gap-1">
+                                    <div className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-slate-50">
+                                        <div className="flex gap-1.5">
                                             <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
                                             <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-75"></span>
                                             <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-150"></span>
@@ -311,22 +319,25 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                             <div ref={chatEndRef} />
                         </div>
 
-                        <div className="p-3 bg-white border-t border-slate-100 flex gap-2">
-                            <input
-                                type="text"
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                placeholder="Pregúntale a Billi..."
-                                className="flex-1 bg-slate-50 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-[#27bea5]/20 focus:outline-none"
-                            />
-                            <button
-                                onClick={handleSendMessage}
-                                disabled={!inputValue.trim() || isTyping}
-                                className="bg-[#27bea5] text-white p-2 rounded-xl hover:bg-[#22a890] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <Send size={18} />
-                            </button>
+                        {/* Floating Input Area */}
+                        <div className="p-5 pt-2">
+                            <div className="bg-white p-1.5 pl-4 rounded-[1.5rem] shadow-lg shadow-slate-200/50 border border-slate-100 flex gap-2 items-center focus-within:ring-2 focus-within:ring-[#27bea5]/20 transition-all">
+                                <input
+                                    type="text"
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                    placeholder="Escribe tu pregunta..."
+                                    className="flex-1 bg-transparent border-0 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                                />
+                                <button
+                                    onClick={handleSendMessage}
+                                    disabled={!inputValue.trim() || isTyping}
+                                    className="w-10 h-10 bg-[#27bea5] text-white rounded-full flex items-center justify-center hover:bg-[#22a890] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md transform hover:scale-105 active:scale-95"
+                                >
+                                    <Send size={18} className={!inputValue.trim() ? 'opacity-50' : ''} />
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 )}
