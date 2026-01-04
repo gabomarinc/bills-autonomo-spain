@@ -162,10 +162,9 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                         className={`absolute inset-0 bg-[#27bea5] rounded-full blur-md -z-10 ${isMenuOpen || isChatOpen ? 'opacity-60' : 'group-hover:opacity-40'}`}
                     />
 
-                    {/* Avatar Image */}
                     <div className="w-24 h-24 flex items-center justify-center relative z-10 transition-transform hover:scale-105">
                         <img
-                            src="/billi_avatar_1.png"
+                            src={(isMenuOpen || isChatOpen) ? '/billi_avatar_2.png' : '/billi_avatar_1.png'}
                             alt="Billi"
                             draggable={false}
                             className="w-full h-full object-contain pointer-events-none select-none drop-shadow-2xl filter"
