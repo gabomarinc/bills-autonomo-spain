@@ -181,6 +181,59 @@ export const askSupportBot = async (message: string, keys?: AiKeys): Promise<str
     }
 };
 
+interface BilliResponse {
+    text: string;
+    actions?: { label: string; action: string; view?: any }[]; // Using any for AppView to avoid circular dependency issues if strict
+}
+
+export const askBilli = async (message: string, userContext: UserProfile, keys?: AiKeys): Promise<BilliResponse> => {
+    try {
+        const ai = getAiClient(keys);
+
+        const schema: Schema = {
+            type: Type.OBJECT,
+            properties: {
+                text: { type: Type.STRING },
+                actions: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            label: { type: Type.STRING },
+                            action: { type: Type.STRING },
+                            view: { type: Type.STRING } // We will map string back to AppView in component
+                        }
+                    }
+                }
+            },
+            required: ['text']
+        };
+
+        const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
+            model: GEMINI_MODEL_ID,
+            contents: `Eres 'Billi', el asistente virtual amigable y proactivo de Kônsul (software para autónomos).
+            Usuario: ${userContext.name} (${userContext.type}).
+            Tu tono: Entusiasta, emoji-friendly, corto y directo.
+            Misión: Ayudar a navegar la app y resolver dudas de autónomos.
+            
+            SI EL USUARIO QUIERE HACER ALGO, SUGIERE ACCIONES (actions).
+            Vistas disponibles (view): 'WIZARD' (Crear Factura), 'CLIENTS' (Clientes), 'EXPENSES' (Gastos), 'QUOTA_CALCULATOR' (Cuotas), 'TRIMESTRAL' (Impuestos), 'CATALOG' (Catálogo), 'REPORTS' (Reportes).
+            
+            Pregunta del usuario: "${message}"`,
+            config: { responseMimeType: "application/json", responseSchema: schema }
+        }));
+
+        const cleaned = cleanJson(response.text || "{}");
+        return JSON.parse(cleaned);
+    } catch (e) {
+        console.error("Billi Error:", e);
+        return {
+            text: "¡Ups! Se me cruzaron los cables 🤖. ¿Puedes repetírmelo?",
+            actions: []
+        };
+    }
+};
+
 // --- ONBOARDING FEATURES (process.env.API_KEY Only) ---
 
 export const suggestCatalogItems = async (businessDescription: string, keys?: AiKeys, _useSystemKey: boolean = false, sector?: string, subcategories?: string[]): Promise<CatalogItem[]> => {

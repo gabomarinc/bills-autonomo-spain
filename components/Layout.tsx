@@ -16,6 +16,7 @@ import {
   Receipt,
   ChevronUp
 } from 'lucide-react';
+import BilliAssistant from './BilliAssistant';
 import { AppView, ProfileType, UserProfile } from '../types';
 
 interface LayoutProps {
@@ -217,6 +218,8 @@ const Layout: React.FC<LayoutProps> = ({
         <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 custom-scrollbar">
           {children}
         </div>
+        {/* Mount Billi Assistant Globally */}
+        <BilliAssistant currentUser={currentProfile} onNavigate={onNavigate} />
       </main>
     </div>
   );
