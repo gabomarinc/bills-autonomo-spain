@@ -356,6 +356,29 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
 };
 
 /**
+ * SAVE INITIAL CATALOG
+ */
+export const saveInitialCatalog = async (userId: string, items: CatalogItem[]): Promise<void> => {
+  const sql = getDbClient();
+  if (!sql || !items || items.length === 0) return;
+
+  try {
+    // Bulk insert items
+    for (const item of items) {
+      const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await sql(
+        `INSERT INTO catalog_items (id, name, price, description, type, user_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+        [itemId, item.name, item.price, item.description || '', 'SERVICE', userId]
+      );
+    }
+  } catch (error) {
+    console.error("Error saving initial catalog:", error);
+  }
+};
+
+
+/**
  * UPDATE USER PROFILE
  */
 export const updateUserProfileInDb = async (profile: UserProfile): Promise<boolean> => {
