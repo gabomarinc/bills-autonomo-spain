@@ -88,6 +88,7 @@ const Layout: React.FC<LayoutProps> = ({
         {/* Navigation */}
         <nav className="flex-1 px-3 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
           <NavItem
+            id="tour-dashboard"
             icon={<LayoutDashboard size={24} />}
             label="Inicio"
             isActive={activeView === AppView.DASHBOARD || activeView === AppView.WIZARD}
@@ -95,6 +96,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => onNavigate(AppView.DASHBOARD)}
           />
           <NavItem
+            id="tour-documents"
             icon={<FileText size={24} />}
             label="Documentos"
             isActive={activeView === AppView.INVOICES || activeView === AppView.INVOICE_DETAIL}
@@ -102,6 +104,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => onNavigate(AppView.INVOICES)}
           />
           <NavItem
+            id="tour-clients"
             icon={<Users size={24} />}
             label="Clientes"
             isActive={activeView === AppView.CLIENTS}
@@ -109,6 +112,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => onNavigate(AppView.CLIENTS)}
           />
           <NavItem
+            id="tour-expenses"
             icon={<TrendingDown size={24} />}
             label="Gastos"
             isActive={activeView === AppView.EXPENSES}
@@ -116,6 +120,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => onNavigate(AppView.EXPENSES)}
           />
           <NavItem
+            id="tour-catalog"
             icon={<ShoppingBag size={24} />}
             label="Catálogo"
             isActive={activeView === AppView.CATALOG}
@@ -123,6 +128,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => onNavigate(AppView.CATALOG)}
           />
           <NavItem
+            id="tour-quotas"
             icon={<Calculator size={24} />}
             label="Cuotas"
             isActive={activeView === AppView.QUOTA_CALCULATOR}
@@ -130,6 +136,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => onNavigate(AppView.QUOTA_CALCULATOR)}
           />
           <NavItem
+            id="tour-taxes"
             icon={<Receipt size={24} />}
             label="Declaraciones"
             isActive={activeView === AppView.TRIMESTRAL}
@@ -137,13 +144,16 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => onNavigate(AppView.TRIMESTRAL)}
           />
           <NavItem
+            id="tour-reports"
             icon={<PieChart size={24} />}
             label="Reportes"
             isActive={activeView === AppView.REPORTS}
             isCollapsed={isCollapsed}
             onClick={() => onNavigate(AppView.REPORTS)}
           />
+          <div className="h-px bg-slate-200 my-2 mx-4"></div>
           <NavItem
+            id="tour-settings"
             icon={<Settings size={24} />}
             label="Ajustes"
             isActive={activeView === AppView.SETTINGS}
@@ -192,17 +202,19 @@ const Layout: React.FC<LayoutProps> = ({
 };
 
 const NavItem: React.FC<{
+  id?: string;
   icon: React.ReactNode,
   label: string,
   isActive: boolean,
   isCollapsed: boolean,
   onClick: () => void
-}> = ({ icon, label, isActive, isCollapsed, onClick }) => (
+}> = ({ id, icon, label, isActive, isCollapsed, onClick }) => (
   <button
+    id={id}
     onClick={onClick}
     className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-start'} gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 group relative ${isActive
-        ? 'bg-[#27bea5]/10 text-[#27bea5] font-bold'
-        : 'text-slate-400 hover:text-[#27bea5] hover:bg-[#27bea5]/5'
+      ? 'bg-[#27bea5]/10 text-[#27bea5] font-bold'
+      : 'text-slate-400 hover:text-[#27bea5] hover:bg-[#27bea5]/5'
       }`}
     title={isCollapsed ? label : undefined}
   >

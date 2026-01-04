@@ -36,6 +36,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
   const [taxId, setTaxId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');      // New
+  const [province, setProvince] = useState('');  // New
+  const [zipCode, setZipCode] = useState('');   // New
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); // New: Default today
+  const [isTarifaPlana, setIsTarifaPlana] = useState(true); // New: Default true for new freelancers
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -433,6 +438,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       name: companyName || 'Usuario Nuevo',
       taxId,
       address,
+      city,     // New
+      province, // New
+      zipCode,  // New
       country: DEFAULT_COUNTRY,
       fiscalConfig: {
         entityType: (personType === 'JURIDICA' ? 'JURIDICA' : 'FISICA') as 'FISICA' | 'JURIDICA',
@@ -440,18 +448,19 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         regimenFiscal: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICOLA' | 'GANADERO' | 'FORESTAL',
         actividadPrincipal: businessDesc || '',
         activitySector: selectedSector || undefined,
-        activitySubcategory: selectedSubcategories.length > 0 ? selectedSubcategories[0] : undefined, // Mantener compatibilidad
+        activitySubcategory: selectedSubcategories.length > 0 ? selectedSubcategories[0] : undefined,
         activitySubcategories: selectedSubcategories.length > 0 ? selectedSubcategories : undefined,
         ivaArticle: (() => {
           if (!selectedSector || selectedSubcategories.length === 0) return undefined;
           const articles = selectedSubcategories.map(subId => getIvaArticleForActivity(selectedSector, subId));
           const uniqueArticles = [...new Set(articles)];
-          // Si hay múltiples artículos diferentes, usar MIXTO
           if (uniqueArticles.length > 1) return 'MIXTO';
           return uniqueArticles[0] as 'ART_21' | 'ART_69_70' | 'ART_69' | 'ART_70' | 'MIXTO';
         })(),
         ivaRegimen: 'GENERAL' as 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO',
-        prorrateoIVA: false
+        prorrateoIVA: false,
+        startDate,       // New
+        isTarifaPlana    // New
       },
       branding: { primaryColor, templateStyle, logoUrl: logoPreview || undefined },
       bankAccount,
@@ -680,17 +689,68 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                 </div>
               </div>
 
-              {/* 3. Address */}
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 block">Dirección Fiscal</label>
+              {/* Expanded Address Fields */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 block">Domicilio Fiscal</label>
                 <div className="relative group/input">
                   <MapPin className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within/input:text-[#27bea5] transition-colors" />
                   <input
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full pl-12 p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#27bea5] outline-none text-slate-700 placeholder:text-slate-300"
-                    placeholder="Calle, Número, Código Postal, Ciudad"
+                    className="w-full pl-12 p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#27bea5] outline-none text-slate-700 placeholder:text-slate-300 transition-all font-medium"
+                    placeholder="Calle / Avenida / Plaza..."
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#27bea5] outline-none text-slate-700 placeholder:text-slate-300 transition-all font-medium"
+                    placeholder="Localidad"
+                  />
+                  <input
+                    value={province}
+                    onChange={(e) => setProvince(e.target.value)}
+                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#27bea5] outline-none text-slate-700 placeholder:text-slate-300 transition-all font-medium"
+                    placeholder="Provincia"
+                  />
+                </div>
+                <input
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  className="w-1/2 p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#27bea5] outline-none text-slate-700 placeholder:text-slate-300 transition-all font-medium"
+                  placeholder="Código Postal"
+                />
+              </div>
+
+              {/* Fiscal Dates & Config */}
+              <div className="space-y-3 pt-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 block">Datos de Alta</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fecha de Inicio de Actividad</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#27bea5] outline-none text-slate-700 font-medium"
+                    />
+                  </div>
+
+                  {personType === 'NATURAL' && (
+                    <div
+                      onClick={() => setIsTarifaPlana(!isTarifaPlana)}
+                      className={`cursor-pointer border-2 rounded-xl p-3 flex items-center justify-between transition-all ${isTarifaPlana ? 'border-[#27bea5] bg-[#27bea5]/5' : 'border-slate-200 hover:border-slate-300'}`}
+                    >
+                      <div>
+                        <span className="block font-bold text-sm text-[#1c2938]">Tarifa Plana</span>
+                        <span className="text-[10px] text-slate-500">Cuota Reducida (80€/mes)</span>
+                      </div>
+                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isTarifaPlana ? 'bg-[#27bea5] border-[#27bea5]' : 'border-slate-300'}`}>
+                        {isTarifaPlana && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1184,14 +1244,27 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                     <div className="p-3 bg-indigo-50 text-indigo-500 rounded-2xl group-hover:bg-[#27bea5] group-hover:text-white transition-colors flex-shrink-0">
                       <ShoppingBag className="w-6 h-6" />
                     </div>
-                    <div className="flex items-center text-xl font-bold text-[#1c2938]">
-                      <span className="text-slate-400 mr-1 text-sm">€</span>
-                      <input
-                        type="number"
-                        value={item.price}
-                        onChange={(e) => updateCatalogItem(idx, 'price', parseFloat(e.target.value) || 0)}
-                        className="w-24 bg-transparent outline-none border-b border-transparent focus:border-[#27bea5] transition-colors text-right"
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center text-xl font-bold text-[#1c2938]">
+                        <span className="text-slate-400 mr-1 text-sm">€</span>
+                        <input
+                          type="number"
+                          value={item.price}
+                          onChange={(e) => updateCatalogItem(idx, 'price', parseFloat(e.target.value) || 0)}
+                          className="w-24 bg-transparent outline-none border-b border-transparent focus:border-[#27bea5] transition-colors text-right"
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newItems = [...catalogItems];
+                          newItems.splice(idx, 1);
+                          setCatalogItems(newItems);
+                        }}
+                        className="p-1.5 hover:bg-red-50 text-slate-300 hover:text-red-500 rounded-full transition-colors"
+                        title="Eliminar Servicio"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                   <input

@@ -38,13 +38,17 @@ export interface DbClient {
 
 // NEW: Database Provider Structure
 export interface DbProvider {
-  id?: string;
+  id: string;
   name: string;
-  taxId?: string;
-  email?: string;
+  email: string;
+  // Address
+  address: string;
+  city?: string;      // New
+  province?: string;  // New
+  zipCode?: string;   // New
+  country: string;
   phone?: string;
-  address?: string;
-  category?: string;
+  taxId: string;
   notes?: string;
 }
 
@@ -136,6 +140,10 @@ export interface SpanishFiscalConfig {
   ivaRegimen?: 'GENERAL' | 'SIMPLIFICADO' | 'AGRICULTURA' | 'EXENTO';
   prorrateoIVA?: boolean; // Si tiene actividad mixta
   porcentajeProrrateo?: number; // % de actividad sujeta a IVA
+
+  // New: Start Date & Flat Rate
+  startDate?: string;       // Fecha de Alta (ISO)
+  isTarifaPlana?: boolean;  // Tiene Tarifa Plana activa
 }
 
 export interface UserProfile {
@@ -146,6 +154,9 @@ export interface UserProfile {
   type: ProfileType;
   taxId: string; // NIF, RFC, CUIT
   address?: string;
+  city?: string;      // New
+  province?: string;  // New
+  zipCode?: string;   // New
   country?: string;
   fiscalRegime?: string; // Legacy string, kept for backward compat
 
@@ -194,6 +205,7 @@ export interface UserProfile {
 
   avatar: string;
   isOnboardingComplete: boolean;
+  hasSeenTour?: boolean; // New: Product tour status
 }
 
 export interface InvoiceItem {

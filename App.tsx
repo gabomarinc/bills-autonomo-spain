@@ -18,6 +18,7 @@ import ExpenseWizard from './components/ExpenseWizard';
 import ClientWizard from './components/ClientWizard';
 import QuotaCalculator from './components/QuotaCalculator';
 import TrimestralWizard from './components/TrimestralWizard';
+import ProductTour from './components/ProductTour'; // New
 import { AlertProvider, useAlert } from './components/AlertSystem';
 import {
   authenticateUser,
@@ -47,6 +48,9 @@ const AppContent: React.FC = () => {
   const [documentToEdit, setDocumentToEdit] = useState<Invoice | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
+
+  // Product Tour State
+  const [isTourOpen, setIsTourOpen] = useState(false);
 
   const alert = useAlert();
 
@@ -139,6 +143,13 @@ const AppContent: React.FC = () => {
           setCatalogItems(items);
           setCurrentUser(prev => prev ? ({ ...prev, defaultServices: items }) : null);
         }
+
+
+        // Check Product Tour Status (DB Based)
+        if (currentUser && !currentUser.hasSeenTour) {
+          // Small delay to let UI render
+          setTimeout(() => setIsTourOpen(true), 1500);
+        }
       };
       loadData();
     }
@@ -212,7 +223,14 @@ const AppContent: React.FC = () => {
     }
     if (invoice.clientName) {
       if (invoice.type === 'Expense') {
-        await saveProviderToDb({ name: invoice.clientName.trim(), category: invoice.items[0]?.description || 'General' }, currentUser.id);
+        await saveProviderToDb({
+          id: `prov_${Date.now()}`,
+          name: invoice.clientName.trim(),
+          email: '',
+          address: '',
+          country: 'ES',
+          taxId: '',
+        }, currentUser.id);
       } else {
         const existingClient = dbClients.find(c => c.name.trim().toLowerCase() === invoice.clientName.trim().toLowerCase());
         await saveClientToDb({ id: existingClient?.id, name: invoice.clientName.trim(), taxId: invoice.clientTaxId, email: invoice.clientEmail, address: invoice.clientAddress }, currentUser.id, invoice.type === 'Invoice' ? 'CLIENT' : 'PROSPECT');
@@ -458,6 +476,30 @@ const AppContent: React.FC = () => {
         alert.addToast('success', 'Declaración Guardada', 'La declaración se ha guardado correctamente.');
       }} />}
       {activeView === AppView.SETTINGS && <UserProfileSettings currentUser={currentUser} onUpdate={handleUpdateProfile} />}
+
+      {/* Product Tour Overlay (DB Persistence) */}
+      {currentUser && (
+        <ProductTour
+          isOpen={isTourOpen}
+          onClose={async () => {
+            setIsTourOpen(false);
+            if (currentUser && !currentUser.hasSeenTour) {
+              const updatedProfile = { ...currentUser, hasSeenTour: true };
+              setCurrentUser(updatedProfile);
+              await updateUserProfileInDb(updatedProfile);
+            }
+          }}
+          onComplete={async () => {
+            setIsTourOpen(false);
+            if (currentUser && !currentUser.hasSeenTour) {
+              const updatedProfile = { ...currentUser, hasSeenTour: true };
+              setCurrentUser(updatedProfile);
+              await updateUserProfileInDb(updatedProfile);
+            }
+            alert.addToast('success', '¡Todo listo!', 'Ya conoces tu nueva herramienta.');
+          }}
+        />
+      )}
     </Layout>
   );
 };
