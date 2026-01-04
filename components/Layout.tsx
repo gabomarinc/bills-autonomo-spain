@@ -190,6 +190,7 @@ const Layout: React.FC<LayoutProps> = ({
           )}
 
           <button
+            id="tour-profile"
             onClick={() => !isCollapsed && setIsProfileOpen(!isProfileOpen)}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} p-2 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 transition-colors group`}
           >

@@ -59,9 +59,9 @@ const TOUR_STEPS: TourStep[] = [
         position: 'right'
     },
     {
-        targetId: 'tour-settings',
-        title: 'Configuración',
-        content: 'Personaliza tu perfil, marca, logo y datos fiscales cuando lo necesites.',
+        targetId: 'tour-profile',
+        title: 'Tu Perfil y Ajustes',
+        content: 'Accede a la configuración de tu cuenta y cierra sesión desde este menú desplegable.',
         position: 'right'
     }
 ];
