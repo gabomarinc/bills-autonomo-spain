@@ -23,6 +23,20 @@ export default defineConfig(({ mode }) => {
       'process.env.DATABASE_URL': JSON.stringify(process.env.DATABASE_URL || env.DATABASE_URL),
       'process.env.VITE_DATABASE_URL': JSON.stringify(process.env.VITE_DATABASE_URL || env.VITE_DATABASE_URL),
       'process.env': env
+    },
+    build: {
+      chunkSizeWarningLimit: 1000, // Increase warning limit to 1000kb
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-ui': ['framer-motion', 'lucide-react', 'clsx', 'tailwind-merge'],
+            'vendor-charts': ['recharts'],
+            'vendor-utils': ['jspdf', 'html2canvas', 'tesseract.js'],
+            'vendor-stripe': ['stripe']
+          }
+        }
+      }
     }
   }
 })
