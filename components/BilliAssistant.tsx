@@ -163,19 +163,25 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                     />
 
                     {/* Avatar Image */}
-                    <div className="w-16 h-16 bg-white rounded-full shadow-2xl border-2 border-white overflow-hidden flex items-center justify-center relative z-10">
+                    <div className="w-24 h-24 flex items-center justify-center relative z-10 transition-transform hover:scale-105">
                         <img
-                            src="/billi_avatar.png"
+                            src="/billi_avatar_1.png"
                             alt="Billi"
-                            className="w-full h-full object-cover"
+                            draggable={false}
+                            className="w-full h-full object-contain pointer-events-none select-none drop-shadow-2xl filter"
                             onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                                 e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                         />
-                        <div className="hidden w-full h-full bg-[#f0fdfa] flex items-center justify-center text-[#27bea5]">
+                        <div className="hidden w-16 h-16 bg-[#f0fdfa] rounded-full flex items-center justify-center text-[#27bea5] shadow-lg">
                             <Sparkles size={32} />
                         </div>
+                    </div>
+
+                    {/* Billi Name Label */}
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 px-2 py-0.5 bg-slate-800/80 backdrop-blur-sm rounded-full pointer-events-none z-20">
+                        <span className="text-[10px] font-bold text-white tracking-wide">Billi</span>
                     </div>
 
                     {/* Badge */}
@@ -220,8 +226,8 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                                         }
                                     }}
                                     className={`pointer-events-auto px-5 py-3 rounded-full font-bold shadow-lg backdrop-blur-md flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 ${item.chat
-                                            ? 'bg-[#27bea5] text-white'
-                                            : 'bg-white/95 text-slate-700 border border-slate-100'
+                                        ? 'bg-[#27bea5] text-white'
+                                        : 'bg-white/95 text-slate-700 border border-slate-100'
                                         }`}
                                 >
                                     <span className="text-lg">{item.icon}</span>
