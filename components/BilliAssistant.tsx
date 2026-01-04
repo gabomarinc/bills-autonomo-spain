@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, AppView } from '../types';
 import { askBilli } from '../services/geminiService';
+import { fetchInvoicesFromDb, fetchClientsFromDb } from '../services/neon';
 import { X, Send, Sparkles, ChevronRight, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,6 +25,7 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [showGreeting, setShowGreeting] = useState(true);
+    const [appContext, setAppContext] = useState<any>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -58,11 +60,30 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
         return () => clearTimeout(timer);
     }, [currentUser, isMenuOpen, isChatOpen, messages.length]);
 
+    // Scroll to bottom
     useEffect(() => {
         if (chatEndRef.current) {
             chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages, isTyping]);
+
+    // Fetch Context for RAG when Chat Opens
+    useEffect(() => {
+        if (isChatOpen && !appContext) {
+            const loadContext = async () => {
+                try {
+                    const [invoices, clients] = await Promise.all([
+                        fetchInvoicesFromDb(currentUser.id),
+                        fetchClientsFromDb(currentUser.id)
+                    ]);
+                    setAppContext({ invoices, clients });
+                } catch (e) {
+                    console.error("Error loading Billi context:", e);
+                }
+            };
+            loadContext();
+        }
+    }, [isChatOpen, currentUser.id, appContext]);
 
     const handleSendMessage = async () => {
         if (!inputValue.trim()) return;
@@ -73,7 +94,8 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
         setIsTyping(true);
 
         try {
-            const response = await askBilli(inputValue, currentUser);
+            // Pass appContext to askBilli for RAG capabilities
+            const response = await askBilli(inputValue, currentUser, undefined, appContext);
 
             const billiMsg: Message = {
                 id: (Date.now() + 1).toString(),
@@ -248,7 +270,7 @@ const BilliAssistant: React.FC<BilliAssistantProps> = ({ currentUser, onNavigate
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         drag
                         dragConstraints={containerRef}
-                        className="fixed pointer-events-auto w-[380px] h-[550px] bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/50 flex flex-col z-50 overflow-hidden"
+                        className="fixed pointer-events-auto w-[380px] h-[550px] bg-white/70 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col z-50 overflow-hidden"
                         style={{
                             right: 40,
                             bottom: 120

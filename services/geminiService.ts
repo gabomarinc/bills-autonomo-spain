@@ -186,7 +186,34 @@ interface BilliResponse {
     actions?: { label: string; action: string; view?: any }[]; // Using any for AppView to avoid circular dependency issues if strict
 }
 
-export const askBilli = async (message: string, userContext: UserProfile, keys?: AiKeys): Promise<BilliResponse> => {
+// Helper to summarize context for AI
+const formatContextForAI = (data: any) => {
+    if (!data) return "No hay datos disponibles.";
+
+    let summary = "CONTEXTO DEL USUARIO (Usa esto para responder):\n";
+
+    // Invoices
+    if (data.invoices && data.invoices.length > 0) {
+        const totalPending = data.invoices
+            .filter((i: any) => i.status === 'PENDING')
+            .reduce((acc: number, curr: any) => acc + (curr.total || 0), 0);
+
+        summary += `- Facturas: ${data.invoices.length} total. Pendiente de cobro: €${totalPending.toFixed(2)}.\n`;
+        summary += `- Últimas 5 facturas:\n${data.invoices.slice(0, 5).map((i: any) =>
+            `  * #${i.id.slice(0, 8)} a ${i.clientName} por €${i.total} (${i.status}) el ${i.date}`
+        ).join('\n')}\n`;
+    }
+
+    // Clients
+    if (data.clients && data.clients.length > 0) {
+        summary += `- Clientes: ${data.clients.length} total.\n`;
+        summary += `- Top Clientes: ${data.clients.slice(0, 5).map((c: any) => c.name).join(', ')}.\n`;
+    }
+
+    return summary;
+};
+
+export const askBilli = async (message: string, userContext: UserProfile, keys?: AiKeys, contextData?: any): Promise<BilliResponse> => {
     try {
         const ai = getAiClient(keys);
 
@@ -209,12 +236,16 @@ export const askBilli = async (message: string, userContext: UserProfile, keys?:
             required: ['text']
         };
 
+        const dataContext = formatContextForAI(contextData);
+
         const response: GenerateContentResponse = await withTimeout(ai.models.generateContent({
             model: GEMINI_MODEL_ID,
             contents: `Eres 'Billi', el asistente virtual amigable y proactivo de Kônsul (software para autónomos).
             Usuario: ${userContext.name} (${userContext.type}).
             Tu tono: Entusiasta, emoji-friendly, corto y directo.
             Misión: Ayudar a navegar la app y resolver dudas de autónomos.
+
+            ${dataContext}
             
             SI EL USUARIO QUIERE HACER ALGO, SUGIERE ACCIONES (actions).
             Vistas disponibles (view): 'WIZARD' (Crear Factura), 'CLIENTS' (Clientes), 'EXPENSES' (Gastos), 'QUOTA_CALCULATOR' (Cuotas), 'TRIMESTRAL' (Impuestos), 'CATALOG' (Catálogo), 'REPORTS' (Reportes).
