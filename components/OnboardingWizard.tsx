@@ -4,7 +4,7 @@ import {
   Building2, Check, ChevronRight, Palette, CreditCard, ShoppingBag, Mail, Sparkles,
   Loader2, Globe, UploadCloud, LayoutTemplate, Search, MapPin, AlertCircle, X,
   Coins, Smartphone, Server, AtSign, ShieldCheck, Zap, ArrowRight, ArrowLeft, PenLine,
-  User, CheckCircle2, Hash, Lock, Eye, EyeOff, Crown, Rocket, Star
+  User, CheckCircle2, Hash, Lock, Eye, EyeOff, Crown, Rocket, Star, Info
 } from 'lucide-react';
 import { UserProfile, CatalogItem, EmailConfig, ProfileType } from '../types';
 import { createUserInDb, saveInitialCatalog } from '../services/neon'; // Import for direct DB creation
@@ -16,7 +16,7 @@ interface OnboardingWizardProps {
   onComplete: (profileData: Partial<UserProfile> & { password?: string, email?: string }) => void;
 }
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 // España configuration
 const DEFAULT_COUNTRY = 'España';
@@ -47,12 +47,15 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
   const [manualEntryMode, setManualEntryMode] = useState(false);
   const [showFreeModal, setShowFreeModal] = useState(false); // New State
 
-  // Step 2 State - Activity Selection (NEW)
+  // Step 2 State - Fiscal Data (NEW)
+  const [createdUserProvider, setCreatedUserProvider] = useState<UserProfile | null>(null);
+
+  // Step 3 State - Activity Selection (Shifted)
   const [selectedSector, setSelectedSector] = useState<string>('');
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [searchSector, setSearchSector] = useState('');
 
-  // Step 3 State - Branding (renumbered from Step 2)
+  // Step 4 State - Branding (Shifted)
   const [primaryColor, setPrimaryColor] = useState('#27bea5');
   const [templateStyle, setTemplateStyle] = useState<'Modern' | 'Classic' | 'Minimal'>('Modern');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -97,6 +100,32 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // --- HANDLERS ---
+  const handleNext = () => {
+    if (step === 1) {
+      // Validate Step 1
+      if (!companyName || !address || !taxId || !email || !password) {
+        alert('Por favor completa todos los campos.');
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      // Validate Step 2
+      if (!startDate) {
+        alert('Por favor indica la fecha de inicio.');
+        return;
+      }
+      setStep(3);
+    } else {
+      // Default next
+      setStep(prev => (prev + 1) as Step);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1 as Step);
   };
 
   const generateCatalog = async () => {
@@ -723,38 +752,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                 />
               </div>
 
-              {/* Fiscal Dates & Config */}
-              <div className="space-y-3 pt-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 block">Datos de Alta</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fecha de Inicio de Actividad</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#27bea5] outline-none text-slate-700 font-medium"
-                    />
-                  </div>
-
-                  {personType === 'NATURAL' && (
-                    <div
-                      onClick={() => setIsTarifaPlana(!isTarifaPlana)}
-                      className={`cursor-pointer border-2 rounded-xl p-3 flex items-center justify-between transition-all ${isTarifaPlana ? 'border-[#27bea5] bg-[#27bea5]/5' : 'border-slate-200 hover:border-slate-300'}`}
-                    >
-                      <div>
-                        <span className="block font-bold text-sm text-[#1c2938]">Tarifa Plana</span>
-                        <span className="text-[10px] text-slate-500">Cuota Reducida (80€/mes)</span>
-                      </div>
-                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isTarifaPlana ? 'bg-[#27bea5] border-[#27bea5]' : 'border-slate-300'}`}>
-                        {isTarifaPlana && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 4. Credentials (NEW) */}
+              {/* 3. Credentials (Renumbered) */}
               <div className="pt-4 border-t border-slate-200">
                 <h4 className="text-sm font-bold text-[#1c2938] mb-4 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-[#27bea5]" /> Crea tu Acceso Seguro
@@ -802,11 +800,83 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         {/* Action Button */}
         <div className="mt-10 flex justify-end">
           <button
-            onClick={() => setStep(2)}
+            onClick={handleNext}
             disabled={!companyName || !address || !taxId || !email || !password}
             className="group w-full md:w-auto bg-[#1c2938] text-white py-4 px-10 rounded-2xl font-bold text-lg hover:bg-[#27bea5] disabled:opacity-30 disabled:hover:bg-[#1c2938] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer"
           >
             Siguiente <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2_FiscalData = () => (
+    <div className="animate-in fade-in slide-in-from-right-8 duration-500">
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-100 shadow-sm">
+          <span>📅</span> Datos de Alta de Autónomo
+        </div>
+        <h2 className="text-4xl font-bold text-[#1c2938] mb-3">Tu Inicio de Actividad</h2>
+        <p className="text-slate-500 text-lg">Para calcular tus impuestos con precisión, necesitamos saber cuándo empezaste.</p>
+      </div>
+
+      <div className="max-w-2xl mx-auto bg-white p-8 md:p-10 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 space-y-8">
+
+        <div>
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Fecha de Inicio de Actividad</label>
+          <div className="relative group/input">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/input:text-[#27bea5] transition-colors pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
+            </div>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full pl-12 p-4 border-2 border-slate-100 rounded-2xl focus:border-[#27bea5] outline-none text-[#1c2938] font-bold text-lg bg-slate-50/50"
+            />
+          </div>
+          <p className="text-xs text-slate-400 mt-2 ml-1">La fecha oficial que aparece en tu Modelo 036/037.</p>
+        </div>
+
+        {personType === 'NATURAL' ? (
+          <div
+            onClick={() => setIsTarifaPlana(!isTarifaPlana)}
+            className={`cursor-pointer border-2 rounded-2xl p-6 flex items-center justify-between transition-all duration-300 group ${isTarifaPlana ? 'border-[#27bea5] bg-[#27bea5]/5 ring-2 ring-[#27bea5]/10' : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'}`}
+          >
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-1">
+                <h3 className={`font-bold text-lg ${isTarifaPlana ? 'text-[#1c2938]' : 'text-slate-600'}`}>Tarifa Plana</h3>
+                {isTarifaPlana && <span className="bg-[#27bea5] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">ACTIVA</span>}
+              </div>
+              <p className="text-sm text-slate-500">
+                Cuota reducida de Seguridad Social (~88€/mes) durante el primer año.
+              </p>
+            </div>
+            <div className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all ${isTarifaPlana ? 'bg-[#27bea5] border-[#27bea5] scale-110' : 'border-slate-300 bg-white'}`}>
+              {isTarifaPlana && <Check className="w-5 h-5 text-white" />}
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex gap-4 text-slate-500">
+            <div className="p-2 bg-white rounded-lg border border-slate-100 h-fit">
+              <Info className="w-5 h-5 text-slate-400" />
+            </div>
+            <div className="text-sm">
+              <p className="font-bold text-slate-700 mb-1">Nota para Empresas</p>
+              <p>La Tarifa Plana de autónomos generalmente aplica a personas físicas. Como sociedad, la cotización depende de los administradores.</p>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-6 border-t border-slate-100 flex justify-between items-center">
+          <button onClick={handleBack} className="text-slate-400 font-bold hover:text-slate-600 transition-colors">Atrás</button>
+          <button
+            onClick={handleNext}
+            disabled={!startDate}
+            className="bg-[#1c2938] text-white py-4 px-10 rounded-2xl font-bold text-lg hover:bg-[#27bea5] disabled:opacity-50 transition-all shadow-xl hover:shadow-2xl flex items-center gap-3"
+          >
+            Continuar <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -974,13 +1044,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
         {/* Navigation */}
         <div className="flex justify-between items-center mt-10 pt-8 border-t border-slate-100">
           <button
-            onClick={() => setStep(1)}
+            onClick={() => setStep(2)}
             className="text-slate-500 hover:text-[#1c2938] font-medium flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" /> Atrás
           </button>
           <button
-            onClick={() => setStep(3)}
+            onClick={() => setStep(4)}
             disabled={!selectedSector || selectedSubcategories.length === 0}
             className="group bg-[#1c2938] text-white py-4 px-10 rounded-2xl font-bold text-lg hover:bg-[#27bea5] disabled:opacity-30 disabled:hover:bg-[#1c2938] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer"
           >
@@ -1061,13 +1131,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
           {/* Navigation */}
           <div className="flex gap-4">
             <button
-              onClick={() => setStep(1)}
+              onClick={() => setStep(3)}
               className="flex-1 py-4 font-bold text-slate-500 hover:text-[#1c2938] hover:bg-white rounded-2xl transition-colors cursor-pointer"
             >
               Atrás
             </button>
             <button
-              onClick={() => setStep(5)}
+              onClick={() => setStep(6)}
               className="flex-[2] bg-[#1c2938] text-white py-4 rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
             >
               Se ve genial <ArrowRight className="w-5 h-5" />
@@ -1183,13 +1253,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
 
         <div className="flex gap-4 pt-4">
           <button
-            onClick={() => setStep(3)}
+            onClick={() => setStep(4)}
             className="flex-1 py-4 font-bold text-slate-500 hover:text-[#1c2938] hover:bg-white rounded-2xl transition-colors cursor-pointer"
           >
             Atrás
           </button>
           <button
-            onClick={() => setStep(5)}
+            onClick={() => setStep(6)}
             className="flex-[2] bg-[#1c2938] text-white py-4 rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
           >
             Guardar Billetera <ArrowRight className="w-5 h-5" />
@@ -1280,7 +1350,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
               {/* Next Step Card */}
               <div className="flex items-center justify-center p-6">
                 <button
-                  onClick={() => setStep(6)}
+                  onClick={() => setStep(7)}
                   className="w-full bg-[#1c2938] text-white py-4 rounded-2xl font-bold hover:bg-[#27bea5] transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2 cursor-pointer"
                 >
                   Continuar <ArrowRight className="w-5 h-5" />
@@ -1300,7 +1370,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
                     O puedes continuar y agregar servicios manualmente más tarde
                   </p>
                   <button
-                    onClick={() => setStep(6)}
+                    onClick={() => setStep(7)}
                     className="px-6 py-2 bg-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-300 transition-colors text-sm"
                   >
                     Continuar sin catálogo
@@ -1397,7 +1467,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
           </div>
           <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-full flex justify-center">
             <button
-              onClick={() => setStep(7)}
+              onClick={() => setStep(9)}
               disabled={!tone}
               className="bg-[#27bea5] text-white px-10 py-4 rounded-full font-bold shadow-xl hover:bg-[#22a890] hover:scale-105 transition-all flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
             >
@@ -1482,7 +1552,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
 
       <div className="flex justify-center mt-12">
         <button
-          onClick={() => setStep(8)} // Move to Step 8 (Plan)
+          onClick={() => setStep(9)} // Move to Step 9 (Plan)
           className="bg-[#1c2938] text-white py-5 px-16 rounded-[2rem] font-bold text-xl hover:bg-[#27bea5] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 flex items-center gap-3 cursor-pointer"
         >
           Siguiente <ArrowRight className="w-6 h-6" />
@@ -1593,7 +1663,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
 
         {/* Visual Progress Steps */}
         <div className="hidden md:flex gap-2">
-          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all duration-500 ${step >= i ? 'w-8 bg-[#27bea5]' : 'w-4 bg-slate-200'
@@ -1607,13 +1677,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
       <div className="flex-1 flex flex-col justify-center py-8 relative z-10 px-4">
         <div className="w-full">
           {step === 1 && renderStep1_Fiscal()}
-          {step === 2 && renderStep2_Activity()}
-          {step === 3 && renderStep3_Branding()}
-          {step === 4 && renderStep4_Finance()}
-          {step === 5 && renderStep5_Catalog()}
-          {step === 6 && renderStep6_Comms()}
-          {step === 7 && renderStep7_Channels()}
-          {step === 8 && renderStep8_Plan()}
+          {step === 2 && renderStep2_FiscalData()}
+          {step === 3 && renderStep2_Activity()}
+          {step === 4 && renderStep3_Branding()}
+          {step === 5 && renderStep4_Finance()}
+          {step === 6 && renderStep5_Catalog()}
+          {step === 7 && renderStep6_Comms()}
+          {step === 8 && renderStep7_Channels()}
+          {step === 9 && renderStep8_Plan()}
         </div>
       </div>
 

@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   LogOut,
   Calculator,
-  Receipt
+  Receipt,
+  ChevronUp
 } from 'lucide-react';
 import { AppView, ProfileType, UserProfile } from '../types';
 
@@ -40,6 +41,7 @@ const Layout: React.FC<LayoutProps> = ({
   onLogout
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -86,7 +88,10 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 space-y-1 mt-4 overflow-y-auto custom-scrollbar">
+
+          {/* OPERATIVO */}
+          {!isCollapsed && <div className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Operativo</div>}
           <NavItem
             id="tour-dashboard"
             icon={<LayoutDashboard size={24} />}
@@ -106,18 +111,10 @@ const Layout: React.FC<LayoutProps> = ({
           <NavItem
             id="tour-clients"
             icon={<Users size={24} />}
-            label="Clientes"
+            label="Comercial"
             isActive={activeView === AppView.CLIENTS}
             isCollapsed={isCollapsed}
             onClick={() => onNavigate(AppView.CLIENTS)}
-          />
-          <NavItem
-            id="tour-expenses"
-            icon={<TrendingDown size={24} />}
-            label="Gastos"
-            isActive={activeView === AppView.EXPENSES}
-            isCollapsed={isCollapsed}
-            onClick={() => onNavigate(AppView.EXPENSES)}
           />
           <NavItem
             id="tour-catalog"
@@ -126,6 +123,17 @@ const Layout: React.FC<LayoutProps> = ({
             isActive={activeView === AppView.CATALOG}
             isCollapsed={isCollapsed}
             onClick={() => onNavigate(AppView.CATALOG)}
+          />
+
+          {/* FINANCIERO */}
+          {!isCollapsed && <div className="px-4 py-2 mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Financiero</div>}
+          <NavItem
+            id="tour-expenses"
+            icon={<TrendingDown size={24} />}
+            label="Gastos"
+            isActive={activeView === AppView.EXPENSES}
+            isCollapsed={isCollapsed}
+            onClick={() => onNavigate(AppView.EXPENSES)}
           />
           <NavItem
             id="tour-quotas"
@@ -143,6 +151,9 @@ const Layout: React.FC<LayoutProps> = ({
             isCollapsed={isCollapsed}
             onClick={() => onNavigate(AppView.TRIMESTRAL)}
           />
+
+          {/* ANÁLISIS */}
+          {!isCollapsed && <div className="px-4 py-2 mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Análisis</div>}
           <NavItem
             id="tour-reports"
             icon={<PieChart size={24} />}
@@ -151,43 +162,52 @@ const Layout: React.FC<LayoutProps> = ({
             isCollapsed={isCollapsed}
             onClick={() => onNavigate(AppView.REPORTS)}
           />
-          <div className="h-px bg-slate-200 my-2 mx-4"></div>
-          <NavItem
-            id="tour-settings"
-            icon={<Settings size={24} />}
-            label="Ajustes"
-            isActive={activeView === AppView.SETTINGS}
-            isCollapsed={isCollapsed}
-            onClick={() => onNavigate(AppView.SETTINGS)}
-          />
         </nav>
 
         {/* Profile & Footer */}
-        <div className="p-4 border-t border-slate-50 space-y-3">
+        {/* Profile & Footer */}
+        <div className="p-4 border-t border-slate-50 relative">
 
-          <div className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-start'} gap-3 p-2 rounded-xl border border-slate-100 bg-slate-50/50`}>
-            <div className="w-9 h-9 rounded-full bg-white text-slate-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-              {currentProfile.type === ProfileType.COMPANY ? <Building2 size={16} /> : <Briefcase size={16} />}
+          {/* Dropup Menu */}
+          {isProfileOpen && !isCollapsed && (
+            <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border border-slate-100 p-2 animate-in slide-in-from-bottom-2 z-50">
+              <button
+                onClick={() => { onNavigate(AppView.SETTINGS); setIsProfileOpen(false); }}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors text-slate-600 font-bold text-sm"
+              >
+                <Settings size={18} /> Ajustes
+              </button>
+              <div className="h-px bg-slate-100 my-1"></div>
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 text-rose-500 transition-colors font-bold text-sm"
+                >
+                  <LogOut size={18} /> Salir
+                </button>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => !isCollapsed && setIsProfileOpen(!isProfileOpen)}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} p-2 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 transition-colors group`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-white text-slate-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                {currentProfile.type === ProfileType.COMPANY ? <Building2 size={16} /> : <Briefcase size={16} />}
+              </div>
+              {!isCollapsed && (
+                <div className="text-left min-w-0">
+                  <p className="text-xs font-bold text-[#1c2938] truncate">{currentProfile.name}</p>
+                  <p className="text-[10px] text-slate-400 truncate capitalize">{currentProfile.type}</p>
+                </div>
+              )}
             </div>
             {!isCollapsed && (
-              <div className="text-left min-w-0 flex-1 animate-in fade-in">
-                <p className="text-xs font-bold text-[#1c2938] truncate">{currentProfile.name}</p>
-                <p className="text-[10px] text-slate-400 truncate capitalize">{currentProfile.type}</p>
-              </div>
+              <ChevronUp size={16} className={`text-slate-400 ml-2 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
             )}
-          </div>
-
-          {/* LOGOUT BUTTON */}
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-start'} gap-3 p-3 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors`}
-              title="Cerrar Sesión"
-            >
-              <LogOut size={20} />
-              {!isCollapsed && <span className="text-xs font-bold animate-in fade-in">Salir</span>}
-            </button>
-          )}
+          </button>
         </div>
       </aside>
 
