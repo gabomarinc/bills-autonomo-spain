@@ -151,7 +151,12 @@ const mapUserRowToProfile = (row: any): UserProfile => {
     bankAccountType: profileSettings.bankAccountType || 'Ahorro',
     fiscalConfig: fiscalConfig,
     stripeCustomerId: row.stripe_customer_id || profileSettings.stripeCustomerId,
-    plan: row.plan_name || profileSettings.plan || 'Freshie',
+    plan: (() => {
+      const p = row.plan_name || profileSettings.plan || 'Freshie';
+      if (p === 'Free') return 'Freshie';
+      if (p === 'Pro') return 'Money Honey';
+      return p;
+    })(), // Map DB internal names back to Brand names
     renewalDate: row.renewal_date || profileSettings.renewalDate,
     ...profileSettings,
     isOnboardingComplete: true
@@ -311,6 +316,16 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
 
     const dbType = (profile.type || '').includes('Empresa') ? 'COMPANY' : 'FREELANCE';
 
+    // --- COMPATIBILITY LAYER FOR DB CONSTRAINTS ---
+    // The DB likely has a CHECK constraint allowing only 'Free' or 'Pro'.
+    // We map 'Freshie' -> 'Free' and 'Money Honey' -> 'Pro' for storage.
+    let dbPlanName = 'Free';
+    if (profile.plan === 'Freshie') dbPlanName = 'Free';
+    else if (profile.plan === 'Money Honey') dbPlanName = 'Pro';
+    else if (profile.plan === 'Empresa Scale') dbPlanName = 'Pro'; // Fallback for enterprise if constraint allows
+    else if (profile.plan) dbPlanName = profile.plan as string; // Allow other values if any
+
+    // Insert user into DB
     await sql(
       `INSERT INTO users (id, name, email, password, type, profile_data, stripe_customer_id, plan_name, renewal_date) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -322,7 +337,7 @@ export const createUserInDb = async (profile: Partial<UserProfile>, password: st
         dbType,
         JSON.stringify(profileData),
         profile.stripeCustomerId || null,
-        profile.plan || 'Freshie',
+        dbPlanName,
         profile.renewalDate || null
       ]
     );
