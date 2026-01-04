@@ -755,8 +755,9 @@ export const fetchProvidersFromDb = async (userId: string): Promise<DbProvider[]
       email: row.email,
       address: row.address,
       phone: row.phone,
-      category: row.category,
-      notes: row.notes
+      country: row.country || 'ES', // Default to ES if missing
+      notes: row.notes,
+      // category removed
     }));
   } catch (error) {
     console.error("Error fetching providers:", error);
@@ -777,7 +778,7 @@ export const saveProviderToDb = async (providerData: DbProvider, userId: string)
   const id = providerData.id || `prov_${userId.substring(0, 8)}_${safeName}`;
   try {
     const upsertProvider = `
-        INSERT INTO providers (id, user_id, name, tax_id, email, address, phone, category, notes, updated_at)
+        INSERT INTO providers (id, user_id, name, tax_id, email, address, phone, country, notes, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
         ON CONFLICT (id) DO UPDATE SET 
           name = EXCLUDED.name,
@@ -785,11 +786,11 @@ export const saveProviderToDb = async (providerData: DbProvider, userId: string)
           email = COALESCE(EXCLUDED.email, providers.email),
           address = COALESCE(EXCLUDED.address, providers.address),
           phone = COALESCE(EXCLUDED.phone, providers.phone),
-          category = COALESCE(EXCLUDED.category, providers.category),
+          country = COALESCE(EXCLUDED.country, providers.country),
           notes = COALESCE(EXCLUDED.notes, providers.notes),
           updated_at = NOW();
     `;
-    await sql(upsertProvider, [id, userId, providerData.name, providerData.taxId, providerData.email, providerData.address, providerData.phone, providerData.category, providerData.notes]);
+    await sql(upsertProvider, [id, userId, providerData.name, providerData.taxId, providerData.email, providerData.address, providerData.phone, providerData.country || 'ES', providerData.notes]);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
