@@ -27,6 +27,7 @@ import {
    Lightbulb
 } from 'lucide-react';
 import { Invoice, AppView, UserProfile } from '../types';
+import PipelineDetailModal from './PipelineDetailModal';
 
 interface DashboardProps {
    recentInvoices: Invoice[];
@@ -203,9 +204,9 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
                </div>
             </button>
 
-            {/* Card 3: Pipeline (Blue) -> Invoices/Quotes */}
+            {/* Card 3: Pipeline (Blue) -> Modal */}
             <button
-               onClick={() => onNavigate && onNavigate(AppView.INVOICES)}
+               onClick={() => setIsPipelineModalOpen(true)}
                className="bg-[#dbeafe] p-5 rounded-[2rem] flex flex-col justify-between h-40 shadow-sm relative overflow-hidden text-left active:scale-95 transition-transform"
             >
                <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/30 rounded-full"></div>
@@ -246,8 +247,26 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
       </div>
    );
 
+   // --- PIPELINE MODAL STATE ---
+   const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
+
+   // Filter pipeline quotes for the modal
+   const pipelineQuotes = useMemo(() => {
+      return recentInvoices.filter(inv =>
+         inv.type === 'Quote' &&
+         (inv.status === 'Enviada' || inv.status === 'Seguimiento' || inv.status === 'Negociacion' || inv.status === 'Creada')
+      );
+   }, [recentInvoices]);
+
    return (
       <>
+         <PipelineDetailModal
+            isOpen={isPipelineModalOpen}
+            onClose={() => setIsPipelineModalOpen(false)}
+            pipelineQuotes={pipelineQuotes}
+            totalPipelineAmount={stats.pipelineAmount}
+         />
+
          {/* MOBILE VIEW */}
          <div className="md:hidden block h-full">
             {renderMobileLayout()}
@@ -491,13 +510,25 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
 
                      {activeTab === 'QUOTES' && (
                         <div className="space-y-2 animate-in fade-in slide-in-from-right-8">
-                           {/* NEW: Pipeline Value Header inside the list */}
-                           <div className="mb-3 p-3 bg-purple-50 rounded-xl border border-purple-100 flex items-center justify-between">
-                              <span className="text-xs font-bold text-purple-800 uppercase flex items-center gap-1">
-                                 <Lightbulb className="w-3 h-3" /> Pipeline
-                              </span>
-                              <span className="font-bold text-purple-700">€{stats.pipelineAmount.toLocaleString()}</span>
-                           </div>
+                           {/* NEW: Pipeline Value Header inside the list - CLICKABLE */}
+                           <button
+                              onClick={() => setIsPipelineModalOpen(true)}
+                              className="w-full mb-3 p-3 bg-purple-50 rounded-xl border border-purple-100 flex items-center justify-between hover:bg-purple-100 hover:scale-[1.02] active:scale-95 transition-all text-left group"
+                           >
+                              <div className="flex items-center gap-2">
+                                 <div className="p-1 bg-purple-200 rounded-lg text-purple-700">
+                                    <TrendingUp className="w-4 h-4" />
+                                 </div>
+                                 <div>
+                                    <span className="text-xs font-bold text-purple-800 uppercase block">Pipeline Activo</span>
+                                    <span className="text-[10px] text-purple-600 font-medium">Click para ver detalle</span>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                 <span className="font-bold text-purple-700 text-lg">€{stats.pipelineAmount.toLocaleString()}</span>
+                                 <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
+                              </div>
+                           </button>
 
                            {/* Borradores */}
                            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
