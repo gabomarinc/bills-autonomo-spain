@@ -66,7 +66,7 @@ const Dashboard: React.FC<DashboardProps> = ({ recentInvoices, isOffline, pendin
       // PIPELINE (Active Quotes: Not Accepted, Not Rejected, Not Drafts ideally for real pipeline)
       // Strictly: Sent, Viewed, Negotiation
       const pipelineAmount = recentInvoices
-         .filter(inv => inv.type === 'Quote' && (inv.status === 'Enviada' || inv.status === 'Seguimiento' || inv.status === 'Negociacion'))
+         .filter(inv => inv.type === 'Quote' && (inv.status === 'Enviada' || inv.status === 'Seguimiento' || inv.status === 'Negociacion' || inv.status === 'Creada'))
          .reduce((acc, curr) => acc + (curr.baseAmountEur || curr.total), 0);
 
       // General Quote Stats
