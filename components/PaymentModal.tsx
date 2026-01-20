@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CreditCard, Landmark, Coins, FileText, AlertTriangle } from 'lucide-react';
+import { X, Loader2, CreditCard, Landmark, Coins, FileText, AlertTriangle, Edit2 } from 'lucide-react';
 import { Invoice, UserProfile, PaymentPlan, PaymentPlanItem, TimelineEvent } from '../types';
 import { convertToEur, SUPPORTED_CURRENCIES } from '../services/exchangeRateService';
 import { useAlert } from './AlertSystem';
@@ -25,6 +25,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
   const [paymentExchangeRate, setPaymentExchangeRate] = useState<number | null>(null);
   const [exchangeDifference, setExchangeDifference] = useState<number | null>(null);
   const [isManualEur, setIsManualEur] = useState(false);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [editDueDate, setEditDueDate] = useState('');
 
   const alert = useAlert();
 
@@ -120,7 +122,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
       };
 
       updatedInvoice.paymentPlan = {
-        ...updatedInvoice.paymentPlan,
+        totalPayments: updatedInvoice.paymentPlan.totalPayments as number,
         payments: updatedPayments
       };
 
@@ -144,7 +146,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
       // Normal payment logic
       const newTotalPaid = (invoice.amountPaid || 0) + amount;
       updatedInvoice.amountPaid = newTotalPaid;
-      updatedInvoice.status = newTotalPaid >= invoice.total - 0.01 ? 'Pagada' : 'Abonada';
+      updatedInvoice.status = newTotalPaid >= (invoice.total - 0.01) ? 'Pagada' : 'Abonada';
 
       const event: TimelineEvent = {
         id: Date.now().toString(),
@@ -171,6 +173,94 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
     onConfirm(updatedInvoice);
     onClose();
   };
+
+  const handleRevertPayment = async () => {
+    if (selectedPaymentIndex === null || !invoice.paymentPlan) return;
+
+    const confirmed = await alert.confirm({
+      title: '¿Anular Cobro?',
+      message: `¿Estás seguro de que deseas anular el cobro de la Cuota ${selectedPaymentIndex + 1}? Esto actualizará el balance de la factura.`,
+      confirmText: 'Anular Cobro',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    const updatedInvoice: Invoice = { ...invoice };
+    const updatedPayments = [...normalizedPayments];
+    const amountToSubtract = updatedPayments[selectedPaymentIndex].amount;
+
+    updatedPayments[selectedPaymentIndex] = {
+      ...updatedPayments[selectedPaymentIndex],
+      paid: false,
+      paidDate: undefined
+    };
+
+    updatedInvoice.paymentPlan = {
+      totalPayments: (invoice.paymentPlan as PaymentPlan).totalPayments,
+      payments: updatedPayments
+    };
+
+    const totalPaid = updatedPayments
+      .filter(p => p.paid)
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    updatedInvoice.amountPaid = totalPaid;
+
+    // Update status
+    if (totalPaid <= 0) {
+      updatedInvoice.status = 'Enviada';
+    } else {
+      updatedInvoice.status = 'Abonada';
+    }
+
+    // Timeline event
+    const event: TimelineEvent = {
+      id: Date.now().toString(),
+      type: 'EDITED',
+      title: `Pago cuota ${selectedPaymentIndex + 1} anulado`,
+      description: `Se ha revertido el cobro de ${currencySymbol}${amountToSubtract.toFixed(2)}`,
+      timestamp: new Date().toISOString()
+    };
+    updatedInvoice.timeline = [...(invoice.timeline || []), event];
+
+    onConfirm(updatedInvoice);
+    onClose();
+    alert.addToast('info', 'Cobro Anulado', `El cobro de la cuota ${selectedPaymentIndex + 1} ha sido revertido.`);
+  };
+
+  const handleUpdateDueDate = () => {
+    if (selectedPaymentIndex === null || !invoice.paymentPlan || !editDueDate) return;
+
+    const updatedInvoice: Invoice = { ...invoice };
+    const updatedPayments = [...normalizedPayments];
+
+    updatedPayments[selectedPaymentIndex] = {
+      ...updatedPayments[selectedPaymentIndex],
+      dueDate: editDueDate
+    };
+
+    updatedInvoice.paymentPlan = {
+      totalPayments: (invoice.paymentPlan as PaymentPlan).totalPayments,
+      payments: updatedPayments
+    };
+
+    const event: TimelineEvent = {
+      id: Date.now().toString(),
+      type: 'EDITED',
+      title: `Vencimiento cuota ${selectedPaymentIndex + 1} modificado`,
+      description: `Nueva fecha: ${new Date(editDueDate).toLocaleDateString()}`,
+      timestamp: new Date().toISOString()
+    };
+    updatedInvoice.timeline = [...(invoice.timeline || []), event];
+
+    onConfirm(updatedInvoice);
+    setIsEditingDate(false);
+    alert.addToast('success', 'Fecha Actualizada', 'El vencimiento ha sido modificado correctamente.');
+  };
+
+  const currencySymbol = SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency || 'EUR'))?.symbol || '€';
 
   if (!isOpen) return null;
 
@@ -210,26 +300,29 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
                     key={payment.id}
                     type="button"
                     onClick={() => {
-                      if (!payment.paid) {
-                        setSelectedPaymentIndex(idx);
+                      setSelectedPaymentIndex(idx);
+                      // Reset states
+                      setIsEditingDate(false);
+                      if (payment.paid) {
+                        setPaymentAmount('');
+                      } else {
                         setPaymentAmount(payment.amount.toString());
                         setPaymentDate(payment.dueDate);
                       }
                     }}
                     className={`w-full p-3 rounded-xl border-2 text-left transition-all flex justify-between items-center ${selectedPaymentIndex === idx
-                      ? 'border-amber-500 bg-white shadow-md'
+                      ? payment.paid ? 'border-red-400 bg-red-50 shadow-sm' : 'border-amber-500 bg-white shadow-md'
                       : payment.paid
-                        ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                        ? 'border-green-100 bg-green-50/50'
                         : 'border-white bg-white/50 hover:bg-white'
                       }`}
-                    disabled={payment.paid}
                   >
                     <div className="flex flex-col">
-                      <span className="font-bold text-xs text-amber-900">Cuota {idx + 1}</span>
-                      <span className="text-[10px] text-amber-600">{new Date(payment.dueDate).toLocaleDateString()}</span>
+                      <span className={`font-bold text-xs ${payment.paid ? 'text-green-800' : 'text-amber-900'}`}>Cuota {idx + 1}</span>
+                      <span className="text-[10px] text-slate-500 text-amber-600">{new Date(payment.dueDate).toLocaleDateString()}</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-bold text-sm text-amber-900">{invoice.currency} {payment.amount.toFixed(2)}</span>
+                      <span className={`font-bold text-sm ${payment.paid ? 'text-green-700' : 'text-amber-900'}`}>{invoice.currency} {payment.amount.toFixed(2)}</span>
                       {payment.paid && <span className="block text-[9px] text-green-600 font-bold uppercase">Pagado</span>}
                     </div>
                   </button>
@@ -238,80 +331,139 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
             </div>
           )}
 
-          {/* Payment Method */}
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Método de Pago</label>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { id: 'BANCO', icon: Landmark, label: 'Banco' },
-                { id: 'TARJETA', icon: CreditCard, label: 'Tarjeta' },
-                { id: 'EFECTIVO', icon: Coins, label: 'Efectivo' },
-                { id: 'OTRO', icon: FileText, label: 'Otro' }
-              ].map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setPaymentMethod(m.id as any)}
-                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${paymentMethod === m.id
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-slate-50 bg-slate-50 text-slate-500 hover:border-slate-200 hover:bg-white'
-                    }`}
-                >
-                  <m.icon className="w-5 h-5" />
-                  <span className="text-[10px] font-bold">{m.label}</span>
-                </button>
-              ))}
+          {/* Edit/Undo Actions for multi-payment */}
+          {selectedPaymentIndex !== null && normalizedPayments[selectedPaymentIndex] && (
+            <div className="space-y-3">
+              {normalizedPayments[selectedPaymentIndex].paid ? (
+                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
+                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-3">Esta cuota está pagada</p>
+                  <button
+                    onClick={handleRevertPayment}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-white border-2 border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                  >
+                    <AlertTriangle className="w-4 h-4" /> Anular Cobro de esta Cuota
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                  {isEditingDate ? (
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Cambiar Vencimiento</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={editDueDate}
+                          onChange={(e) => setEditDueDate(e.target.value)}
+                          className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm"
+                        />
+                        <button
+                          onClick={handleUpdateDueDate}
+                          className="bg-amber-500 text-white px-4 rounded-lg text-xs font-bold"
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          onClick={() => setIsEditingDate(false)}
+                          className="bg-slate-200 text-slate-600 px-3 rounded-lg text-xs font-medium"
+                        >
+                          x
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsEditingDate(true);
+                        setEditDueDate(normalizedPayments[selectedPaymentIndex].dueDate);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2 bg-white border border-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:border-amber-300 transition-all"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" /> Editar fecha de vencimiento
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Amount */}
-            <div className="col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Monto Recibido</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">
-                  {SUPPORTED_CURRENCIES.find(c => c.code === paymentCurrency)?.symbol || '€'}
-                </span>
-                <input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => {
-                    setPaymentAmount(e.target.value);
-                    setPaymentReceivedEur(null);
-                  }}
-                  className="w-full pl-10 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-2xl font-bold text-[#1c2938] outline-none focus:bg-white focus:border-green-500 transition-all"
-                  placeholder="0.00"
-                />
+          {/* Payment Method - Only for unpaid */}
+          {!(selectedPaymentIndex !== null && normalizedPayments[selectedPaymentIndex]?.paid) && (
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Método de Pago</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: 'BANCO', icon: Landmark, label: 'Banco' },
+                  { id: 'TARJETA', icon: CreditCard, label: 'Tarjeta' },
+                  { id: 'EFECTIVO', icon: Coins, label: 'Efectivo' },
+                  { id: 'OTRO', icon: FileText, label: 'Otro' }
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setPaymentMethod(m.id as any)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${paymentMethod === m.id
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-slate-50 bg-slate-50 text-slate-500 hover:border-slate-200 hover:bg-white'
+                      }`}
+                  >
+                    <m.icon className="w-5 h-5" />
+                    <span className="text-[10px] font-bold">{m.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Date */}
-            <div className="col-span-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Fecha</label>
-              <input
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-green-500 transition-all"
-              />
-            </div>
+          {/* Amount - Only for unpaid */}
+          {!(selectedPaymentIndex !== null && normalizedPayments[selectedPaymentIndex]?.paid) && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Monto Recibido</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xl">
+                    {SUPPORTED_CURRENCIES.find(c => c.code === paymentCurrency)?.symbol || '€'}
+                  </span>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => {
+                      setPaymentAmount(e.target.value);
+                      setPaymentReceivedEur(null);
+                    }}
+                    className="w-full pl-10 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-2xl font-bold text-[#1c2938] outline-none focus:bg-white focus:border-green-500 transition-all"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
 
-            {/* Currency */}
-            <div className="col-span-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Moneda</label>
-              <select
-                value={paymentCurrency}
-                onChange={(e) => {
-                  setPaymentCurrency(e.target.value);
-                  setPaymentReceivedEur(null);
-                }}
-                className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-green-500 transition-all"
-              >
-                {SUPPORTED_CURRENCIES.map(curr => (
-                  <option key={curr.code} value={curr.code}>{curr.code}</option>
-                ))}
-              </select>
+              {/* Date */}
+              <div className="col-span-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Fecha Cobro</label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-green-500 transition-all"
+                />
+              </div>
+
+              {/* Currency */}
+              <div className="col-span-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Moneda</label>
+                <select
+                  value={paymentCurrency}
+                  onChange={(e) => {
+                    setPaymentCurrency(e.target.value);
+                    setPaymentReceivedEur(null);
+                  }}
+                  className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-green-500 transition-all"
+                >
+                  {SUPPORTED_CURRENCIES.map(curr => (
+                    <option key={curr.code} value={curr.code}>{curr.code}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Multicurrency Analysis */}
           {paymentAmount && parseFloat(paymentAmount) > 0 && paymentCurrency !== 'EUR' && (
@@ -384,14 +536,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, invoice, i
             </div>
           )}
 
-          {/* Confirm Button */}
-          <button
-            onClick={handleConfirm}
-            disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isCalculating}
-            className="w-full py-4 bg-[#1c2938] text-white rounded-2xl font-bold text-lg hover:bg-[#27bea5] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:-translate-y-1 active:translate-y-0"
-          >
-            Confirmar Registro
-          </button>
+          {/* Confirm Button - Only for unpaid */}
+          {!(selectedPaymentIndex !== null && normalizedPayments[selectedPaymentIndex]?.paid) && (
+            <button
+              onClick={handleConfirm}
+              disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isCalculating}
+              className="w-full py-4 bg-[#1c2938] text-white rounded-2xl font-bold text-lg hover:bg-[#27bea5] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:-translate-y-1 active:translate-y-0"
+            >
+              Confirmar Registro
+            </button>
+          )}
         </div>
       </div>
     </div>
