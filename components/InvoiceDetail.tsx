@@ -725,41 +725,24 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
               </div>
             </div>
 
-            {!isQuote && (amountPaid > 0 || paidEur > 0) && (
-              <div className="pt-4 mt-2 border-t border-slate-100">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-bold text-green-600">Pagado</span>
-                  <div className="text-right">
-                    {invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && invoice.baseAmountEur ? (
-                      <>
-                        <span className="font-bold text-slate-600 block">
-                          {invoice.invoiceCurrency} {amountPaid.toFixed(2)}
-                        </span>
-                        <span className="text-xs text-slate-500 no-pdf">
-                          (€{paidEur.toFixed(2)} para declaración)
-                        </span>
-                      </>
-                    ) : (
-                      <span className="font-bold text-slate-600">
-                        {invoice.currency} {amountPaid.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
+            {!isQuote && amountPaid > 0 && (
+              <div className="pt-4 mt-2 border-t border-slate-100 space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-bold text-green-600">Pagado a la fecha</span>
+                  <span className="font-bold text-slate-700">{currencySymbol} {amountPaid.toFixed(2)}</span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2.5 mb-1">
+                <div className="flex justify-between items-center text-lg bg-amber-50/50 p-2 rounded-lg border border-amber-100/50">
+                  <span className="font-bold text-amber-700 text-sm">Balance Pendiente</span>
+                  <span className="font-bold text-amber-800 tracking-tight">
+                    {currencySymbol} {(invoice.total - amountPaid).toFixed(2)}
+                  </span>
+                </div>
+                {/* Visual indicator of progress */}
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
                   <div
-                    className="bg-green-500 h-2.5 rounded-full"
+                    className="bg-green-500 h-full rounded-full"
                     style={{ width: `${Math.min(100, (amountPaid / invoice.total) * 100)}%` }}
                   ></div>
-                </div>
-                <div className="flex justify-between text-xs text-slate-400">
-                  <span>{((amountPaid / invoice.total) * 100).toFixed(0)}% Completado</span>
-                  <span>
-                    Resta: {currencySymbol} {(invoice.total - amountPaid).toFixed(2)}
-                    {invoice.baseAmountEur && (
-                      <span className="block text-[10px] no-pdf">(€{remainingBalance.toFixed(2)} para declaración)</span>
-                    )}
-                  </span>
                 </div>
                 {invoice.exchangeDifference && invoice.exchangeDifference !== 0 && (
                   <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-amber-700">
@@ -855,6 +838,19 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             <span>Total:</span>
             <span>{currencySymbol} {invoice.total.toFixed(2)}</span>
           </div>
+
+          {!isQuote && amountPaid > 0 && (
+            <div className="mt-4 pt-4 border-t-2 border-slate-900 border-double space-y-2">
+              <div className="flex justify-between text-slate-600 font-serif text-sm">
+                <span>Abonado a la fecha:</span>
+                <span>{currencySymbol} {amountPaid.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[#1c2938] font-serif font-bold text-base">
+                <span>Balance Pendiente:</span>
+                <span>{currencySymbol} {(invoice.total - amountPaid).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -974,10 +970,23 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             </div>
           )}
 
-          <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 pt-4 border-t border-slate-100">Total a Pagar</p>
+          <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 pt-4 border-t border-slate-100">Total Factura</p>
           <h2 className="text-5xl font-bold text-slate-900 tracking-tighter" style={{ color: color }}>
             {currencySymbol} {invoice.total.toLocaleString()}
           </h2>
+
+          {!isQuote && amountPaid > 0 && (
+            <div className="mt-6 pt-6 border-t border-slate-100 space-y-1">
+              <div className="flex justify-end gap-8 text-sm text-slate-400">
+                <span>Ya Pagado</span>
+                <span className="font-medium">{currencySymbol} {amountPaid.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-end gap-8 text-lg text-slate-900">
+                <span className="font-bold">Por Pagar</span>
+                <span className="font-bold underline decoration-slate-200 underline-offset-4">{currencySymbol} {(invoice.total - amountPaid).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
