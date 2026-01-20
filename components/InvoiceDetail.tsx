@@ -152,6 +152,13 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     }
   }, [invoice.paymentPlan]);
 
+  const getCurrencySymbol = () => {
+    const code = (invoice.invoiceCurrency || invoice.currency || 'EUR').toUpperCase();
+    return SUPPORTED_CURRENCIES.find(c => c.code === code)?.symbol || '€';
+  };
+
+  const currencySymbol = getCurrencySymbol();
+
   // --- CALCULATION LOGIC ---
   const subtotal = invoice.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const discountRate = invoice.discountRate || 0;
@@ -599,8 +606,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                     {item.details && <p className="text-xs text-slate-500 mt-1 whitespace-pre-wrap leading-relaxed">{item.details}</p>}
                   </td>
                   <td className="py-3 text-center text-slate-600 align-top pt-4">{item.quantity}</td>
-                  <td className="py-3 text-right text-slate-600 align-top pt-4">€{item.price.toFixed(2)}</td>
-                  <td className="py-3 text-right font-bold text-[#1c2938] text-base align-top pt-4">€{(item.quantity * item.price).toFixed(2)}</td>
+                  <td className="py-3 text-right text-slate-600 align-top pt-4">{currencySymbol}{item.price.toFixed(2)}</td>
+                  <td className="py-3 text-right font-bold text-[#1c2938] text-base align-top pt-4">{currencySymbol}{(item.quantity * item.price).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -629,6 +636,28 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <div className="mt-3 pt-3 border-t border-blue-100/50 text-[10px] text-blue-600 flex items-center gap-2">
                   <Globe className="w-3 h-3" />
                   <span>Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})</span>
+                </div>
+              </div>
+            )}
+
+            {/* PLAN DE PAGOS - MODERN */}
+            {normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0 && (
+              <div className="p-6 rounded-xl text-sm bg-amber-50/50 border border-amber-100">
+                <p className="font-bold mb-3 flex items-center gap-2 text-amber-800 uppercase tracking-wider text-xs">
+                  <Clock className="w-4 h-4" /> Plan de Pagos
+                </p>
+                <div className="space-y-3">
+                  {normalizedPaymentPlan.payments.map((p, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-2 text-amber-900 font-medium">
+                        <div className="w-4 h-4 rounded-full border-2 border-amber-200 flex items-center justify-center text-[8px]">
+                          {p.paid ? <Check className="w-2.4 h-2.4" /> : idx + 1}
+                        </div>
+                        <span>Pago {idx + 1}: {new Date(p.dueDate).toLocaleDateString()}</span>
+                      </div>
+                      <span className="font-bold text-amber-900">{currencySymbol} {p.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -668,34 +697,30 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
           <div className="w-full md:w-96 space-y-4">
             <div className="flex justify-between text-slate-500 text-lg">
               <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>{currencySymbol}{subtotal.toFixed(2)}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-lg">
                 <span className="text-slate-500">Descuento ({discountRate.toFixed(1)}%)</span>
-                <span className="text-green-600 font-medium">-${discountAmount.toFixed(2)}</span>
+                <span className="text-green-600 font-medium">-{currencySymbol}{discountAmount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-slate-500 text-lg">
               <span>IVA {invoice.items[0]?.tax ? `(${invoice.items[0].tax}%)` : ''}</span>
-              <span>${(invoice.ivaAmount || taxTotal).toFixed(2)}</span>
+              <span>{currencySymbol}{(invoice.ivaAmount || taxTotal).toFixed(2)}</span>
             </div>
             {/* IRPF Amount - Fix stray '0' by using boolean check */}
             {(invoice.irpfAmount || 0) > 0 && (
               <div className="flex justify-between text-slate-500 text-lg">
                 <span>Ret. IRPF ({invoice.irpfRetention}%)</span>
-                <span className="text-amber-600">-${invoice.irpfAmount!.toFixed(2)}</span>
+                <span className="text-amber-600">-{currencySymbol}{invoice.irpfAmount!.toFixed(2)}</span>
               </div>
             )}
             <div className="pt-6 border-t-2 border-slate-100 flex justify-between items-center">
               <span className="font-bold text-[#1c2938] text-xl">Total</span>
               <div className="text-right min-w-[150px]">
                 <span className="font-bold text-[#1c2938] text-3xl whitespace-nowrap block" style={{ color: color }}>
-                  {(() => {
-                    const currency = invoice.invoiceCurrency || invoice.currency;
-                    const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
-                    return `${symbol} ${invoice.total.toFixed(2)}`;
-                  })()}
+                  {currencySymbol} {invoice.total.toFixed(2)}
                 </span>
                 {/* Información interna de conversión - NO visible en PDF para cliente */}
                 {invoice.baseAmountEur && invoice.invoiceCurrency && invoice.invoiceCurrency.toUpperCase() !== 'EUR' && (
@@ -736,11 +761,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <div className="flex justify-between text-xs text-slate-400">
                   <span>{((amountPaid / invoice.total) * 100).toFixed(0)}% Completado</span>
                   <span>
-                    Resta: {(() => {
-                      const currency = invoice.invoiceCurrency || invoice.currency;
-                      const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
-                      return `${symbol} ${(invoice.total - amountPaid).toFixed(2)}`;
-                    })()}
+                    Resta: {currencySymbol} {(invoice.total - amountPaid).toFixed(2)}
                     {invoice.baseAmountEur && (
                       <span className="block text-[10px] no-pdf">(€{remainingBalance.toFixed(2)} para declaración)</span>
                     )}
@@ -807,8 +828,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 {item.details && <p className="text-sm text-slate-500 mt-1 italic">{item.details}</p>}
               </td>
               <td className="py-4 font-serif text-slate-700 text-right align-top pt-4">{item.quantity}</td>
-              <td className="py-4 font-serif text-slate-700 text-right align-top pt-4">€{item.price.toFixed(2)}</td>
-              <td className="py-4 font-serif font-bold text-slate-800 text-right align-top pt-4">€{(item.quantity * item.price).toFixed(2)}</td>
+              <td className="py-4 font-serif text-slate-700 text-right align-top pt-4">{currencySymbol}{item.price.toFixed(2)}</td>
+              <td className="py-4 font-serif font-bold text-slate-800 text-right align-top pt-4">{currencySymbol}{(item.quantity * item.price).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
@@ -818,27 +839,27 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         <div className="w-64 space-y-3">
           <div className="flex justify-between text-slate-600 font-serif text-sm">
             <span>Subtotal:</span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span>{currencySymbol}{subtotal.toFixed(2)}</span>
           </div>
           {discountAmount > 0 && (
             <div className="flex justify-between text-slate-600 font-serif text-sm">
               <span>Descuento:</span>
-              <span>-${discountAmount.toFixed(2)}</span>
+              <span>-{currencySymbol}{discountAmount.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between text-slate-600 font-serif text-sm border-b border-slate-300 pb-2">
             <span>IVA {invoice.items[0]?.tax ? `(${invoice.items[0].tax}%)` : ''}:</span>
-            <span>${(invoice.ivaAmount || taxTotal).toFixed(2)}</span>
+            <span>{currencySymbol}{(invoice.ivaAmount || taxTotal).toFixed(2)}</span>
           </div>
           {invoice.irpfAmount && invoice.irpfAmount > 0 && (
             <div className="flex justify-between text-slate-600 font-serif text-sm border-b border-slate-300 pb-2">
               <span>Ret. IRPF ({invoice.irpfRetention}%):</span>
-              <span>-${invoice.irpfAmount.toFixed(2)}</span>
+              <span>-{currencySymbol}{invoice.irpfAmount.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between font-serif font-bold text-xl text-slate-900">
             <span>Total:</span>
-            <span>{invoice.currency === 'EUR' ? '€' : invoice.currency} {invoice.total.toFixed(2)}</span>
+            <span>{currencySymbol} {invoice.total.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -858,6 +879,21 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
           <p className="font-serif text-[10px] text-slate-500 border-t border-slate-200 pt-2 flex items-center gap-1">
             <Globe className="w-3 h-3" /> Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})
           </p>
+        </div>
+      )}
+
+      {/* PLAN DE PAGOS - CLASSIC */}
+      {normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0 && (
+        <div className="mb-8 p-4 border border-slate-200 bg-amber-50/30 rounded">
+          <p className="font-serif font-bold text-xs text-amber-900 mb-2 uppercase tracking-widest">Plan de Pagos:</p>
+          <div className="space-y-1">
+            {normalizedPaymentPlan.payments.map((p, idx) => (
+              <div key={idx} className="flex justify-between items-center text-xs font-serif text-amber-800">
+                <span>Pago {idx + 1}: {new Date(p.dueDate).toLocaleDateString()}</span>
+                <span className="font-bold">{currencySymbol} {p.amount.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -914,9 +950,9 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             <div>
               <p className="font-medium text-slate-900 text-lg">{item.description}</p>
               {item.details && <p className="text-sm text-slate-500 mt-1">{item.details}</p>}
-              <p className="text-xs text-slate-400 mt-1">{item.quantity} x €{item.price.toFixed(2)}</p>
+              <p className="text-xs text-slate-400 mt-1">{item.quantity} x {currencySymbol}{item.price.toFixed(2)}</p>
             </div>
-            <p className="font-bold text-slate-900 text-lg">€{(item.quantity * item.price).toFixed(2)}</p>
+            <p className="font-bold text-slate-900 text-lg">{currencySymbol}{(item.quantity * item.price).toFixed(2)}</p>
           </div>
         ))}
       </div>
@@ -925,28 +961,28 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         <div className="text-right space-y-1">
           <div className="flex justify-end gap-8 text-sm text-slate-500">
             <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span>{currencySymbol}{subtotal.toFixed(2)}</span>
           </div>
           {discountAmount > 0 && (
             <div className="flex justify-end gap-8 text-sm text-slate-500">
               <span>Descuento</span>
-              <span>-${discountAmount.toFixed(2)}</span>
+              <span>-{currencySymbol}{discountAmount.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-end gap-8 text-sm text-slate-500 pb-4">
             <span>IVA {invoice.items[0]?.tax ? `(${invoice.items[0].tax}%)` : ''}</span>
-            <span>${(invoice.ivaAmount || taxTotal).toFixed(2)}</span>
+            <span>{currencySymbol}{(invoice.ivaAmount || taxTotal).toFixed(2)}</span>
           </div>
           {invoice.irpfAmount && invoice.irpfAmount > 0 && (
             <div className="flex justify-end gap-8 text-sm text-slate-500 pb-4">
               <span>Ret. IRPF ({invoice.irpfRetention}%)</span>
-              <span>-${invoice.irpfAmount.toFixed(2)}</span>
+              <span>-{currencySymbol}{invoice.irpfAmount.toFixed(2)}</span>
             </div>
           )}
 
           <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 pt-4 border-t border-slate-100">Total a Pagar</p>
           <h2 className="text-5xl font-bold text-slate-900 tracking-tighter" style={{ color: color }}>
-            {invoice.currency} {invoice.total.toLocaleString()}
+            {currencySymbol} {invoice.total.toLocaleString()}
           </h2>
         </div>
       </div>
@@ -965,6 +1001,24 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
           <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
             <Globe className="w-3 h-3" /> Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})
           </p>
+        </div>
+      )}
+
+      {/* PLAN DE PAGOS - MINIMAL */}
+      {normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0 && (
+        <div className="mt-8 pt-8 border-t border-slate-100">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Plan de Pagos</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {normalizedPaymentPlan.payments.map((p, idx) => (
+              <div key={idx} className="p-4 bg-slate-50 rounded-lg flex justify-between items-center">
+                <div className="text-xs text-slate-500">
+                  <p className="font-bold text-slate-700">Pago {idx + 1}</p>
+                  <p>{new Date(p.dueDate).toLocaleDateString()}</p>
+                </div>
+                <p className="font-bold text-slate-900">{currencySymbol} {p.amount.toFixed(2)}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
