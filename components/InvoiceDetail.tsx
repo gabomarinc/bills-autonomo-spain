@@ -619,8 +619,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             {/* NOTES SECTION */}
             {invoice.notes && (
               <div className="p-6 rounded-xl text-sm bg-slate-50 border border-slate-100">
-                <p className="font-bold mb-2 flex items-center gap-2 text-slate-700 uppercase tracking-wider text-xs">
-                  <StickyNote className="w-4 h-4" /> Notas
+                <p className="font-bold mb-2 flex items-center gap-2 text-slate-700 uppercase tracking-wider text-xs leading-none">
+                  <StickyNote className="w-4 h-4 flex-shrink-0" /> <span className="translate-y-[0.5px]">Notas</span>
                 </p>
                 <p className="text-slate-600 whitespace-pre-wrap leading-relaxed">{invoice.notes}</p>
               </div>
@@ -629,13 +629,13 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             {/* LEGAL MENTION */}
             {invoice.legalMention && (
               <div className="p-6 rounded-xl text-sm bg-blue-50/50 border border-blue-100">
-                <p className="font-bold mb-2 flex items-center gap-2 text-blue-700 uppercase tracking-wider text-xs">
-                  <FileText className="w-4 h-4" /> Mención Legal
+                <p className="font-bold mb-2 flex items-center gap-2 text-blue-700 uppercase tracking-wider text-xs leading-none">
+                  <FileText className="w-4 h-4 flex-shrink-0" /> <span className="translate-y-[0.5px]">Mención Legal</span>
                 </p>
                 <p className="text-blue-800 text-xs italic leading-relaxed">{invoice.legalMention}</p>
-                <div className="mt-3 pt-3 border-t border-blue-100/50 text-[10px] text-blue-600 flex items-center gap-2">
-                  <Globe className="w-3 h-3" />
-                  <span>Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})</span>
+                <div className="mt-3 pt-3 border-t border-blue-100/50 text-[10px] text-blue-600 flex items-center gap-2 leading-none">
+                  <Globe className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="translate-y-[0.5px]">Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})</span>
                 </div>
               </div>
             )}
@@ -643,17 +643,17 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             {/* PLAN DE PAGOS - MODERN */}
             {normalizedPaymentPlan && normalizedPaymentPlan.payments && normalizedPaymentPlan.payments.length > 0 && (
               <div className="p-6 rounded-xl text-sm bg-amber-50/50 border border-amber-100">
-                <p className="font-bold mb-3 flex items-center gap-2 text-amber-800 uppercase tracking-wider text-xs">
-                  <Clock className="w-4 h-4" /> Plan de Pagos
+                <p className="font-bold mb-3 flex items-center gap-2 text-amber-800 uppercase tracking-wider text-xs leading-none">
+                  <Clock className="w-4 h-4 flex-shrink-0" /> <span className="translate-y-[0.5px]">Plan de Pagos</span>
                 </p>
                 <div className="space-y-3">
                   {normalizedPaymentPlan.payments.map((p, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs">
-                      <div className="flex items-center gap-2 text-amber-900 font-medium">
-                        <div className="w-4 h-4 rounded-full border-2 border-amber-200 flex items-center justify-center text-[8px]">
-                          {p.paid ? <Check className="w-2.4 h-2.4" /> : idx + 1}
+                      <div className="flex items-center gap-2 text-amber-900 font-medium leading-none">
+                        <div className="w-5 h-5 rounded-full border-2 border-amber-200 flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                          {p.paid ? <Check className="w-3 h-3" /> : <span className="translate-y-[0.5px]">{idx + 1}</span>}
                         </div>
-                        <span>Pago {idx + 1}: {new Date(p.dueDate).toLocaleDateString()}</span>
+                        <span className="translate-y-[0.5px]">Pago {idx + 1}: {new Date(p.dueDate).toLocaleDateString()}</span>
                       </div>
                       <span className="font-bold text-amber-900">{currencySymbol} {p.amount.toFixed(2)}</span>
                     </div>
@@ -876,8 +876,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         <div className="mb-8 p-4 border-t border-slate-200 bg-blue-50/50 rounded-lg">
           <p className="font-serif font-bold text-xs text-slate-700 mb-1 uppercase tracking-wide">Mención Legal:</p>
           <p className="font-serif text-xs text-slate-600 italic leading-relaxed mb-2">{invoice.legalMention}</p>
-          <p className="font-serif text-[10px] text-slate-500 border-t border-slate-200 pt-2 flex items-center gap-1">
-            <Globe className="w-3 h-3" /> Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})
+          <p className="font-serif text-[10px] text-slate-500 border-t border-slate-200 pt-2 flex items-center gap-1 leading-none">
+            <Globe className="w-3.5 h-3.5 flex-shrink-0" /> <span className="translate-y-[0.5px]">Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})</span>
           </p>
         </div>
       )}
@@ -900,8 +900,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       {/* VERIFACTU BADGE - CLASSIC */}
       {invoice.verifactu && (
         <div className="mb-8 p-4 border border-slate-200 rounded text-left font-serif text-xs text-slate-600 bg-slate-50 no-pdf">
-          <p className="font-bold text-slate-800 mb-1 flex items-center gap-2 uppercase tracking-wide">
-            <Lock className="w-3 h-3" /> VeriFactu
+          <p className="font-bold text-slate-800 mb-1 flex items-center gap-2 uppercase tracking-wide leading-none">
+            <Lock className="w-3.5 h-3.5 flex-shrink-0" /> <span className="translate-y-[0.5px]">VeriFactu</span>
           </p>
           <p className="font-mono text-[10px] break-all">H: {invoice.verifactu.chainHash}</p>
         </div>
@@ -998,8 +998,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         <div className="mt-8 pt-8 border-t border-slate-100">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mención Legal</p>
           <p className="text-xs text-slate-500 italic leading-relaxed">{invoice.legalMention}</p>
-          <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
-            <Globe className="w-3 h-3" /> Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})
+          <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1 leading-none">
+            <Globe className="w-3.5 h-3.5 flex-shrink-0" /> <span className="translate-y-[0.5px]">Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})</span>
           </p>
         </div>
       )}
@@ -1025,8 +1025,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       {/* VERIFACTU BADGE - MINIMAL */}
       {invoice.verifactu && (
         <div className="mt-8 pt-4 border-t border-slate-100 text-xs text-slate-400 no-pdf">
-          <p className="font-bold mb-1 flex items-center gap-2 uppercase tracking-wider">
-            <Lock className="w-3 h-3" /> VeriFactu
+          <p className="font-bold mb-1 flex items-center gap-2 uppercase tracking-wider leading-none">
+            <Lock className="w-3.5 h-3.5 flex-shrink-0" /> <span className="translate-y-[0.5px]">VeriFactu</span>
           </p>
           <p className="font-mono text-[10px] break-all">{invoice.verifactu.chainHash}</p>
         </div>
