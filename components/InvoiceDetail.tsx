@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, Printer, Share2, Download, Building2,
   CheckCircle2, Loader2, Send, MessageCircle, Smartphone, Mail, Check, AlertTriangle, Edit2,
-  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link, FileText, Receipt, FileCode
+  ChevronDown, XCircle, Wallet, ArrowRight, X, Trash2, CreditCard, Clock, StickyNote, Lock, Link, FileText, Receipt, FileCode, Globe
 } from 'lucide-react';
 import { generateFacturaeXML } from '../services/facturae';
 import html2canvas from 'html2canvas';
@@ -539,7 +539,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
               {logo && (
                 <>
                   <p className="font-bold text-[#1c2938] text-lg leading-tight">{issuer.name}</p>
-                  {issuer.legalName && <p className="text-xs font-medium text-slate-400 mb-2">{issuer.legalName}</p>}
+                  {issuer.legalName && <p className="text-xs font-medium text-slate-400 mb-1">{issuer.legalName}</p>}
+                  <p className="text-xs font-mono text-slate-500 mb-2">{issuer.taxId}</p>
                 </>
               )}
               <p>{issuer.address}</p>
@@ -625,6 +626,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                   <FileText className="w-4 h-4" /> Mención Legal
                 </p>
                 <p className="text-blue-800 text-xs italic leading-relaxed">{invoice.legalMention}</p>
+                <div className="mt-3 pt-3 border-t border-blue-100/50 text-[10px] text-blue-600 flex items-center gap-2">
+                  <Globe className="w-3 h-3" />
+                  <span>Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})</span>
+                </div>
               </div>
             )}
 
@@ -768,7 +773,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       <div className="text-center border-b-4 border-slate-100 pb-8 mb-8">
         <h1 className="text-3xl font-serif font-bold text-slate-800 uppercase tracking-widest mb-1">{issuer.name}</h1>
         {issuer.legalName && <p className="text-slate-600 font-serif font-bold text-sm mb-1">{issuer.legalName}</p>}
-        <p className="text-slate-500 font-serif italic text-sm">{issuer.address} • {issuer.country}</p>
+        <p className="text-slate-500 font-serif font-bold text-xs mb-1">{issuer.taxId}</p>
+        <p className="text-slate-50 font-serif italic text-sm">{issuer.address} • {issuer.country}</p>
       </div>
 
       <div className="flex justify-between items-start mb-12">
@@ -848,7 +854,10 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       {invoice.legalMention && (
         <div className="mb-8 p-4 border-t border-slate-200 bg-blue-50/50 rounded-lg">
           <p className="font-serif font-bold text-xs text-slate-700 mb-1 uppercase tracking-wide">Mención Legal:</p>
-          <p className="font-serif text-xs text-slate-600 italic leading-relaxed">{invoice.legalMention}</p>
+          <p className="font-serif text-xs text-slate-600 italic leading-relaxed mb-2">{invoice.legalMention}</p>
+          <p className="font-serif text-[10px] text-slate-500 border-t border-slate-200 pt-2 flex items-center gap-1">
+            <Globe className="w-3 h-3" /> Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})
+          </p>
         </div>
       )}
 
@@ -884,6 +893,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
           <div>
             <h1 className="font-bold text-slate-900 text-xl tracking-tight">{issuer.name}</h1>
             {issuer.legalName && <p className="text-xs text-slate-500">{issuer.legalName}</p>}
+            <p className="text-[10px] font-mono text-slate-400">{issuer.taxId}</p>
           </div>
         </div>
         <div className="text-right">
@@ -952,6 +962,9 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         <div className="mt-8 pt-8 border-t border-slate-100">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mención Legal</p>
           <p className="text-xs text-slate-500 italic leading-relaxed">{invoice.legalMention}</p>
+          <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
+            <Globe className="w-3 h-3" /> Moneda: {SUPPORTED_CURRENCIES.find(c => c.code === (invoice.invoiceCurrency || invoice.currency))?.name || (invoice.invoiceCurrency || invoice.currency)} ({(invoice.invoiceCurrency || invoice.currency)})
+          </p>
         </div>
       )}
 
