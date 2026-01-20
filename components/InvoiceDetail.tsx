@@ -745,7 +745,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                   ></div>
                 </div>
                 {invoice.exchangeDifference && invoice.exchangeDifference !== 0 && (
-                  <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-amber-700">
+                  <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-amber-700 no-pdf">
                     <div className="flex justify-between font-medium">
                       <span>Diferencia de cambio:</span>
                       <span>€{invoice.exchangeDifference.toFixed(2)}</span>
