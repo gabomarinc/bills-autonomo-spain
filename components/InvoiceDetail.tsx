@@ -559,7 +559,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <span className="font-medium text-slate-800">{new Date(invoice.date).toLocaleDateString()}</span>
               </div>
             </div>
-            <div className="mt-4 flex justify-end relative">
+            <div className="mt-4 flex justify-end relative no-pdf">
               <button
                 onClick={() => onUpdateStatus && setShowStatusMenu(!showStatusMenu)}
                 className={`px-4 py-1.5 rounded-full text-sm font-bold border uppercase tracking-wide flex items-center gap-1 ${getStatusStyle(invoice.status)} ${onUpdateStatus ? 'cursor-pointer hover:shadow-md' : ''}`}
@@ -630,7 +630,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
             {/* VERIFACTU BADGE - MODERN */}
             {invoice.verifactu && (
-              <div className="mt-4 p-4 bg-[#1c2938] text-slate-200 rounded-xl text-xs font-mono border border-slate-700">
+              <div className="mt-4 p-4 bg-[#1c2938] text-slate-200 rounded-xl text-xs font-mono border border-slate-700 no-pdf">
                 <p className="font-bold text-[#27bea5] mb-2 flex items-center gap-2 uppercase tracking-wider">
                   <Lock className="w-3 h-3" /> Sistema VeriFactu
                 </p>
@@ -651,18 +651,12 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
                 <p className="opacity-90 text-[#1c2938] leading-relaxed">Esta cotización incluye impuestos. Para aprobar, favor de firmar y enviar respuesta a este correo.</p>
               </div>
             ) : (
-              <div className="bg-slate-50 p-5 pb-6 rounded-xl text-slate-700 text-xs">
-                <p className="font-bold mb-2 text-base">Datos Bancarios</p>
-                <p className="font-bold text-[#1c2938]">{issuer.legalName || issuer.name}</p>
-                {issuer.bankName && <p className="font-medium text-slate-600">{issuer.bankName}</p>}
-                <p className="font-mono text-sm mb-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">{issuer.bankAccountType || 'Cuenta'}:</span>
-                  {issuer.bankAccount || 'No configurado'}
-                </p>
-
-                {/* Payment Buttons (PagueloFacil / Yappy) */}
-                {renderPaymentButtons()}
-              </div>
+              renderPaymentButtons() ? (
+                <div className="bg-slate-50 p-5 pb-6 rounded-xl text-slate-700 text-xs">
+                  {/* Banking details removed as requested */}
+                  {renderPaymentButtons()}
+                </div>
+              ) : null
             )}
           </div>
 
@@ -690,8 +684,8 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
             )}
             <div className="pt-6 border-t-2 border-slate-100 flex justify-between items-center">
               <span className="font-bold text-[#1c2938] text-xl">Total</span>
-              <div className="text-right">
-                <span className="font-bold text-[#1c2938] text-3xl whitespace-nowrap" style={{ color: color }}>
+              <div className="text-right min-w-[150px]">
+                <span className="font-bold text-[#1c2938] text-3xl whitespace-nowrap block" style={{ color: color }}>
                   {(() => {
                     const currency = invoice.invoiceCurrency || invoice.currency;
                     const symbol = SUPPORTED_CURRENCIES.find(c => c.code === currency)?.symbol || '€';
@@ -860,7 +854,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
       {/* VERIFACTU BADGE - CLASSIC */}
       {invoice.verifactu && (
-        <div className="mb-8 p-4 border border-slate-200 rounded text-left font-serif text-xs text-slate-600 bg-slate-50">
+        <div className="mb-8 p-4 border border-slate-200 rounded text-left font-serif text-xs text-slate-600 bg-slate-50 no-pdf">
           <p className="font-bold text-slate-800 mb-1 flex items-center gap-2 uppercase tracking-wide">
             <Lock className="w-3 h-3" /> VeriFactu
           </p>
@@ -869,12 +863,9 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       )}
 
       {/* BANK INFO CLASSIC */}
-      {!isQuote && (
+      {!isQuote && renderPaymentButtons() && (
         <div className="mb-8 p-4 border border-slate-200 rounded text-center">
-          <p className="font-serif font-bold text-sm text-slate-800">Métodos de Pago</p>
-          <p className="font-serif text-sm font-bold text-slate-900">{issuer.legalName || issuer.name}</p>
-          <p className="font-serif text-sm text-slate-600">{issuer.bankName}</p>
-          <p className="font-serif text-sm text-slate-600 font-bold">{issuer.bankAccountType}: {issuer.bankAccount}</p>
+          {/* Banking details removed as requested */}
           {renderPaymentButtons()}
         </div>
       )}
@@ -966,7 +957,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
       {/* VERIFACTU BADGE - MINIMAL */}
       {invoice.verifactu && (
-        <div className="mt-8 pt-4 border-t border-slate-100 text-xs text-slate-400">
+        <div className="mt-8 pt-4 border-t border-slate-100 text-xs text-slate-400 no-pdf">
           <p className="font-bold mb-1 flex items-center gap-2 uppercase tracking-wider">
             <Lock className="w-3 h-3" /> VeriFactu
           </p>
@@ -975,14 +966,11 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       )}
 
       {/* BANK INFO MINIMAL */}
-      {!isQuote && (
+      {!isQuote && renderPaymentButtons() && (
         <div className="mt-16 pt-8 border-t border-slate-100">
           <div className="flex flex-col md:flex-row justify-between items-end">
             <div className="text-sm text-slate-500">
-              <p className="font-bold mb-1">Información de Pago</p>
-              <p className="font-medium text-slate-800">{issuer.legalName || issuer.name}</p>
-              <p>{issuer.bankName}</p>
-              <p><span className="font-bold uppercase text-xs">{issuer.bankAccountType}</span>: {issuer.bankAccount}</p>
+              {/* Banking details removed as requested */}
             </div>
             <div className="mt-4 md:mt-0">
               {renderPaymentButtons()}
