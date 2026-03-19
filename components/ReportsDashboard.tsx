@@ -157,23 +157,28 @@ const ReportsDashboard = ({ invoices, currencySymbol, apiKey, currentUser }: Rep
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-
-    let heightLeft = pdfHeight;
-    let position = 0;
+    const margin = 10; // 10mm margin
+    
+    const imgProps = pdf.getImageProperties(imgData);
+    const contentWidth = pageWidth - (2 * margin);
+    const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
+    
+    const usableHeight = pageHeight - (2 * margin);
+    let heightLeft = contentHeight;
+    let position = margin;
 
     // Add first page
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-    heightLeft -= pageHeight;
+    pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+    heightLeft -= usableHeight;
 
     // Add successive pages if content is longer than one page
     while (heightLeft > 0) {
-      position -= pageHeight;
+      position -= usableHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
+      pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
+      heightLeft -= usableHeight;
     }
 
     pdf.save(`${title}_${new Date().toISOString().split('T')[0]}.pdf`);

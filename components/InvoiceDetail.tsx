@@ -289,23 +289,27 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       });
 
       const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-
-      let heightLeft = pdfHeight;
-      let position = 0;
+      const margin = 10; // 10mm margin
+      
+      const contentWidth = pageWidth - (2 * margin);
+      const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
+      
+      const usableHeight = pageHeight - (2 * margin);
+      let heightLeft = contentHeight;
+      let position = margin;
 
       // Add first page
-      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
+      pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
+      heightLeft -= usableHeight;
 
       // Add successive pages if content is longer than one page
       while (heightLeft > 0) {
-        position -= pageHeight;
+        position -= usableHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, 'JPEG', margin, position + margin, contentWidth, contentHeight);
+        heightLeft -= usableHeight;
       }
 
       // --- ADD CLICKABLE LINK OVER STRIPE BUTTON ---
@@ -318,15 +322,15 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         const relativeX = rect.left - containerRect.left;
         const relativeY = rect.top - containerRect.top;
 
-        // Convert from pixels to mm
-        const xMm = (relativeX * pdfWidth) / containerRect.width;
-        const yMm = (relativeY * pdfHeight) / containerRect.height;
-        const wMm = (rect.width * pdfWidth) / containerRect.width;
-        const hMm = (rect.height * pdfHeight) / containerRect.height;
+        // Convert from pixels to mm within the content area
+        const xMm = margin + (relativeX * contentWidth) / containerRect.width;
+        const yMm = margin + (relativeY * contentHeight) / containerRect.height;
+        const wMm = (rect.width * contentWidth) / containerRect.width;
+        const hMm = (rect.height * contentWidth) / containerRect.width; // Use width ratio for proportional height
 
-        // Calculate which page the button is on
-        const pageIndex = Math.floor(yMm / pageHeight);
-        const relativeYMm = yMm % pageHeight;
+        // Calculate which page and relative Y position (accounting for margins)
+        const pageIndex = Math.floor((yMm - margin) / usableHeight);
+        const relativeYMm = margin + ((yMm - margin) % usableHeight);
 
         const payUrl = `${window.location.origin}/api/pay?invoiceId=${invoice.id}&userId=${invoice.userId}`;
         
@@ -407,24 +411,28 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
 
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-
-    let heightLeft = pdfHeight;
-    let position = 0;
+    const margin = 10; // 10mm margin
+    
+    const imgProps = pdf.getImageProperties(imgData);
+    const contentWidth = pageWidth - (2 * margin);
+    const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
+    
+    const usableHeight = pageHeight - (2 * margin);
+    let heightLeft = contentHeight;
+    let position = margin;
 
     // Add first page
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-    heightLeft -= pageHeight;
+    pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+    heightLeft -= usableHeight;
 
     // Add successive pages if content is longer than one page
     while (heightLeft > 0) {
-      position -= pageHeight;
+      position -= usableHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
+      pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
+      heightLeft -= usableHeight;
     }
 
     // --- ADD CLICKABLE LINK OVER STRIPE BUTTON ---
@@ -437,15 +445,15 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       const relativeX = rect.left - containerRect.left;
       const relativeY = rect.top - containerRect.top;
 
-      // Convert from pixels to mm
-      const xMm = (relativeX * pdfWidth) / containerRect.width;
-      const yMm = (relativeY * pdfHeight) / containerRect.height;
-      const wMm = (rect.width * pdfWidth) / containerRect.width;
-      const hMm = (rect.height * pdfHeight) / containerRect.height;
+      // Convert from pixels to mm within the content area
+      const xMm = margin + (relativeX * contentWidth) / containerRect.width;
+      const yMm = margin + (relativeY * contentHeight) / containerRect.height;
+      const wMm = (rect.width * contentWidth) / containerRect.width;
+      const hMm = (rect.height * contentWidth) / containerRect.width;
 
-      // Calculate which page the button is on
-      const pageIndex = Math.floor(yMm / pageHeight);
-      const relativeYMm = yMm % pageHeight;
+      // Calculate which page and relative Y position (accounting for margins)
+      const pageIndex = Math.floor((yMm - margin) / usableHeight);
+      const relativeYMm = margin + ((yMm - margin) % usableHeight);
 
       const payUrl = `${window.location.origin}/api/pay?invoiceId=${invoice.id}&userId=${invoice.userId}`;
       
