@@ -308,7 +308,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       while (heightLeft > 0) {
         position -= usableHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', margin, position + margin, contentWidth, contentHeight);
+        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
         heightLeft -= usableHeight;
       }
 
@@ -431,7 +431,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     while (heightLeft > 0) {
       position -= usableHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
+      pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
       heightLeft -= usableHeight;
     }
 

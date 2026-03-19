@@ -177,7 +177,7 @@ const ReportsDashboard = ({ invoices, currencySymbol, apiKey, currentUser }: Rep
     while (heightLeft > 0) {
       position -= usableHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
+      pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
       heightLeft -= usableHeight;
     }
 
