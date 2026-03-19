@@ -159,26 +159,33 @@ const ReportsDashboard = ({ invoices, currencySymbol, apiKey, currentUser }: Rep
     
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10; // 10mm margin
+    const margin = 10;
     
     const imgProps = pdf.getImageProperties(imgData);
     const contentWidth = pageWidth - (2 * margin);
     const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
     
-    const usableHeight = pageHeight - (2 * margin);
-    let heightLeft = contentHeight;
+    const usableHeight = 250;
+    const totalPages = Math.ceil(contentHeight / usableHeight);
+    
     let position = margin;
 
-    // Add first page
-    pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-    heightLeft -= usableHeight;
+    for (let i = 0; i < totalPages; i++) {
+      if (i > 0) {
+        pdf.addPage();
+      }
+      
+      // Header and Page number
+      pdf.setFillColor(28, 41, 56); // Default dark theme color
+      pdf.rect(0, 0, pageWidth, 4, 'F');
+      
+      pdf.setFontSize(8);
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`${title} - Página ${i + 1} de ${totalPages}`, pageWidth - margin, 10, { align: 'right' });
 
-    // Add successive pages if content is longer than one page
-    while (heightLeft > 0) {
-      position -= usableHeight;
-      pdf.addPage();
       pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-      heightLeft -= usableHeight;
+      
+      position -= usableHeight;
     }
 
     pdf.save(`${title}_${new Date().toISOString().split('T')[0]}.pdf`);

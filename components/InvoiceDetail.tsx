@@ -291,25 +291,36 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       const imgProps = pdf.getImageProperties(imgData);
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10; // 10mm margin
+      const margin = 10;
       
       const contentWidth = pageWidth - (2 * margin);
       const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
       
-      const usableHeight = pageHeight - (2 * margin);
+      // Use a smaller usable height to leave "breathing room" (padding) at the bottom of each page
+      const usableHeight = 250; 
+      const totalPages = Math.ceil(contentHeight / usableHeight);
+      
       let heightLeft = contentHeight;
       let position = margin;
 
-      // Add first page
-      pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
-      heightLeft -= usableHeight;
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        // --- DRAW PREMIUM HEADER ON EVERY PAGE ---
+        pdf.setFillColor(color);
+        pdf.rect(0, 0, pageWidth, 4, 'F');
+        
+        // Add Page Number and ID Reference
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(`${isQuote ? 'Cotización' : 'Factura'} #${invoice.id.toUpperCase()} - Página ${i + 1} de ${totalPages}`, pageWidth - margin, 10, { align: 'right' });
 
-      // Add successive pages if content is longer than one page
-      while (heightLeft > 0) {
-        position -= usableHeight;
-        pdf.addPage();
+        // Add the content slice
         pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
-        heightLeft -= usableHeight;
+        
+        position -= usableHeight;
       }
 
       // --- ADD CLICKABLE LINK OVER STRIPE BUTTON ---
@@ -318,23 +329,19 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         const rect = stripeBtn.getBoundingClientRect();
         const containerRect = documentRef.current.getBoundingClientRect();
 
-        // Calculate position relative to the container
         const relativeX = rect.left - containerRect.left;
         const relativeY = rect.top - containerRect.top;
 
-        // Convert from pixels to mm within the content area
         const xMm = margin + (relativeX * contentWidth) / containerRect.width;
         const yMm = margin + (relativeY * contentHeight) / containerRect.height;
         const wMm = (rect.width * contentWidth) / containerRect.width;
-        const hMm = (rect.height * contentWidth) / containerRect.width; // Use width ratio for proportional height
+        const hMm = (rect.height * contentWidth) / containerRect.width;
 
-        // Calculate which page and relative Y position (accounting for margins)
         const pageIndex = Math.floor((yMm - margin) / usableHeight);
         const relativeYMm = margin + ((yMm - margin) % usableHeight);
 
         const payUrl = `${window.location.origin}/api/pay?invoiceId=${invoice.id}&userId=${invoice.userId}`;
         
-        // Go to the correct page to add the link
         pdf.setPage(pageIndex + 1);
         pdf.link(xMm, relativeYMm, wMm, hMm, { url: payUrl });
       }
@@ -413,26 +420,35 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10; // 10mm margin
+    const margin = 10;
     
     const imgProps = pdf.getImageProperties(imgData);
     const contentWidth = pageWidth - (2 * margin);
     const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
     
-    const usableHeight = pageHeight - (2 * margin);
-    let heightLeft = contentHeight;
+    // Breathing room logic
+    const usableHeight = 250;
+    const totalPages = Math.ceil(contentHeight / usableHeight);
+    
     let position = margin;
 
-    // Add first page
-    pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-    heightLeft -= usableHeight;
+    for (let i = 0; i < totalPages; i++) {
+      if (i > 0) {
+        pdf.addPage();
+      }
+      
+      // --- RECURRING HEADER ---
+      pdf.setFillColor(color);
+      pdf.rect(0, 0, pageWidth, 4, 'F');
+      
+      // Page Indicator
+      pdf.setFontSize(8);
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`${isQuote ? 'Cotización' : 'Factura'} #${invoice.id.toUpperCase()} - Página ${i + 1} de ${totalPages}`, pageWidth - margin, 10, { align: 'right' });
 
-    // Add successive pages if content is longer than one page
-    while (heightLeft > 0) {
-      position -= usableHeight;
-      pdf.addPage();
       pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-      heightLeft -= usableHeight;
+      
+      position -= usableHeight;
     }
 
     // --- ADD CLICKABLE LINK OVER STRIPE BUTTON ---
@@ -441,23 +457,19 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       const rect = stripeBtn.getBoundingClientRect();
       const containerRect = documentRef.current.getBoundingClientRect();
 
-      // Calculate position relative to the container
       const relativeX = rect.left - containerRect.left;
       const relativeY = rect.top - containerRect.top;
 
-      // Convert from pixels to mm within the content area
       const xMm = margin + (relativeX * contentWidth) / containerRect.width;
       const yMm = margin + (relativeY * contentHeight) / containerRect.height;
       const wMm = (rect.width * contentWidth) / containerRect.width;
       const hMm = (rect.height * contentWidth) / containerRect.width;
 
-      // Calculate which page and relative Y position (accounting for margins)
       const pageIndex = Math.floor((yMm - margin) / usableHeight);
       const relativeYMm = margin + ((yMm - margin) % usableHeight);
 
       const payUrl = `${window.location.origin}/api/pay?invoiceId=${invoice.id}&userId=${invoice.userId}`;
       
-      // Go to the correct page to add the link
       pdf.setPage(pageIndex + 1);
       pdf.link(xMm, relativeYMm, wMm, hMm, { url: payUrl });
     }
