@@ -156,9 +156,26 @@ const ReportsDashboard = ({ invoices, currencySymbol, apiKey, currentUser }: Rep
     const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: '#FFFFFF' });
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
+    
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    let heightLeft = pdfHeight;
+    let position = 0;
+
+    // Add first page
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+    heightLeft -= pageHeight;
+
+    // Add successive pages if content is longer than one page
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+    }
+
     pdf.save(`${title}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
