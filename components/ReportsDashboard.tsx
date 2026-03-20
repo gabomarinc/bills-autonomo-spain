@@ -153,19 +153,19 @@ const ReportsDashboard = ({ invoices, currencySymbol, apiKey, currentUser }: Rep
 
   const handleExportPdf = async (ref: React.RefObject<HTMLDivElement>, title: string) => {
     if (!ref.current) return;
-    const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: '#FFFFFF' });
+    const canvas = await html2canvas(ref.current, { scale: 3, backgroundColor: '#FFFFFF' });
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
     
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
+    const margin = 20; // 20mm premium margins
     
     const imgProps = pdf.getImageProperties(imgData);
     const contentWidth = pageWidth - (2 * margin);
     const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
     
-    const usableHeight = 250;
+    const usableHeight = pageHeight - (2 * margin);
     const totalPages = Math.ceil(contentHeight / usableHeight);
     
     let position = margin;
@@ -175,16 +175,24 @@ const ReportsDashboard = ({ invoices, currencySymbol, apiKey, currentUser }: Rep
         pdf.addPage();
       }
       
+      // Page Content
+      pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+
+      // --- MASK MARGINS ---
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, pageWidth, margin, 'F');
+      pdf.rect(0, pageHeight - margin, pageWidth, margin, 'F');
+      pdf.rect(0, 0, margin, pageHeight, 'F');
+      pdf.rect(pageWidth - margin, 0, margin, pageHeight, 'F');
+
       // Header and Page number
-      pdf.setFillColor(28, 41, 56); // Default dark theme color
+      pdf.setFillColor(28, 41, 56); 
       pdf.rect(0, 0, pageWidth, 4, 'F');
       
-      pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text(`${title} - Página ${i + 1} de ${totalPages}`, pageWidth - margin, 10, { align: 'right' });
+      pdf.setFontSize(7);
+      pdf.setTextColor(180, 180, 180);
+      pdf.text(`${title.toUpperCase()} • PÁGINA ${i + 1} DE ${totalPages}`, pageWidth - margin, 12, { align: 'right' });
 
-      pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-      
       position -= usableHeight;
     }
 

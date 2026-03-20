@@ -269,7 +269,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       if (!documentRef.current) throw new Error("No se pudo capturar el documento.");
 
       const canvas = await html2canvas(documentRef.current, {
-        scale: 2,
+        scale: 3, // Increased quality
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -291,16 +291,15 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
       const imgProps = pdf.getImageProperties(imgData);
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
+      const margin = 20; // Increased to 20mm for a more premium look
       
       const contentWidth = pageWidth - (2 * margin);
       const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
       
-      // Use a smaller usable height to leave "breathing room" (padding) at the bottom of each page
-      const usableHeight = 250; 
+      // Strict paging to avoid gaps or repetitions
+      const usableHeight = pageHeight - (2 * margin);
       const totalPages = Math.ceil(contentHeight / usableHeight);
       
-      let heightLeft = contentHeight;
       let position = margin;
 
       for (let i = 0; i < totalPages; i++) {
@@ -308,18 +307,25 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
           pdf.addPage();
         }
         
-        // --- DRAW PREMIUM HEADER ON EVERY PAGE ---
-        pdf.setFillColor(color);
-        pdf.rect(0, 0, pageWidth, 4, 'F');
-        
-        // Add Page Number and ID Reference
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(`${isQuote ? 'Cotización' : 'Factura'} #${invoice.id.toUpperCase()} - Página ${i + 1} de ${totalPages}`, pageWidth - margin, 10, { align: 'right' });
-
         // Add the content slice
         pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
+
+        // --- MASK MARGINS TO PREVENT OVERLAP (Crucial for a clean look) ---
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pageWidth, margin, 'F'); // Top Mask
+        pdf.rect(0, pageHeight - margin, pageWidth, margin, 'F'); // Bottom Mask
+        pdf.rect(0, 0, margin, pageHeight, 'F'); // Left Mask
+        pdf.rect(pageWidth - margin, 0, margin, pageHeight, 'F'); // Right Mask
         
+        // --- RECURRING PREMIUM HEADER ---
+        pdf.setFillColor(color);
+        pdf.rect(0, 0, pageWidth, 4, 'F'); // Accent bar
+        
+        pdf.setFontSize(7);
+        pdf.setTextColor(180, 180, 180);
+        const headerText = `${isQuote ? 'COTIZACIÓN' : 'FACTURA'} #${invoice.id.toUpperCase()} • ${new Date(invoice.date).toLocaleDateString()} • PÁGINA ${i + 1} DE ${totalPages}`;
+        pdf.text(headerText, pageWidth - margin, 12, { align: 'right' });
+
         position -= usableHeight;
       }
 
@@ -404,7 +410,7 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     if (!documentRef.current) return;
 
     const canvas = await html2canvas(documentRef.current, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
@@ -420,14 +426,14 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
+    const margin = 20;
     
     const imgProps = pdf.getImageProperties(imgData);
     const contentWidth = pageWidth - (2 * margin);
     const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
     
-    // Breathing room logic
-    const usableHeight = 250;
+    // Strict paging
+    const usableHeight = pageHeight - (2 * margin);
     const totalPages = Math.ceil(contentHeight / usableHeight);
     
     let position = margin;
@@ -437,17 +443,25 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, issuer, onBack, 
         pdf.addPage();
       }
       
-      // --- RECURRING HEADER ---
+      // Add the content slice
+      pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+
+      // --- MASK MARGINS ---
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, pageWidth, margin, 'F');
+      pdf.rect(0, pageHeight - margin, pageWidth, margin, 'F');
+      pdf.rect(0, 0, margin, pageHeight, 'F');
+      pdf.rect(pageWidth - margin, 0, margin, pageHeight, 'F');
+
+      // --- RECURRING PREMIUM HEADER ---
       pdf.setFillColor(color);
       pdf.rect(0, 0, pageWidth, 4, 'F');
       
-      // Page Indicator
-      pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text(`${isQuote ? 'Cotización' : 'Factura'} #${invoice.id.toUpperCase()} - Página ${i + 1} de ${totalPages}`, pageWidth - margin, 10, { align: 'right' });
+      pdf.setFontSize(7);
+      pdf.setTextColor(180, 180, 180);
+      const headerText = `${isQuote ? 'COTIZACIÓN' : 'FACTURA'} #${invoice.id.toUpperCase()} • ${new Date(invoice.date).toLocaleDateString()} • PÁGINA ${i + 1} DE ${totalPages}`;
+      pdf.text(headerText, pageWidth - margin, 12, { align: 'right' });
 
-      pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
-      
       position -= usableHeight;
     }
 
